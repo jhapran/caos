@@ -1,0 +1,62 @@
+import type { FirmAlert } from './types';
+
+export const ALERTS: FirmAlert[] = [
+  {
+    id: 'a-01',
+    severity: 'critical',
+    title: 'GSTR-1 overdue for 3 clients',
+    detail: 'ABC Pvt Ltd, PQR Industries and Vedant Alloys have not filed GSTR-1 for Aug 2025. Statutory due date was 11 Sep 2025 — filing late attracts ₹200/day late fee per return and blocks GSTR-3B e-filing for the period.',
+    clientId: 'c-abc',
+    complianceId: 'gstr1',
+    raisedAt: '2025-09-09T08:15:00+05:30',
+    ownerId: 'u-priya',
+    status: 'active',
+    recommendedAction: 'Send escalation reminder to all 3 clients and reassign preparation to Rahul Verma today.',
+  },
+  {
+    id: 'a-02',
+    severity: 'critical',
+    title: 'Tax Audit deadline cluster — 9 audits due 30 Sep',
+    detail: 'Nine tax audits are due by 30 Sep 2025; 4 are still in Preparation and 2 are waiting on client trial balances. At current throughput (1.2 audits/week) the firm misses the date for at least 3 engagements.',
+    complianceId: 'tax-audit',
+    raisedAt: '2025-09-08T18:40:00+05:30',
+    ownerId: 'u-pranav',
+    status: 'active',
+    recommendedAction: 'Rebalance workload: move 2 audits from Priya Nair to Amit Shah; escalate missing TBs.',
+  },
+  {
+    id: 'a-03',
+    severity: 'high',
+    title: 'ABC Pvt Ltd blocking 7 tasks',
+    detail: 'Information requested on 28 Aug remains unanswered after 2 reminders. Blocked: GSTR-3B, TDS 26Q, tax audit TB tie-out and 4 more. Oldest waiting item is 12 days old.',
+    clientId: 'c-abc',
+    raisedAt: '2025-09-08T11:05:00+05:30',
+    ownerId: 'u-priya',
+    status: 'active',
+    recommendedAction: 'Escalate to the client CFO with a consolidated missing-documents list.',
+  },
+  {
+    id: 'a-04',
+    severity: 'medium',
+    title: 'Advance Tax Q2 instalment due 15 Sep — 6 clients',
+    detail: 'Second advance-tax instalment (45% cumulative) is due 15 Sep 2025 for 6 clients. Computations are ready for 4; LMN Ltd and Trident Pharma have not confirmed estimated income.',
+    complianceId: 'advance-tax',
+    raisedAt: '2025-09-07T15:20:00+05:30',
+    ownerId: 'u-rahul',
+    status: 'active',
+    recommendedAction: 'Send challan-ready computation sheets to the 4 ready clients today.',
+  },
+  {
+    id: 'a-05',
+    severity: 'low',
+    title: 'MCA annual filings season starting — 21 entities',
+    detail: 'AOC-4 and MGT-7 for FY 2024-25 fall due from 29 Oct 2025. AGM dates are still unconfirmed for 5 companies; director KYC (DIR-3) is pending for 2 directors.',
+    complianceId: 'mca-aoc4',
+    raisedAt: '2025-09-06T10:00:00+05:30',
+    ownerId: 'u-neha',
+    status: 'active',
+    recommendedAction: 'Schedule AGMs for the 5 unconfirmed companies before 25 Sep.',
+  },
+];
+
+export const ACTIVE_ALERT_COUNT = ALERTS.filter((a) => a.status === 'active').length; // 5

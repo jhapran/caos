@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-feature-settings: "cv11";
+  }
+  /* Focus ring: gold 2px (design.md §11) */
+  :focus-visible {
+    outline: 2px solid #b7791f;
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: #e3f0ed;
+    color: #093f37;
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-display {
+    @apply font-display text-[34px] leading-10 font-medium tracking-[-0.01em];
+  }
+  .text-stat-xl {
+    @apply font-display text-[32px] leading-10 font-medium tnum;
+  }
+  .text-caption {
+    @apply text-[12px] leading-4 font-medium uppercase tracking-[0.06em] text-ink-3;
+  }
+  .gold-underline-sweep {
+    background-image: linear-gradient(#b7791f, #b7791f);
+    background-size: 0% 2px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.35s ease;
+  }
+  .gold-underline-sweep:hover {
+    background-size: 100% 2px;
+  }
+}
+
+@layer base {
+  /* Slim, ledger-styled scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f6f5f1;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8d3c8;
+    border-radius: 999px;
+    border: 2px solid #f6f5f1;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #b8b2a4;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d8d3c8 #f6f5f1;
+  }
+}
