@@ -49,8 +49,15 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
     <div className="flex h-full w-60 flex-col bg-brand-deep text-paper">
       {/* Wordmark + gold rule */}
       <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center justify-between">
-          <img src="/logo.svg" alt="CAOS" className="h-8 w-auto" />
+          <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Go to landing"
+            className="flex items-center"
+          >
+            <img src="/logo.svg" alt="CAOS" className="h-8 w-auto" />
+          </button>
           {isMobile && (
             <button type="button" onClick={onCloseMobile} aria-label="Close menu" className="rounded-md p-1 text-paper/60 hover:text-paper">
               <X className="h-5 w-5" />
@@ -166,7 +173,9 @@ function IconRail({ items }: { items: NavItem[] }) {
   return (
     <div className="flex h-full w-16 flex-col bg-brand-deep text-paper">
       <div className="flex justify-center px-2 pt-5 pb-4">
-        <img src="/favicon.svg" alt="CAOS" className="h-8 w-8" />
+        <button type="button" onClick={() => navigate('/')} aria-label="Go to landing" className="flex items-center">
+          <img src="/favicon.svg" alt="CAOS" className="h-8 w-8" />
+        </button>
       </div>
       <nav className="flex-1 space-y-1 px-2" aria-label="Primary">
         {items.map((item) => (
