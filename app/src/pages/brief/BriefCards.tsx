@@ -49,9 +49,9 @@ function BriefCard({
       onClick={() => navigate(to)}
       className={cn(
         'group flex h-full flex-col rounded-xl border border-line bg-card p-5 text-left shadow-card transition-all duration-200',
-        'hover:-translate-y-0.5 hover:border-ink-3/40 hover:shadow-lift',
-        // left border removed per design: no thick side on cards
-        // amber && 'border-l-[3px] border-l-warning',
+          'hover:-translate-y-0.5 hover:border-ink-3/40 hover:shadow-lift',
+          // left border removed per design: no thick side on cards
+          amber && 'ring-1 ring-warning/20',
       )}
     >
       <span className="text-caption">{label}</span>

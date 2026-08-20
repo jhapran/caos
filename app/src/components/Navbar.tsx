@@ -170,6 +170,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
 
 /** Collapsed icon rail (< 1280px). */
 function IconRail({ items }: { items: NavItem[] }) {
+  const navigate = useNavigate();
   return (
     <div className="flex h-full w-16 flex-col bg-brand-deep text-paper">
       <div className="flex justify-center px-2 pt-5 pb-4">
