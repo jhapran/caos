@@ -18,7 +18,7 @@ const POSTURE = [
   { key: 'on-track', label: 'On Track', value: 684, dot: 'bg-success', chip: 'bg-success-soft text-success' },
 ];
 
-const GREETING_WORDS = ['Good', 'Morning,', 'Pranav.'];
+const GREETING_WORDS = ['Good', 'Morning,', 'Pranav Kumar.'];
 
 /** Section 1 — greeting band: editorial greeting + attention count + posture chips. */
 export default function GreetingBand() {
@@ -27,7 +27,7 @@ export default function GreetingBand() {
   return (
     <section aria-label="Morning greeting" className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
       <div>
-        <h1 className="text-display text-ink" aria-label="Good Morning, Pranav.">
+        <h1 className="text-display text-ink" aria-label="Good Morning, Pranav Kumar.">
           {GREETING_WORDS.map((word, i) => (
             <motion.span
               key={word}

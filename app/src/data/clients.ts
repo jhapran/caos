@@ -1,14 +1,14 @@
 import type { Client, Firm } from './types';
 
 export const FIRM: Firm = {
-  name: 'Sharma & Associates, Chartered Accountants',
-  shortName: 'Sharma & Associates',
+  name: 'Kumar Associates, Chartered Accountants',
+  shortName: 'Kumar Associates',
   frn: '0123456W',
   city: 'Mumbai',
   fy: 'FY 2024-25',
   ay: 'AY 2025-26',
   team: [
-    { id: 'u-pranav', name: 'CA Pranav Sharma', initials: 'PS', role: 'Partner' },
+    { id: 'u-pranav', name: 'CA Pranav Kumar', initials: 'PK', role: 'Partner' },
     { id: 'u-priya', name: 'Priya Nair', initials: 'PN', role: 'Manager' },
     { id: 'u-rahul', name: 'Rahul Verma', initials: 'RV', role: 'Senior Associate' },
     { id: 'u-neha', name: 'Neha Iyer', initials: 'NI', role: 'Associate' },

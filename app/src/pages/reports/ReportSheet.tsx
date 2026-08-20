@@ -20,7 +20,7 @@ const EXCEPTIONS: { client: string; reason: string; owner: string }[] = [
   { client: 'ABC Pvt Ltd', reason: 'GSTR-3B blocked — GSTR-2A reco + bank statements pending 12 days', owner: 'Priya Nair' },
   { client: 'PQR Industries', reason: 'Tax audit TB tie-out waiting on trial balance; DSC expires in 9 days', owner: 'Priya Nair' },
   { client: 'XYZ LLP', reason: 'TDS 26Q preparation stalled — Form 16A and challans missing', owner: 'Rahul Verma' },
-  { client: 'RST Pvt Ltd', reason: 'Receivable ₹1.2 L at 118 days; engagement letter unsigned', owner: 'CA Pranav Sharma' },
+  { client: 'RST Pvt Ltd', reason: 'Receivable ₹1.2 L at 118 days; engagement letter unsigned', owner: 'CA Pranav Kumar' },
   { client: 'LMN Ltd', reason: 'Advance tax Q2 computation unconfirmed — estimated income not shared', owner: 'Rahul Verma' },
 ];
 

@@ -372,7 +372,7 @@ function ComplianceDetailInner({ id }: { id: string }) {
   const addNote = () => {
     const text = draft.trim();
     if (!text) return;
-    const note = { at: demoNowIso(notes.length), by: 'CA Pranav Sharma', text };
+    const note = { at: demoNowIso(notes.length), by: 'CA Pranav Kumar', text };
     setNotes((n) => [...n, note]);
     setLocalEvents((ev) => [...ev, { at: note.at, kind: 'note', text: `Note added by ${note.by}` }]);
     setDraft('');

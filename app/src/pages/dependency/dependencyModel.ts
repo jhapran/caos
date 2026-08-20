@@ -109,7 +109,7 @@ export function nextDueLabel(clientId: string): string {
 
 export function buildReminderMessage(clientName: string, docs: string[], clientId: string): string {
   const list = (docs.length > 0 ? docs : ['pending information']).map((d) => `• ${d}`).join('\n');
-  return `Namaste ${clientName} team,\n\nGentle reminder from Sharma & Associates — we are awaiting the following to keep your filings on track:\n\n${list}\n\nPlease share by ${nextDueLabel(clientId)}. You can reply on this thread or WhatsApp the documents directly.\n\n— CA Pranav Sharma`;
+  return `Namaste ${clientName} team,\n\nGentle reminder from Kumar Associates — we are awaiting the following to keep your filings on track:\n\n${list}\n\nPlease share by ${nextDueLabel(clientId)}. You can reply on this thread or WhatsApp the documents directly.\n\n— CA Pranav Kumar`;
 }
 
 export function averageWait(clients: DependencyClient[]): number {

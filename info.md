@@ -32,7 +32,7 @@ Examples: "GST filing deadline in 48 hours: 18 clients incomplete." · "Partner 
 Partners ask: "Which GST clients are at risk this month?" · "Show all compliance tasks assigned to Rahul." · "Which clients haven't submitted bank statements?" · "Which clients have more than three outstanding compliance items?" · "How many tax audits are assigned to Partner Sharma?" System converts NL → structured queries and shows answer tables/cards.
 
 ### Partner Morning Home (PRD §75/§136)
-"Good Morning, Pranav — 17 items need attention today"
+"Good Morning, Pranav Kumar — 17 items need attention today"
 - Compliance Risk: 🔴 5 Critical · 🟠 12 At Risk · 🟢 684 On Track
 - Waiting for Clients: 28 clients
 - Awaiting Review: 14 items
@@ -52,7 +52,7 @@ Not "GST — Delayed" but "GST — At Risk. Reason: Purchase register not receiv
 Risk score 82/100 because: 3 days remaining · 2 documents missing · client usually responds in 4 days · review not started.
 
 ## Demo firm dataset (use realistic Indian CA firm data)
-- Firm: "Sharma & Associates, Chartered Accountants" (or similar). Partner: CA Pranav Sharma. Staff: Rahul, Neha, Amit, Priya (manager).
+- Firm: "Kumar Associates, Chartered Accountants" (or similar). Partner: CA Pranav Kumar. Staff: Rahul, Neha, Amit, Priya (manager).
 - Clients: ABC Pvt Ltd (Manufacturing, Pvt Ltd, PAN/GSTIN/CIN), XYZ LLP, PQR Industries, LMN Ltd, RST Pvt Ltd, etc. — 30+ clients for drill-down lists.
 - Compliance types: GSTR-1, GSTR-3B, TDS (24Q/26Q), ITR, Tax Audit, Statutory Audit, MCA (AOC-4/MGT-7), Advance Tax, PF/ESI.
 - Workflow states: Not Started → Information Requested → Information Received → Preparation → Internal Review → Client Approval → Ready to File → Filed → Acknowledgement Received → Closed.

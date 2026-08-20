@@ -136,7 +136,7 @@ export default function Inspector({ item, onApprove, onReturn, onReassign, retur
     if (!note.trim()) return;
     setLocalNotes((m) => ({
       ...m,
-      [item.id]: [...(m[item.id] ?? []), { by: 'CA Pranav Sharma', text: note.trim() }],
+      [item.id]: [...(m[item.id] ?? []), { by: 'CA Pranav Kumar', text: note.trim() }],
     }));
     setNote('');
   };
