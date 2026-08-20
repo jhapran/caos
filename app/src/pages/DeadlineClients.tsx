@@ -186,7 +186,7 @@ function DeadlineClientsInner({ id }: { id: string }) {
       for (const r of selectedRows) {
         next[r.client.id] = [
           ...(next[r.client.id] ?? []),
-          { sentAt: now, channel: 'Email', by: 'CA Pranav Kumar' },
+          { sentAt: now, channel: 'Email', by: 'CA Lew Kong' },
         ];
       }
       return next;

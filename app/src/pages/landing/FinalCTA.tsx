@@ -56,7 +56,7 @@ export default function FinalCTA({ onEnter }: { onEnter: (e: React.MouseEvent) =
           transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
           className="mx-auto mt-4 max-w-lg text-[15px] leading-7 text-paper/65"
         >
-          Explore the Firm Command Centre with realistic data for Kumar Associates.
+          Explore the Firm Command Centre with realistic data for LK Associates.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

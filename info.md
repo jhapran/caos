@@ -52,7 +52,7 @@ Not "GST — Delayed" but "GST — At Risk. Reason: Purchase register not receiv
 Risk score 82/100 because: 3 days remaining · 2 documents missing · client usually responds in 4 days · review not started.
 
 ## Demo firm dataset (use realistic Indian CA firm data)
-- Firm: "Kumar Associates, Chartered Accountants" (or similar). Partner: CA Pranav Kumar. Staff: Rahul, Neha, Amit, Priya (manager).
+- Firm: "LK Associates, Chartered Accountants" (or similar). Partner: CA Lew Kong. Staff: Rahul, Neha, Amit, Priya (manager).
 - Clients: ABC Pvt Ltd (Manufacturing, Pvt Ltd, PAN/GSTIN/CIN), XYZ LLP, PQR Industries, LMN Ltd, RST Pvt Ltd, etc. — 30+ clients for drill-down lists.
 - Compliance types: GSTR-1, GSTR-3B, TDS (24Q/26Q), ITR, Tax Audit, Statutory Audit, MCA (AOC-4/MGT-7), Advance Tax, PF/ESI.
 - Workflow states: Not Started → Information Requested → Information Received → Preparation → Internal Review → Client Approval → Ready to File → Filed → Acknowledgement Received → Closed.

@@ -100,7 +100,7 @@ function Supplement({ answer }: { answer: AskAnswer }) {
         <CapacityBar name="Rahul Verma" pct={84} tone="amber" />
         <CapacityBar name="Neha Iyer" pct={63} tone="brand" />
         <CapacityBar name="Amit Shah" pct={58} tone="brand" />
-        <CapacityBar name="CA Pranav Kumar" pct={35} tone="brand" />
+        <CapacityBar name="CA Lew Kong" pct={35} tone="brand" />
       </motion.div>
     );
   }

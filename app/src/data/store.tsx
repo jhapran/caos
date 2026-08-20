@@ -75,7 +75,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
       const base = REVIEW_ITEMS.find((r) => r.id === id);
       const comments = [...(prev?.comments ?? base?.comments ?? [])];
       if (comment) {
-        comments.push({ at: new Date().toISOString(), by: 'CA Pranav Kumar', text: comment });
+        comments.push({ at: new Date().toISOString(), by: 'CA Lew Kong', text: comment });
       }
       return { ...s, reviewOverlay: { ...s.reviewOverlay, [id]: { status: 'approved', comments } } };
     });
@@ -86,7 +86,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
       const prev = s.reviewOverlay[id];
       const base = REVIEW_ITEMS.find((r) => r.id === id);
       const comments = [...(prev?.comments ?? base?.comments ?? [])];
-      comments.push({ at: new Date().toISOString(), by: 'CA Pranav Kumar', text: comment || 'Returned for rework.' });
+      comments.push({ at: new Date().toISOString(), by: 'CA Lew Kong', text: comment || 'Returned for rework.' });
       return { ...s, reviewOverlay: { ...s.reviewOverlay, [id]: { status: 'returned', comments } } };
     });
   }, []);
@@ -97,7 +97,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
     const reminder: Reminder = {
       sentAt: new Date().toISOString(),
       channel,
-      by: 'CA Pranav Kumar',
+      by: 'CA Lew Kong',
     };
     setState((s) => ({
       ...s,

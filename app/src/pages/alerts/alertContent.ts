@@ -90,7 +90,7 @@ export const ALERT_CONTENT: AlertContent[] = [
     rule: 'workload-threshold',
     detectedAt: 'Detected 06:40',
     bodyStrong: '117%',
-    bodyText: 'of review capacity — Pranav Kumar has 9 items queued for more than 2 days.',
+    bodyText: 'of review capacity — CA Lew Kong has 9 items queued for more than 2 days.',
     entities: [
       { clientId: 'c-lmn', risk: 71, missing: 'FS sign-off' },
       { clientId: 'c-trident', risk: 66, missing: 'Tax audit review' },
@@ -101,11 +101,11 @@ export const ALERT_CONTENT: AlertContent[] = [
     icon: Scale,
     primaryAction: { label: 'Rebalance', kind: 'drawer' },
     why: [
-      { icon: Scale, text: 'Pranav Kumar is at 117% of review capacity — the firm threshold is 110%.' },
+      { icon: Scale, text: 'CA Lew Kong is at 117% of review capacity — the firm threshold is 110%.' },
       { icon: Clock3, text: '9 review items have been queued for more than 2 days.' },
       { icon: TrendingUp, text: 'Priya Nair is at 72% capacity — rebalancing clears the queue in 1.5 days.' },
     ],
-    recommendation: 'Reassign 5 queued reviews to Priya Nair and 2 to Rahul Verma to bring Pranav Kumar under 90%.',
+    recommendation: 'Reassign 5 queued reviews to Priya Nair and 2 to Rahul Verma to bring CA Lew Kong under 90%.',
   },
   {
     id: 'a-03',
@@ -253,12 +253,12 @@ export const RESOLVED_ALERTS: ResolvedAlert[] = [
   { id: 'ra-03', title: 'PF return late for 2 months — Quickmed', resolvedBy: 'Neha Iyer', resolvedOn: '02 Sep' },
   { id: 'ra-04', title: 'Director KYC pending — Crestpoint Realty', resolvedBy: 'Amit Shah', resolvedOn: '01 Sep' },
   { id: 'ra-05', title: 'Advance tax shortfall Q1 — Astra Cloud', resolvedBy: 'Priya Nair', resolvedOn: '30 Aug' },
-  { id: 'ra-06', title: 'GSTR-1 late fee exposure — 5 clients', resolvedBy: 'CA Pranav Kumar', resolvedOn: '28 Aug' },
+  { id: 'ra-06', title: 'GSTR-1 late fee exposure — 5 clients', resolvedBy: 'CA Lew Kong', resolvedOn: '28 Aug' },
   { id: 'ra-07', title: 'Audit confirmation pending — Trident Pharma', resolvedBy: 'Rahul Verma', resolvedOn: '26 Aug' },
   { id: 'ra-08', title: 'DSC expired — Orion Packaging', resolvedBy: 'Neha Iyer', resolvedOn: '22 Aug' },
   { id: 'ra-09', title: 'Books not closed Q1 — Blue Lotus Hotels', resolvedBy: 'Amit Shah', resolvedOn: '19 Aug' },
   { id: 'ra-10', title: '26AS mismatch — Rajhans Jewellers', resolvedBy: 'Priya Nair', resolvedOn: '15 Aug' },
-  { id: 'ra-11', title: 'Invoice ageing > 60d — 6 clients', resolvedBy: 'CA Pranav Kumar', resolvedOn: '11 Aug' },
+  { id: 'ra-11', title: 'Invoice ageing > 60d — 6 clients', resolvedBy: 'CA Lew Kong', resolvedOn: '11 Aug' },
   { id: 'ra-12', title: 'MGT-7 AGM date unconfirmed — Kaveri Textiles', resolvedBy: 'Neha Iyer', resolvedOn: '08 Aug' },
 ];
 
