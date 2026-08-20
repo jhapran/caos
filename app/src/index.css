@@ -104,3 +104,11 @@
     scrollbar-color: #d8d3c8 #f6f5f1;
   }
 }
+
+/* Ensure rounded cards never show a thick left accent stripe.
+   This overrides any remaining `border-l-*` utility on card elements. */
+.rounded-xl.border,
+.rounded-lg.border,
+.rounded-md.border {
+  border-left-width: 0 !important;
+}
