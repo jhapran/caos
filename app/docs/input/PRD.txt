@@ -1,0 +1,4870 @@
+Product Requirements Document (PRD)
+AI-Native Practice, Compliance & Client Operating System for
+Chartered Accountant Firms
+Working Product Name: CAOS — CA Operating System
+Alternative names: FinPilot CA, PracticeAI, CAFlow, ComplyOS, LedgerPilot
+Version: 0.1 — Product Discovery / MVP
+Primary Market: Indian Chartered Accountant firms
+Initial Target Segment: CA firms with 5–50 employees and approximately 100–2,000 client entities
+
+
+
+
+1. Product Vision
+Build an AI-native operating system for Chartered Accountant firms that brings together:
+
+
+      • clients
+      • entities
+      • compliance
+      • documents
+      • communication
+      • work allocation
+      • review
+      • financial information
+      • audit evidence
+      • notices
+      • billing
+      • advisory opportunities
+
+into one intelligent workspace.
+
+
+The product should become the system of record and system of action for a CA practice.
+
+
+It should not initially try to replace established products such as:
+
+
+      • Tally
+      • Zoho Books
+      • ClearTax
+      • Winman
+      • KDK
+      • CompuTax
+
+Instead, it should connect these systems and manage the workflow between them.
+
+
+
+
+                                                        1
+2. Product Mission
+Help CA firms spend less time on:
+
+
+     • chasing clients
+     • searching for documents
+     • updating Excel trackers
+     • assigning recurring tasks
+     • asking for information already provided
+     • checking which return is pending
+     • consolidating information from multiple systems
+     • preparing status reports
+     • identifying missed deadlines
+     • checking work manually across hundreds of clients
+
+and spend more time on:
+
+
+     • review
+     • advisory
+     • client relationships
+     • risk management
+     • higher-value professional services.
+
+
+
+
+3. Core Product Promise
+       Know what is due, what is missing, who is responsible, and what needs attention —
+       across every client.
+
+
+Secondary promise:
+
+
+       Request information once. Use it everywhere.
+
+
+
+
+4. The Core Problem
+A typical CA firm may use:
+
+
+     • Tally for accounting
+     • Excel for compliance tracking
+     • tax software for income-tax returns
+     • GST software
+     • MCA portal
+     • Income Tax portal
+
+
+
+
+                                                   2
+     • WhatsApp for communication
+     • email
+     • Google Drive/OneDrive/local folders for documents
+     • Word for engagement letters
+     • separate billing software
+     • Excel for staff allocation
+     • Excel for client profitability
+
+The individual applications may work well.
+
+
+The problem is that information is fragmented.
+
+
+Consider one client:
+
+
+ABC Pvt Ltd
+
+
+The firm may have different information about the same client stored across:
+
+
+     • Tally
+     • GST software
+     • ITR software
+     • WhatsApp messages
+     • email
+     • Excel compliance tracker
+     • local folders
+     • Google Drive
+     • audit folders
+     • billing software
+
+There is usually no unified intelligence layer connecting these systems.
+
+
+
+
+5. Product Strategy
+The application should be designed around four layers.
+
+
+Layer 1 — Client Intelligence
+Build a comprehensive client/entity knowledge graph.
+
+
+Layer 2 — Workflow Intelligence
+Understand:
+
+
+     • what needs to happen
+
+
+
+
+                                                      3
+      • when
+      • who should do it
+      • what information is required
+      • what is blocking completion
+
+
+Layer 3 — Professional AI
+Use AI for:
+
+
+      • document extraction
+      • classification
+      • reconciliation
+      • anomaly identification
+      • summarisation
+      • drafting
+      • research
+      • workflow automation
+
+but retain CA review and approval.
+
+
+Layer 4 — Advisory Intelligence
+Use accumulated financial and compliance information to identify:
+
+
+      • financial risks
+      • business issues
+      • improvement opportunities
+      • additional professional services.
+
+
+
+
+6. Initial Customer Profile
+Ideal Customer Profile — Phase 1
+CA practice with:
+
+
+Employees: 5–50
+
+
+Partners: 1–10
+
+
+Clients: 100–2,000
+
+
+Typical services:
+
+
+      • GST
+
+
+
+
+                                                    4
+     • Income Tax
+     • TDS
+     • accounting
+     • statutory audit
+     • tax audit
+     • company compliance
+     • payroll
+     • certifications
+     • advisory services
+
+Current working environment:
+
+
+     • Excel trackers
+     • WhatsApp
+     • Tally
+     • tax software
+     • shared folders
+     • email
+
+Primary pain point:
+
+
+       “We have software for filing, but managing all the work around filing is difficult.”
+
+
+
+
+7. User Personas
+Persona 1 — Managing Partner
+
+Responsibilities
+
+     • portfolio oversight
+     • client relationships
+     • revenue
+     • review
+     • risk
+     • deadline management
+     • staff productivity
+
+Problems
+
+     • does not know real-time work status
+     • discovers problems too late
+     • difficult to know which clients are delaying information
+     • difficult to identify staff overload
+     • cannot easily calculate client profitability
+     • relies on managers for status updates
+
+
+
+
+                                                       5
+Product need
+
+A command centre showing:
+
+
+     • risk
+     • delays
+     • exceptions
+     • overdue clients
+     • workload
+     • compliance status
+     • revenue
+     • collections
+     • review items
+
+
+
+
+8. Persona 2 — CA Manager
+Responsibilities
+
+     • assign work
+     • supervise staff
+     • review work
+     • communicate with clients
+     • meet compliance deadlines
+
+Problems
+
+     • continuously checking work status
+     • multiple follow-ups
+     • manual Excel tracking
+     • staff dependencies
+     • documents scattered across folders
+
+Product need
+
+A workflow dashboard showing:
+
+
+     • work assigned
+     • bottlenecks
+     • documents missing
+     • review queue
+     • upcoming deadlines
+     • team capacity
+
+
+
+
+                                            6
+9. Persona 3 — Article / Accountant / Executive
+Responsibilities
+
+     • collect information
+     • prepare returns
+     • reconcile accounts
+     • prepare working papers
+     • update trackers
+
+Problems
+
+     • unclear instructions
+     • difficult document search
+     • repetitive work
+     • repeated follow-up
+     • frequently switching applications
+
+Product need
+
+A simple “My Work” screen containing:
+
+
+     • priority
+     • client
+     • deadline
+     • required documents
+     • instructions
+     • previous period work
+     • checklist
+     • review comments
+
+
+
+
+10. Persona 4 — Client
+Responsibilities
+
+     • provide documents
+     • approve returns
+     • sign documents
+     • make payments
+     • respond to queries
+
+Problems
+
+     • does not know what CA requires
+     • receives repeated WhatsApp messages
+
+
+
+
+                                             7
+      • cannot find old documents
+      • does not know compliance status
+      • unsure whether work is completed
+
+Product need
+
+Simple portal/mobile experience:
+
+
+       “These three items require your attention.”
+
+
+Not an accounting dashboard.
+
+
+
+
+11. Primary Jobs To Be Done
+JTBD 1
+When a compliance deadline approaches, I want to know which clients are ready and which are not so I can
+focus my team on exceptions.
+
+
+JTBD 2
+When a client's documents arrive through email, portal or WhatsApp, I want them automatically identified,
+stored and attached to the correct client.
+
+
+JTBD 3
+When documents are missing, I want the software to follow up automatically.
+
+
+JTBD 4
+When I open a client, I want to see everything related to that client.
+
+
+JTBD 5
+When reviewing work, I want the preparation, evidence, calculations and reviewer comments together.
+
+
+JTBD 6
+When a partner asks about firm status, I want instant answers instead of preparing an Excel report.
+
+
+
+
+                                                       8
+12. MVP Scope
+The MVP should contain eight core modules.
+
+
+    1. Firm Command Centre
+    2. Client 360
+    3. Compliance Engine
+    4. Smart Document Vault
+    5. Client Communication & Follow-Up
+    6. Workflow / Task Management
+    7. AI Assistant & Review Queue
+    8. Client Portal
+
+Supporting components:
+
+
+     • user management
+     • role-based access
+     • audit logs
+     • notifications
+     • basic integrations
+     • reporting.
+
+
+
+
+13. Module 1 — Firm Command Centre
+The dashboard should not display vanity metrics.
+
+
+It should answer:
+
+
+       What requires attention today?
+
+
+
+
+Dashboard Section A — Compliance Health
+Example:
+
+
+Total active compliances: 1,284
+
+
+Completed: 912
+
+
+In progress: 215
+
+
+Waiting for client: 103
+
+
+
+
+                                                   9
+Under review: 38
+
+
+At risk: 16
+
+
+
+
+Dashboard Section B — Upcoming Deadlines
+Display:
+
+
+                      Compliance     Due Date     Clients     Ready   Blocked   Risk
+
+                      GSTR-1            11 Sep        240       198       34      8
+
+                      GSTR-3B           20 Sep        240       182       42     16
+
+                      TDS                7 Oct           94      62       25      7
+
+Clicking a number opens the corresponding client list.
+
+
+
+
+14. Dashboard Section C — Client Dependency
+Example:
+
+
+       48 clients currently blocking 79 compliance tasks.
+
+
+Top blockers:
+
+
+ABC Pvt Ltd — 7 missing items
+
+
+XYZ LLP — 5 missing items
+
+
+PQR Industries — 4 missing items
+
+
+
+
+15. Dashboard Section D — Review Queue
+Example:
+
+
+21 items awaiting review
+
+
+     • 6 GST reconciliations
+     • 5 TDS returns
+     • 4 ITR computations
+
+
+
+
+                                                     10
+      • 3 financial statements
+      • 3 audit workpapers
+
+
+
+
+16. Dashboard Section E — Firm Risk Alerts
+Possible alerts:
+
+
+       GST filing deadline in 48 hours: 18 clients incomplete.
+
+
+       Partner workload threshold exceeded.
+
+
+       7 client DSCs expire within 30 days.
+
+
+       4 engagements do not have signed engagement letters.
+
+
+       11 invoices are more than 90 days overdue.
+
+
+
+
+17. Dashboard Natural Language Interface
+Partners should be able to ask:
+
+
+       Which GST clients are at risk this month?
+
+
+       Show all compliance tasks assigned to Rahul.
+
+
+       Which clients haven't submitted bank statements?
+
+
+       Which clients have more than three outstanding compliance items?
+
+
+       How many tax audits are assigned to Partner Sharma?
+
+
+The system converts natural language into structured queries.
+
+
+
+
+18. Module 2 — Client 360
+Client 360 becomes the most important screen.
+
+
+Each client should have tabs.
+
+
+
+
+                                                      11
+Client Overview
+Display:
+
+
+Client: ABC Pvt Ltd
+
+
+Entity type: Private Limited
+
+
+Industry: Manufacturing
+
+
+Partner: CA Sharma
+
+
+Manager: Priya
+
+
+Risk rating: Medium
+
+
+Identifiers:
+
+
+PAN
+TAN
+CIN
+GSTIN
+DINs
+
+
+
+
+19. Client Relationships
+Support:
+
+
+       • companies
+       • directors
+       • partners
+       • promoters
+       • trusts
+       • family members
+       • group entities
+       • related parties
+
+Example:
+
+
+ABC Holdings Pvt Ltd
+↓
+ABC Manufacturing Pvt Ltd
+↓
+ABC Trading LLP
+
+
+
+
+                               12
+A single client group may contain multiple legal entities.
+
+
+
+
+20. Client 360 — Compliance Tab
+Show:
+
+
+GST
+Income Tax
+TDS
+MCA
+Audit
+Payroll
+PF/ESI
+Certificates
+Custom recurring compliance
+
+
+For every compliance:
+
+
+      • frequency
+      • next deadline
+      • owner
+      • status
+      • previous filing
+      • acknowledgement
+      • notes.
+
+
+
+
+21. Client 360 — Documents Tab
+Group documents automatically.
+
+
+Examples:
+
+
+Identity
+
+PAN
+GST certificate
+Incorporation certificate
+
+
+Income Tax
+
+ITR
+AIS
+
+
+
+
+                                                      13
+26AS
+Form 16
+
+
+GST
+
+GSTR-1
+GSTR-3B
+GSTR-2B
+
+
+Accounting
+
+Trial Balance
+Ledger
+Financial Statements
+
+
+Banking
+
+Bank Statements
+Loan Statements
+
+
+Legal
+
+Agreements
+MOA/AOA
+Partnership Deeds
+
+
+
+
+22. Client 360 — Communications
+Store client interactions:
+
+
+      • emails
+      • reminders
+      • portal messages
+      • WhatsApp activity
+      • notes
+
+Example:
+
+
+12 Aug — requested July purchase register.
+
+
+14 Aug — automatic reminder sent.
+
+
+15 Aug — purchase register received.
+
+
+The communication timeline provides accountability.
+
+
+
+
+                                                      14
+23. Client 360 — Financial Snapshot
+Future integration with Tally/Zoho can display:
+
+
+Revenue
+Gross Profit
+EBITDA
+Receivables
+Payables
+Bank balance
+
+
+Period comparisons.
+
+
+Not part of mandatory MVP but data model should support it.
+
+
+
+
+24. Module 3 — Compliance Engine
+This is a major differentiator.
+
+
+Compliance obligations should not only be manually created tasks.
+
+
+The system should understand client applicability.
+
+
+
+
+25. Client Compliance Profile
+During onboarding ask:
+
+
+Does the client have GST registration?
+
+
+Does the client deduct TDS?
+
+
+Company/LLP/individual?
+
+
+Is statutory audit applicable?
+
+
+Is tax audit applicable?
+
+
+Employees?
+
+
+PF?
+
+
+
+
+                                                     15
+ESI?
+
+
+Multiple states?
+
+
+The system generates a compliance profile.
+
+
+
+
+26. Compliance Rule Object
+Every compliance contains:
+
+
+Compliance type
+
+
+Authority
+
+
+Frequency
+
+
+Due date rule
+
+
+Applicability
+
+
+Documents required
+
+
+Preparation checklist
+
+
+Reviewer
+
+
+Client approval required
+
+
+Filing confirmation required
+
+
+Acknowledgement required
+
+
+
+
+27. Compliance Workflow
+Standard workflow:
+
+
+Not Started
+
+
+↓
+
+
+Information Requested
+
+
+
+
+                                             16
+↓
+
+
+Information Received
+
+
+↓
+
+
+Preparation
+
+
+↓
+
+
+Internal Review
+
+
+↓
+
+
+Client Approval
+
+
+↓
+
+
+Ready to File
+
+
+↓
+
+
+Filed
+
+
+↓
+
+
+Acknowledgement Received
+
+
+↓
+
+
+Closed
+
+
+Different compliance types can have configurable workflows.
+
+
+
+
+28. Exception-Based Management
+The system should focus attention on exceptions.
+
+
+Example:
+
+
+240 clients have GSTR-3B.
+
+
+Instead of listing 240 tasks:
+
+
+
+
+                                                   17
+         184 healthy
+         31 waiting for documents
+         14 discrepancies
+         8 awaiting review
+         3 high-risk
+
+
+Click only the problematic category.
+
+
+
+
+29. Automated Recurring Compliance
+When one period closes:
+
+
+July GSTR-3B → closed
+
+
+automatically create:
+
+
+August GSTR-3B
+
+
+Copy:
+
+
+        • assigned employee
+        • reviewer
+        • checklist
+        • client communication rules
+
+but not unnecessary documents.
+
+
+
+
+30. Module 4 — Smart Document Vault
+Documents are central to CA practice.
+
+
+The document system should be intelligent rather than simple storage.
+
+
+
+
+31. Document Ingestion Channels
+Documents can enter through:
+
+
+        • drag/drop
+        • client portal
+        • email
+
+
+
+
+                                                   18
+        • mobile
+        • WhatsApp integration
+        • bulk upload
+        • external storage integration
+
+
+
+
+32. AI Document Classification
+Automatically identify:
+
+
+PAN Card
+GST Registration Certificate
+Form 16
+26AS
+AIS
+Bank Statement
+Purchase Register
+Sales Register
+Trial Balance
+Financial Statement
+GST Return
+TDS Return
+Challan
+Notice
+Assessment Order
+Invoice
+Agreement
+
+
+
+
+33. Metadata Extraction
+Example:
+
+
+Upload GST certificate.
+
+
+System extracts:
+
+
+Legal Name
+
+
+GSTIN
+
+
+State
+
+
+Registration Date
+
+
+
+
+                                         19
+Business Address
+
+
+Trade Name
+
+
+Then asks:
+
+
+         Update Client Master?
+
+
+User confirms.
+
+
+
+
+34. Duplicate Document Detection
+Before storing:
+
+
+         Similar document already exists.
+
+
+Provide:
+
+
+Previous file
+New file
+Date
+Version
+
+
+Allow:
+
+
+Replace
+Keep both
+Cancel
+
+
+
+
+35. Document Reuse
+Critical principle:
+
+
+If a bank statement was uploaded for accounting, the tax team should not request it again.
+
+
+Document request logic:
+
+
+         Before requesting a document, search existing client vault.
+
+
+This feature directly improves client experience.
+
+
+
+
+                                                      20
+36. Document Expiry Management
+Track:
+
+
+     • DSC expiry
+     • certificates
+     • licenses
+     • registrations
+     • agreements
+
+Generate alerts:
+
+
+30 days
+
+
+15 days
+
+
+7 days
+
+
+
+
+37. Module 5 — Client Communication Engine
+The system should automate routine follow-up.
+
+
+
+
+38. Document Request Template
+Example request:
+
+
+GST — August 2026
+
+
+Required:
+
+
+     • Sales register
+     • Purchase register
+     • Bank statement
+     • Expense invoices above configured threshold
+
+Client uploads directly through secure link.
+
+
+
+
+39. Reminder Automation
+Example sequence:
+
+
+
+
+                                                     21
+Day 0
+
+
+Initial request.
+
+
+Day 3
+
+
+Friendly reminder.
+
+
+Day 5
+
+
+Second reminder.
+
+
+Day 7
+
+
+Urgent reminder.
+
+
+Day 9
+
+
+Escalate to client + manager.
+
+
+Sequence stops once documents arrive.
+
+
+
+
+40. Smart Reminder Rules
+Do not send:
+
+
+       • on configured holidays
+       • after work hours
+       • after document has been received
+       • after workflow status changes
+
+Avoid repeated spam.
+
+
+
+
+41. Communication Channels
+MVP:
+
+
+       • Email
+       • Client Portal
+
+
+
+
+                                            22
+Phase 1.5:
+
+
+         • WhatsApp Business integration
+
+Later:
+
+
+         • SMS if required.
+
+
+
+
+42. Module 6 — Workflow & Task Management
+Task management should be CA-specific.
+
+
+
+
+43. Work Item
+Every work item contains:
+
+
+Client
+
+
+Compliance
+
+
+Period
+
+
+Due date
+
+
+Assigned employee
+
+
+Reviewer
+
+
+Partner
+
+
+Priority
+
+
+Required documents
+
+
+Checklist
+
+
+Status
+
+
+Dependencies
+
+
+Comments
+
+
+
+
+                                           23
+Attachments
+
+
+Time spent
+
+
+
+
+44. My Work Screen
+Employee view:
+
+
+Today
+5 tasks
+
+
+Due This Week
+13 tasks
+
+
+Waiting
+6 tasks
+
+
+Returned by Reviewer
+3 tasks
+
+
+Each item should clearly state:
+
+
+          Next action
+
+
+Example:
+
+
+ABC Pvt Ltd — GSTR-3B
+
+
+          Purchase register received. Reconcile with GSTR-2B.
+
+
+Not merely:
+
+
+          Status: In Progress
+
+
+
+
+45. Workload Management
+Managers should see:
+
+
+
+                                                       24
+                      Employee   Assigned   Due this week      Overdue   Review returns
+
+                      Rahul            34                 12         2               3
+
+                      Neha             19                  6         0               1
+
+                      Amit             48                 18         7               6
+
+System recommends workload redistribution.
+
+
+
+
+46. Reviewer Workflow
+Preparer submits work.
+
+
+Reviewer can:
+
+
+Approve
+
+
+Return
+
+
+Request clarification
+
+
+Add comment
+
+
+Mark risk
+
+
+Escalate
+
+
+All reviewer comments become part of the audit history.
+
+
+
+
+47. Four-Eyes Principle
+For selected tasks:
+
+
+Preparer cannot approve own work.
+
+
+Roles:
+
+
+Preparer
+Reviewer
+Partner
+
+
+Configurable by compliance category.
+
+
+
+                                                   25
+48. Module 7 — AI Review Queue
+This is where AI becomes operationally valuable.
+
+
+AI should not simply provide chat.
+
+
+It should continuously identify situations requiring human review.
+
+
+
+
+49. AI Review Examples
+       PAN extracted with 72% confidence.
+
+
+       GST turnover does not match accounting turnover.
+
+
+       Bank statement is missing page 4.
+
+
+       Client uploaded June document for July compliance.
+
+
+       GST certificate has different registered address than client master.
+
+
+       Duplicate invoice detected.
+
+
+       Previous-period figures differ from opening balances.
+
+
+Each becomes a review item.
+
+
+
+
+50. AI Confidence Framework
+AI output should include:
+
+
+Confidence: 97%
+
+
+or
+
+
+Confidence: 63% — human review required.
+
+
+Suggested thresholds:
+
+
+90–100% → automatic classification
+
+
+
+
+                                                      26
+75–89% → verify before workflow
+
+
+Below 75% → mandatory review
+
+
+Thresholds should be configurable.
+
+
+
+
+51. AI Copilot
+Context-aware assistant available inside:
+
+
+      • client
+      • compliance
+      • document
+      • task
+
+Examples:
+
+
+       Summarize this client.
+
+
+       What information is missing?
+
+
+       Draft an email requesting missing documents.
+
+
+       Explain this GST difference.
+
+
+       Compare this month's trial balance to last month.
+
+
+       Summarize reviewer comments.
+
+
+The assistant should know which client and work item the user is viewing.
+
+
+
+
+52. AI Guardrails
+AI must not silently:
+
+
+      • file returns
+      • approve tax computations
+      • submit notices
+      • sign professional documents
+      • generate UDIN
+      • approve audit reports
+
+Human confirmation required.
+
+
+
+                                                    27
+Display:
+
+
+       AI-generated output. Professional review required.
+
+
+
+
+53. Module 8 — Client Portal
+The portal must be extremely simple.
+
+
+
+
+54. Client Home Screen
+Action Required
+3 items
+
+
+Upload July bank statement
+
+Due: 18 August
+
+
+[Upload]
+
+
+Approve GST computation
+
+[Review]
+
+
+Pay professional invoice
+
+₹25,000
+
+
+[View Invoice]
+
+
+
+
+55. Client Compliance Status
+Show simple statuses:
+
+
+Completed
+
+
+Processing
+
+
+Waiting for you
+
+
+
+
+                                                    28
+Upcoming
+
+
+Avoid technical workflow statuses.
+
+
+
+
+56. Client Documents
+Allow downloading:
+
+
+     • returns
+     • acknowledgements
+     • financial statements
+     • certificates
+     • challans
+     • audit reports
+     • engagement documents
+
+
+
+
+57. Client Activity Feed
+Example:
+
+
+15 Aug — July bank statement uploaded.
+
+
+14 Aug — GSTR-1 filed.
+
+
+13 Aug — CA requested purchase invoices.
+
+
+
+
+58. Client Portal Security
+MVP requirements:
+
+
+     • OTP login
+     • MFA option
+     • session expiry
+     • document access controls
+     • complete access logging
+     • encrypted transport
+
+
+
+
+                                           29
+59. Integration Architecture
+Do not tightly couple integrations directly to application features.
+
+
+Create an integration layer.
+
+
+
+
+60. Initial Integrations
+Priority 0
+CSV/Excel import
+
+
+Email
+
+
+Cloud document storage
+
+
+Priority 1
+Tally
+
+
+Zoho Books
+
+
+WhatsApp Business
+
+
+Priority 2
+BUSY
+
+
+Accounting exports from ERP systems
+
+
+Future
+GST platform APIs where legitimately available
+
+
+Income Tax workflows where legitimately supported
+
+
+MCA integrations
+
+
+bank feeds
+
+
+enterprise ERP systems
+
+
+
+
+                                                       30
+61. Common Financial Data Model
+Normalize imported financial data into:
+
+
+Company
+
+
+Account
+
+
+Ledger Entry
+
+
+Voucher
+
+
+Invoice
+
+
+Customer
+
+
+Vendor
+
+
+Bank Transaction
+
+
+Tax Component
+
+
+Cost Centre
+
+
+Financial Period
+
+
+This allows AI to work consistently regardless of source.
+
+
+
+
+62. Core Data Model
+Primary entities:
+
+
+Firm
+Represents CA practice.
+
+
+User
+Partner, manager, employee, admin.
+
+
+
+
+                                                      31
+Client
+Commercial/customer relationship.
+
+
+Legal Entity
+Company, LLP, individual, trust, HUF etc.
+
+
+Registration
+PAN, GSTIN, TAN, CIN etc.
+
+
+Contact
+Client personnel.
+
+
+Engagement
+Scope of professional services.
+
+
+Compliance Type
+GST, TDS, ITR etc.
+
+
+Compliance Instance
+Specific obligation for period.
+
+
+Task
+Execution activity.
+
+
+Document
+File + metadata.
+
+
+Document Request
+Client information request.
+
+
+Communication
+Email/WhatsApp/portal message.
+
+
+
+
+                                            32
+Review Item
+Human review requirement.
+
+
+Activity Log
+Immutable event record.
+
+
+
+
+63. Important Relationships
+Firm
+
+
+→ Client
+
+
+→ Legal Entities
+
+
+→ Registrations
+
+
+→ Engagements
+
+
+→ Compliance
+
+
+→ Tasks
+
+
+→ Documents
+
+
+→ Communication
+
+
+→ Employees
+
+
+Everything should remain queryable through Client 360.
+
+
+
+
+64. Role-Based Access Control
+Roles:
+
+
+Super Admin
+
+
+Partner
+
+
+Manager
+
+
+
+
+                                                  33
+Senior
+
+
+Article/Executive
+
+
+Billing
+
+
+Client User
+
+
+External Consultant
+
+
+
+
+65. Permission Examples
+Article:
+
+
+Can view assigned clients.
+
+
+Cannot view firm revenue.
+
+
+Manager:
+
+
+Can assign work within team.
+
+
+Partner:
+
+
+Can see portfolio and approve work.
+
+
+Billing:
+
+
+Can see billing data but not audit workpapers.
+
+
+Client:
+
+
+Can only see own organisation.
+
+
+
+
+66. Data Security Requirements
+This product handles highly sensitive financial information.
+
+
+Security must be a product feature.
+
+
+
+
+                                                     34
+Required:
+
+
+       • encryption at rest
+       • TLS in transit
+       • MFA
+       • role-based permissions
+       • audit trail
+       • file-access logs
+       • login history
+       • IP/device logging
+       • configurable data retention
+       • backups
+       • disaster recovery
+       • tenant isolation
+
+Future enterprise requirements:
+
+
+       • SSO
+       • Microsoft Entra ID
+       • Google Workspace login
+       • SCIM
+       • SOC 2
+       • ISO 27001
+
+
+
+
+67. Audit Trail
+Every sensitive action should log:
+
+
+User
+
+
+Timestamp
+
+
+IP
+
+
+Object
+
+
+Action
+
+
+Previous value
+
+
+New value
+
+
+Example:
+
+
+
+
+                                       35
+        Rahul changed GSTR-3B status from Preparation to Review at 18:32 on 14 Aug.
+
+
+Audit log should not be editable by normal users.
+
+
+
+
+68. Search
+Create a global search bar.
+
+
+Search by:
+
+
+Client name
+
+
+PAN
+
+
+GSTIN
+
+
+CIN
+
+
+Phone
+
+
+Email
+
+
+Document
+
+
+Compliance
+
+
+Task
+
+
+Invoice
+
+
+Employee
+
+
+Example:
+
+
+Typing:
+
+
+29ABCDE1234F1Z5
+
+
+should immediately open the related entity.
+
+
+
+
+                                                    36
+69. Universal Command Bar
+Keyboard shortcut:
+
+
+Ctrl/Cmd + K
+
+
+Commands:
+
+
+Create Client
+
+
+Upload Document
+
+
+Assign Task
+
+
+Request Document
+
+
+Search GSTIN
+
+
+Open Client
+
+
+Create Compliance
+
+
+Ask AI
+
+
+
+
+70. Notifications
+Notification channels:
+
+
+In-app
+
+
+Email
+
+
+Push later
+
+
+WhatsApp later
+
+
+Important rule:
+
+
+Do not overwhelm users.
+
+
+
+
+                          37
+Use:
+
+
+       • digest
+       • priority
+       • escalation
+       • personal settings
+
+
+
+
+71. MVP Screen Architecture
+Primary navigation:
+
+
+Home
+Firm Command Centre
+
+
+Clients
+Client list
+Client groups
+
+
+Compliance
+Calendar
+Command Centre
+At Risk
+Completed
+
+
+Work
+My Work
+Team Work
+Review Queue
+
+
+Documents
+Inbox
+Vault
+Requests
+
+
+Communications
+Client conversations
+
+
+
+
+                             38
+Reports
+Firm performance
+
+
+Settings
+Users
+Roles
+Compliance templates
+Integrations
+
+
+
+
+72. Main User Journey — New Client
+Step 1
+Partner selects:
+
+
+New Client
+
+
+Step 2
+Enter:
+
+
+Name
+Entity Type
+PAN
+Email
+Phone
+
+
+Step 3
+System sends onboarding link.
+
+
+Step 4
+Client completes questionnaire.
+
+
+Step 5
+Client uploads documents.
+
+
+
+
+                                  39
+Step 6
+AI extracts:
+
+
+PAN
+GSTIN
+CIN
+TAN
+registered address
+
+
+Step 7
+CA reviews extracted information.
+
+
+Step 8
+System suggests compliance profile.
+
+
+Example:
+
+
+       Based on available registrations, the following appear applicable:
+
+
+GST monthly
+
+
+TDS quarterly
+
+
+Income Tax annual
+
+
+MCA annual compliance
+
+
+Step 9
+CA approves compliance profile.
+
+
+Step 10
+System creates recurring compliance calendar.
+
+
+Client onboarding complete.
+
+
+
+
+                                                     40
+73. Main User Journey — Monthly GST
+Example client:
+
+
+ABC Pvt Ltd
+
+
+Day 1
+System generates August GST work item.
+
+
+Day 2
+System sends automated document request.
+
+
+Day 5
+Sales register received.
+
+
+System identifies purchase register missing.
+
+
+Day 6
+Reminder sent automatically.
+
+
+Day 8
+Purchase register received.
+
+
+Work status becomes:
+
+
+Ready for Preparation
+
+
+Employee
+Runs reconciliation.
+
+
+AI
+Flags 7 mismatches.
+
+
+Employee
+Resolves 5.
+
+
+
+                                               41
+Escalates 2.
+
+
+Reviewer
+Approves.
+
+
+Client
+Receives computation for approval.
+
+
+Filing
+Performed through appropriate external/internal tax workflow.
+
+
+After filing
+Acknowledgement uploaded.
+
+
+System marks compliance complete.
+
+
+No Excel tracker required.
+
+
+
+
+74. Main User Journey — Missing Documents
+Partner dashboard:
+
+
+          37 compliances waiting for client information.
+
+
+Click.
+
+
+Filter:
+
+
+GST
+
+
+Shows:
+
+
+ABC Pvt Ltd
+
+
+Missing:
+
+
+Purchase Register
+
+
+
+
+                                                       42
+Bank Statement
+
+
+Buttons:
+
+
+Send Reminder
+
+
+Call Client
+
+
+Escalate
+
+
+AI already manages routine reminders.
+
+
+Human staff intervene only when necessary.
+
+
+
+
+75. Main User Journey — Partner Morning
+Dashboard
+Partner opens product.
+
+
+Display:
+
+
+Good Morning
+Today
+
+
+17 items require attention.
+
+
+High Risk
+
+3 clients
+
+
+Awaiting Partner Review
+
+7 items
+
+
+Client Delays
+
+21 clients
+
+
+Team Bottleneck
+
+Rahul has 14 overdue tasks.
+
+
+
+
+                                             43
+Deadline Risk
+
+11 GST clients incomplete.
+
+
+Billing
+
+₹8.4 lakh outstanding.
+
+
+This screen should take less than 60 seconds to understand.
+
+
+
+
+76. AI Architecture
+The AI layer should consist of multiple controlled services.
+
+
+Not one large unrestricted agent.
+
+
+
+
+77. AI Service 1 — Document Intelligence
+Input:
+
+
+PDF/image/spreadsheet
+
+
+Output:
+
+
+Document type
+
+
+Client association
+
+
+Metadata
+
+
+Confidence
+
+
+Extracted fields
+
+
+
+
+78. AI Service 2 — Workflow Assistant
+Understands:
+
+
+Client
+
+
+
+
+                                                      44
+Compliance
+
+
+Required documents
+
+
+Deadline
+
+
+Previous period
+
+
+Task dependencies
+
+
+Can answer:
+
+
+          Why is this work blocked?
+
+
+
+
+79. AI Service 3 — Communication Assistant
+Creates drafts for:
+
+
+         • document requests
+         • reminders
+         • client explanations
+         • follow-ups
+
+Inputs:
+
+
+client
+
+
+work status
+
+
+missing information
+
+
+communication history
+
+
+Output is reviewed or sent automatically under predefined templates.
+
+
+
+
+80. AI Service 4 — Anomaly Assistant
+Later phase.
+
+
+Analyzes:
+
+
+ledger
+
+
+
+
+                                                   45
+bank
+
+
+GST
+
+
+financial statements
+
+
+Flags unusual items.
+
+
+
+
+81. AI Service 5 — Knowledge Assistant
+Later phase.
+
+
+Answers professional questions using validated sources.
+
+
+Important architecture:
+
+
+Retrieval-Augmented Generation
+
+
+Sources should contain:
+
+
+authority
+
+
+publication date
+
+
+effective date
+
+
+jurisdiction
+
+
+citation.
+
+
+
+
+82. AI Service 6 — Firm Knowledge
+Search previous:
+
+
+       • engagements
+       • working papers
+       • notices
+       • responses
+       • client advice
+       • templates
+
+Subject to permissions.
+
+
+
+
+                                                   46
+Example:
+
+
+         Show previous GST notices involving Section X.
+
+
+
+
+83. Human-in-the-Loop Architecture
+For high-risk AI actions:
+
+
+AI suggestion
+
+
+↓
+
+
+Human verification
+
+
+↓
+
+
+Human approval
+
+
+↓
+
+
+Action
+
+
+Store both:
+
+
+AI output
+
+
+Human decision
+
+
+This becomes part of the audit trail.
+
+
+
+
+84. Product Differentiator — Evidence-Linked AI
+Every AI finding should ideally show its source.
+
+
+Example:
+
+
+         Finding: Potential duplicate invoice.
+
+
+         Invoice #INV-128 — ₹84,500
+
+
+         Invoice #INV-128 — ₹84,500
+
+
+
+
+                                                      47
+[Open Document 1]
+
+
+[Open Document 2]
+
+
+User does not have to trust unexplained AI output.
+
+
+
+
+85. Product Differentiator — Explainable Workflow
+Every status should have a reason.
+
+
+Bad:
+
+
+          GST — Delayed
+
+
+Better:
+
+
+          GST — At Risk
+
+
+Reason: Purchase register not received.
+
+
+Client contacted: 3 times.
+
+
+Last reminder: 14 Aug.
+
+
+Due: 20 Aug.
+
+
+Owner: Rahul.
+
+
+
+
+86. Product Differentiator — Compliance
+Intelligence
+System should answer:
+
+
+          What could go wrong?
+
+
+not simply:
+
+
+          What is the status?
+
+
+Risk score can use:
+
+
+
+
+                                                     48
+Days until deadline
+
+
+Missing documents
+
+
+Current workflow stage
+
+
+Reviewer queue
+
+
+Historical client delay
+
+
+Staff workload
+
+
+Example:
+
+
+Risk: 82 / 100
+
+
+because:
+
+
+3 days remaining
+
+
+2 documents missing
+
+
+client usually responds in 4 days
+
+
+review not started
+
+
+
+
+87. MVP Reporting
+Initial reports:
+
+
+Compliance Status
+
+
+Employee Workload
+
+
+Client Delay
+
+
+Document Request Status
+
+
+Overdue Tasks
+
+
+Review Turnaround
+
+
+Client Activity
+
+
+
+
+                                    49
+Upcoming Deadlines
+
+
+DSC Expiry
+
+
+
+
+88. Phase 2 Reporting
+Client Profitability
+
+
+Team Utilisation
+
+
+Turnaround Time
+
+
+Revenue by Service
+
+
+Collections
+
+
+Realisation
+
+
+Compliance Completion Trends
+
+
+Partner Portfolio Health
+
+
+
+
+89. Future Audit Module
+After MVP product-market fit.
+
+
+Features:
+
+
+Audit engagement
+
+
+Audit planning
+
+
+Materiality
+
+
+Risk assessment
+
+
+TB import
+
+
+Lead schedules
+
+
+Working papers
+
+
+
+
+                                50
+Sampling
+
+
+Vouching
+
+
+Reviewer notes
+
+
+Partner review
+
+
+Financial statement review
+
+
+CARO checklist
+
+
+Evidence indexing
+
+
+Final file lock
+
+
+
+
+90. Future Notice Management Module
+Upload notice.
+
+
+AI extracts:
+
+
+Authority
+
+
+Section
+
+
+Date
+
+
+Tax period
+
+
+Deadline
+
+
+Demand amount
+
+
+Requested information
+
+
+System creates:
+
+
+Case
+
+
+Tasks
+
+
+Deadline
+
+
+
+
+                             51
+Document checklist
+
+
+Response workspace
+
+
+
+
+91. Future Advisory Module
+Client financial intelligence.
+
+
+Monthly summary:
+
+
+Revenue
+
+
+Margin
+
+
+Cash Flow
+
+
+Receivables
+
+
+Payables
+
+
+Working Capital
+
+
+Debt
+
+
+Alerts:
+
+
+Margin deterioration
+
+
+Slow collections
+
+
+Customer concentration
+
+
+Unusual expenses
+
+
+Cash shortage
+
+
+Inventory growth
+
+
+
+
+92. Advisory Opportunity Engine
+System could identify potential services.
+
+
+
+
+                                            52
+Example:
+
+
+        Client has ₹1.8 crore receivables with average debtor days of 92.
+
+
+Suggested service:
+
+
+Working Capital Review
+
+
+Another example:
+
+
+        Monthly reporting is not currently part of engagement.
+
+
+Suggested service:
+
+
+Virtual CFO Package
+
+
+This transforms the application into a revenue platform for CA firms.
+
+
+
+
+93. Product Phases
+Phase 0 — Discovery
+Duration defined by team.
+
+
+Activities:
+
+
+Interview 20–30 CA firms.
+
+
+Observe actual daily work.
+
+
+Collect:
+
+
+Excel trackers
+
+
+document request templates
+
+
+client onboarding forms
+
+
+task structures
+
+
+compliance checklists
+
+
+
+
+                                                      53
+94. Phase 1 — MVP
+Build:
+
+
+Client 360
+
+
+Entity master
+
+
+Compliance calendar
+
+
+Tasks
+
+
+Document vault
+
+
+Document requests
+
+
+Email reminders
+
+
+AI classification
+
+
+AI extraction
+
+
+Review queue
+
+
+Partner dashboard
+
+
+Client portal
+
+
+Basic reporting
+
+
+Excel imports
+
+
+
+
+95. Phase 1.5 — Adoption Features
+Build:
+
+
+WhatsApp integration
+
+
+Tally connector
+
+
+Zoho Books connector
+
+
+
+
+                       54
+Advanced workload management
+
+
+Template library
+
+
+Better mobile experience
+
+
+Billing integration
+
+
+
+
+96. Phase 2 — Intelligence
+Build:
+
+
+GST reconciliation
+
+
+AIS/26AS reconciliation
+
+
+AI anomaly detection
+
+
+Notice management
+
+
+Professional research assistant
+
+
+Advanced analytics
+
+
+Firm knowledge search
+
+
+
+
+97. Phase 3 — Audit
+Build:
+
+
+Audit planning
+
+
+Ledger scrutiny
+
+
+Sampling
+
+
+Evidence
+
+
+Working papers
+
+
+CARO
+
+
+
+
+                                  55
+Financial statement review
+
+
+Partner sign-off
+
+
+Audit AI agents
+
+
+
+
+98. Phase 4 — Advisory
+Build:
+
+
+Management reporting
+
+
+Cash-flow insights
+
+
+Working-capital analytics
+
+
+Forecasting
+
+
+Benchmarking
+
+
+Virtual CFO
+
+
+Advisory Opportunity Engine
+
+
+
+
+99. MVP Prioritisation
+Use:
+
+
+P0 = mandatory
+
+
+P1 = important
+
+
+P2 = later
+
+
+                              Feature               Priority
+
+                              Client Master         P0
+
+                              Client 360            P0
+
+                              Compliance Calendar   P0
+
+                              Task Workflow         P0
+
+
+
+
+                                              56
+                                  Feature                      Priority
+
+                                  Document Vault               P0
+
+                                  Document Request             P0
+
+                                  AI Document Classification   P0
+
+                                  AI Metadata Extraction       P0
+
+                                  Client Portal                P0
+
+                                  Email Reminders              P0
+
+                                  Role Permissions             P0
+
+                                  Audit Logs                   P0
+
+                                  Firm Dashboard               P0
+
+                                  WhatsApp                     P1
+
+                                  Tally Integration            P1
+
+                                  Zoho Integration             P1
+
+                                  Billing                      P1
+
+                                  GST Reconciliation           P1
+
+                                  Notice Management            P1
+
+                                  Research Copilot             P1
+
+                                  Audit Workspace              P2
+
+                                  Advisory Analytics           P2
+
+                                  Benchmarking                 P2
+
+
+
+
+100. MVP Acceptance Criteria
+A pilot firm should be able to:
+
+
+Client
+
+Create 100+ clients.
+
+
+Compliance
+
+Generate recurring compliance work.
+
+
+
+
+                                                      57
+Documents
+
+Request, receive and store documents.
+
+
+Automation
+
+Send reminders without manual tracking.
+
+
+Team
+
+Assign and review work.
+
+
+Partner
+
+View high-risk items instantly.
+
+
+Client
+
+Upload requested documents through portal.
+
+
+AI
+
+Correctly classify common documents and extract important fields.
+
+
+Security
+
+Maintain role-based access and action logs.
+
+
+
+
+101. Product Success Metrics
+North Star Metric
+Percentage of compliance engagements completed through the platform without external tracking.
+
+
+Example:
+
+
+Month 1: 30%
+
+
+Month 3: 70%
+
+
+Month 6: 90%
+
+
+
+
+                                                   58
+102. Operational Metrics
+Time saved per compliance.
+
+
+Number of manual reminders eliminated.
+
+
+Average document collection time.
+
+
+Compliance completion before deadline.
+
+
+Review turnaround time.
+
+
+Number of missed deadlines.
+
+
+Employee tasks completed.
+
+
+
+
+103. Client Metrics
+Portal adoption.
+
+
+Upload completion.
+
+
+Average response time.
+
+
+Client satisfaction.
+
+
+Reduction in repeated requests.
+
+
+
+
+104. Business Metrics
+Monthly Recurring Revenue.
+
+
+Revenue per Firm.
+
+
+Customer Acquisition Cost.
+
+
+Churn.
+
+
+Net Revenue Retention.
+
+
+Active firms.
+
+
+
+                                         59
+Active users.
+
+
+Number of managed entities.
+
+
+Number of compliances processed.
+
+
+
+
+105. AI Metrics
+Classification accuracy.
+
+
+Extraction accuracy.
+
+
+Percentage requiring human correction.
+
+
+False-positive anomaly rate.
+
+
+AI suggestion acceptance rate.
+
+
+Number of hours saved.
+
+
+
+
+106. Pricing Strategy
+Avoid very low per-user pricing initially.
+
+
+The product delivers value based on:
+
+
+      • number of clients
+      • compliances
+      • firm productivity
+
+A hybrid model may work better.
+
+
+
+
+107. Suggested Plans
+Starter
+For firms with up to 5 users.
+
+
+Includes:
+
+
+
+
+                                             60
+Client management
+
+
+Compliance
+
+
+Tasks
+
+
+Documents
+
+
+Client portal
+
+
+Basic AI
+
+
+
+
+Professional
+For growing firms.
+
+
+Includes:
+
+
+Everything in Starter
+
+
+Automation
+
+
+WhatsApp
+
+
+Advanced AI
+
+
+Tally integration
+
+
+Workload analytics
+
+
+Advanced permissions
+
+
+
+
+Firm / Enterprise
+Includes:
+
+
+Multiple branches
+
+
+SSO
+
+
+Advanced audit logs
+
+
+
+
+                        61
+Custom workflows
+
+
+API access
+
+
+Data migration
+
+
+Premium support
+
+
+Enterprise integrations
+
+
+
+
+108. Potential Pricing Structure
+Example only — validate through customer interviews.
+
+
+Starter:
+
+
+₹3,000–₹6,000/month
+
+
+Professional:
+
+
+₹10,000–₹25,000/month
+
+
+Firm:
+
+
+₹30,000+/month
+
+
+Potential alternative:
+
+
+Base subscription + client entities.
+
+
+Example:
+
+
+₹10,000/month
+
+
+includes 250 entities.
+
+
+Additional entity packs available.
+
+
+Avoid complicated usage pricing during early adoption.
+
+
+
+
+                                                   62
+109. Product-Market Fit Hypothesis
+The product has achieved initial PMF if CA firms say:
+
+
+          “We no longer use Excel to track compliance.”
+
+
+and:
+
+
+          “Our staff and clients use this system every day.”
+
+
+An even stronger signal:
+
+
+          “If you remove this product, my firm will struggle to operate.”
+
+
+
+
+110. Pilot Strategy
+Recruit:
+
+
+10 CA firms.
+
+
+Preferred diversity:
+
+
+3 firms — 5–10 employees
+
+
+4 firms — 10–25 employees
+
+
+3 firms — 25–50 employees
+
+
+Provide heavily assisted onboarding.
+
+
+Import:
+
+
+clients
+
+
+employees
+
+
+compliance calendar
+
+
+documents where practical.
+
+
+Observe usage weekly.
+
+
+
+
+                                                          63
+111. Customer Interview Questions
+Ask partners:
+
+
+    1. How do you currently track compliance?
+
+
+    2. What spreadsheets do you maintain?
+
+
+    3. How many WhatsApp messages are sent for document follow-up?
+
+
+    4. What causes missed deadlines?
+
+
+    5. Which work requires the most manager supervision?
+
+
+    6. What does a partner ask the team every morning?
+
+
+    7. Which data is entered twice?
+
+
+    8. What information do clients repeatedly send?
+
+
+    9. How do you know a task is actually complete?
+
+
+   10. Which activity would you most like AI to handle?
+
+
+Do not ask:
+
+
+       “Would you buy AI software?”
+
+
+Observe behaviour instead.
+
+
+
+
+112. Competitive Positioning
+The product should not say:
+
+
+       We do everything ClearTax does.
+
+
+Instead:
+
+
+       Keep your existing filing and accounting systems. We make your whole practice work
+       together.
+
+
+Potential website positioning:
+
+
+
+
+                                                      64
+Your accounting software manages accounts.
+
+Your tax software files returns.
+
+We manage everything in between.
+
+This is a very strong positioning concept.
+
+
+
+
+113. Product Messaging
+Headline
+The Operating System for Modern CA Firms
+
+
+Subheadline
+Manage clients, collect documents, automate compliance workflows, review work and identify risks from
+one intelligent platform.
+
+
+
+
+114. Core Marketing Messages
+Message 1
+
+Stop tracking compliance in Excel.
+
+
+Message 2
+
+Stop chasing clients manually.
+
+
+Message 3
+
+Never request the same document twice.
+
+
+Message 4
+
+Know what needs attention before it becomes urgent.
+
+
+Message 5
+
+Give every client one secure digital workspace.
+
+
+
+
+                                                   65
+115. Defensible Competitive Moat
+The moat is not:
+
+
+Chatbot.
+
+
+OCR.
+
+
+Email reminders.
+
+
+Task management.
+
+
+All can be copied.
+
+
+The moat becomes:
+
+
+Client Financial Knowledge Graph
+Years of connected:
+
+
+documents
+
+
+compliance
+
+
+financial information
+
+
+communication
+
+
+audit history
+
+
+notices
+
+
+staff decisions
+
+
+engagements
+
+
+advisory insights.
+
+
+
+
+116. Second Moat — Workflow Intelligence
+Over time, the system learns:
+
+
+
+
+                                66
+Which documents are usually required?
+
+
+Which clients respond slowly?
+
+
+How much time does particular work require?
+
+
+Which employee is best for a work category?
+
+
+Which activities commonly lead to delays?
+
+
+The workflow model becomes more intelligent with usage.
+
+
+
+
+117. Third Moat — Firm Knowledge
+If a CA firm uses the software for years, it accumulates:
+
+
+client decisions
+
+
+professional positions
+
+
+previous notices
+
+
+templates
+
+
+workpapers
+
+
+comments
+
+
+review patterns
+
+
+This becomes institutional memory.
+
+
+Staff turnover no longer removes knowledge from the firm.
+
+
+
+
+118. Technology Architecture — Suggested High
+Level
+Frontend
+React / Next.js
+
+
+
+
+                                                      67
+Responsive web application.
+
+
+Later:
+
+
+React Native / Flutter mobile app.
+
+
+
+
+119. Backend
+Possible stack:
+
+
+Node.js / Python services
+
+
+REST/GraphQL APIs
+
+
+Event-driven architecture for automation
+
+
+Job queues for:
+
+
+document processing
+
+
+reminders
+
+
+AI extraction
+
+
+scheduled compliance
+
+
+integrations.
+
+
+
+
+120. Data Layer
+Relational database:
+
+
+PostgreSQL
+
+
+Use for:
+
+
+clients
+
+
+compliance
+
+
+tasks
+
+
+
+
+                                           68
+permissions
+
+
+workflow
+
+
+metadata.
+
+
+Object storage:
+
+
+Azure Blob / AWS S3
+
+
+Use for documents.
+
+
+Vector database:
+
+
+Azure AI Search / pgvector / Pinecone equivalent
+
+
+Use for:
+
+
+document semantic search
+
+
+professional knowledge
+
+
+firm knowledge.
+
+
+
+
+121. AI Layer
+Since the product may be built on Microsoft/Azure infrastructure, a suitable architecture could use:
+
+
+Azure OpenAI
+
+
+Azure AI Document Intelligence
+
+
+Azure AI Search
+
+
+Azure Functions
+
+
+Service Bus
+
+
+Blob Storage
+
+
+Azure Database for PostgreSQL
+
+
+Microsoft Entra ID
+
+
+
+
+                                                     69
+Application Insights
+
+
+Key Vault.
+
+
+Keep AI providers abstracted behind a service layer to avoid hard dependency.
+
+
+
+
+122. AI Processing Flow
+Document uploaded
+
+
+↓
+
+
+Virus/security scan
+
+
+↓
+
+
+OCR/document extraction
+
+
+↓
+
+
+Document classification
+
+
+↓
+
+
+Entity extraction
+
+
+↓
+
+
+Client matching
+
+
+↓
+
+
+Confidence check
+
+
+↓
+
+
+High confidence:
+
+
+Store metadata
+
+
+Low confidence:
+
+
+Human Review Queue
+
+
+
+
+                                                   70
+↓
+
+
+Vector indexing
+
+
+↓
+
+
+Document becomes searchable by AI.
+
+
+
+
+123. Automation Architecture
+Use event-driven rules.
+
+
+Example event:
+
+
+DOCUMENT_RECEIVED
+
+
+Triggers:
+
+
+mark document request completed
+
+
+update compliance readiness
+
+
+cancel future reminders
+
+
+notify assigned employee
+
+
+run classification
+
+
+refresh risk score.
+
+
+Another event:
+
+
+DEADLINE_APPROACHING
+
+
+Triggers:
+
+
+calculate compliance risk
+
+
+notify manager if threshold exceeded.
+
+
+
+
+                                        71
+124. Compliance Rule Engine
+Avoid hard-coding compliance logic throughout application code.
+
+
+Create rules as configurable objects.
+
+
+Example:
+
+
+Compliance Type:
+
+
+GST GSTR-3B
+
+
+Frequency:
+
+
+Monthly
+
+
+Applicability:
+
+
+GST registered + configured filing frequency
+
+
+Documents Required:
+
+
+Purchase register
+
+
+Sales register
+
+
+Bank statement
+
+
+Due Date Rule:
+
+
+Configurable
+
+
+Workflow:
+
+
+Request → Prepare → Review → Approve → File
+
+
+This allows compliance rules to evolve without rewriting the entire system.
+
+
+
+
+125. Multi-Tenant Architecture
+Every CA firm is a separate tenant.
+
+
+
+
+                                                     72
+Strong tenant isolation is mandatory.
+
+
+Tenant:
+
+
+Data
+
+
+Files
+
+
+Users
+
+
+Permissions
+
+
+AI context
+
+
+must never leak across firms.
+
+
+
+
+126. Search Architecture
+Combine:
+
+
+Structured search
+
+
++
+
+
+Semantic search.
+
+
+Example query:
+
+
+         Show GST notices received by manufacturing clients in the last 12 months.
+
+
+Structured filters:
+
+
+notice
+
+
+date
+
+
+industry
+
+
+Semantic matching:
+
+
+document content.
+
+
+
+
+                                                     73
+127. API Strategy
+Design API-first even if API is not initially exposed.
+
+
+Potential future ecosystem:
+
+
+Accounting applications
+
+
+Banks
+
+
+Tax software
+
+
+Payroll
+
+
+CRM
+
+
+Document systems
+
+
+WhatsApp
+
+
+CA-specific applications.
+
+
+Long-term opportunity:
+
+
+Create an integration marketplace for CA firms.
+
+
+
+
+128. Risks
+Risk 1 — Trying to Build Too Much
+Mitigation:
+
+
+Strict MVP.
+
+
+Do not build tax computation immediately.
+
+
+
+
+129. Risk 2 — Regulatory Complexity
+Mitigation:
+
+
+
+
+                                                         74
+Separate compliance-rule layer.
+
+
+Professional review.
+
+
+Domain advisory board.
+
+
+
+
+130. Risk 3 — AI Hallucination
+Mitigation:
+
+
+Evidence-linked AI.
+
+
+Confidence thresholds.
+
+
+Human approval.
+
+
+Deterministic calculations.
+
+
+Source-grounded research.
+
+
+
+
+131. Risk 4 — Data Security Concern
+CA firms will be highly sensitive.
+
+
+Mitigation:
+
+
+Security-first architecture.
+
+
+Clear hosting details.
+
+
+Audit trail.
+
+
+Data ownership policy.
+
+
+Export/delete options.
+
+
+
+
+132. Risk 5 — User Resistance
+Some CA teams heavily depend on WhatsApp and Excel.
+
+
+
+
+                                                75
+Mitigation:
+
+
+Do not attempt to eliminate them instantly.
+
+
+Integrate with familiar workflows.
+
+
+Examples:
+
+
+WhatsApp requests.
+
+
+Excel import.
+
+
+Email ingestion.
+
+
+
+
+133. Risk 6 — Competing With Free PMS Tools
+Mitigation:
+
+
+Do not sell generic:
+
+
+CRM
+
+
+Tasks
+
+
+Attendance
+
+
+Calendar.
+
+
+Sell:
+
+
+Compliance Intelligence + Document Automation + CA-Specific AI + Client Data Graph.
+
+
+
+
+134. Recommended MVP Team
+A lean starting team could include:
+
+
+1 Product Owner
+
+
+1 CA Domain Expert
+
+
+1 UI/UX Designer
+
+
+
+
+                                                76
+2 Frontend Engineers
+
+
+2 Backend Engineers
+
+
+1 AI/ML Engineer
+
+
+1 QA Engineer
+
+
+1 DevOps/Cloud Engineer shared
+
+
+The CA domain expert is extremely important.
+
+
+
+
+135. Recommended Product Validation Before
+Development
+Before building extensively:
+
+
+Interview 20–30 CA firms.
+
+
+Select 5 firms.
+
+
+Ask them to share sanitized examples of:
+
+
+      • compliance tracker
+      • client master
+      • document checklist
+      • GST workflow
+      • task allocation
+      • reminder messages
+      • audit checklist
+
+Map their real workflows.
+
+
+Then design the software around the common 80%.
+
+
+
+
+136. Proposed MVP Home Page Concept
+When a partner logs in:
+
+
+
+
+                                                  77
+Good Morning, Pranav
+17 items need attention today
+
+
+
+Compliance Risk
+
+
+🔴 5 Critical
+🟠 12 At Risk
+🟢 684 On Track
+
+
+
+Waiting for Clients
+
+
+28 clients
+
+
+
+Awaiting Review
+
+
+14 items
+
+
+
+Team Overload
+
+
+3 employees
+
+
+
+Upcoming Deadlines
+
+
+GST — 5 days
+
+
+TDS — 12 days
+
+
+MCA — 18 days
+
+
+
+Ask CAOS
+
+
+       “What should I review first today?”
+
+
+
+
+                                             78
+137. AI Partner Assistant Example
+Partner asks:
+
+
+       What needs my attention today?
+
+
+System answers:
+
+
+       Five items require partner attention.
+
+
+       1. ABC Pvt Ltd — GSTR-3B
+
+
+       Filing is due in three days. Two reconciliation differences remain unresolved.
+
+
+       2. XYZ Industries — Tax Audit
+
+
+       Manager review is complete and awaiting partner sign-off.
+
+
+       3. PQR LLP
+
+
+       DSC expires in nine days.
+
+
+       4. LMN Ltd
+
+
+       GST notice response is due within seven days.
+
+
+       5. RST Pvt Ltd
+
+
+       Professional fee invoice of ₹1.2 lakh is 74 days overdue.
+
+
+This should eventually become the user's preferred interface to the application.
+
+
+
+
+138. Product North Star
+The long-term product should behave like:
+
+
+       A digital senior manager who knows every client, every deadline, every document,
+       every open question and every risk across the CA firm.
+
+
+The AI should not replace the CA.
+
+
+It should remove administrative complexity surrounding the CA's professional judgement.
+
+
+
+
+                                                      79
+139. Recommended Build Decision
+Build first
+Client Knowledge Graph
+
+
+Compliance Workflow
+
+
+Document Intelligence
+
+
+Client Follow-Up
+
+
+Partner Command Centre
+
+
+AI Review Queue
+
+
+Client Portal
+
+
+Integrate first
+Accounting
+
+
+Tax filing
+
+
+Email
+
+
+WhatsApp
+
+
+Storage
+
+
+Build later
+Tax computation
+
+
+Advanced filing
+
+
+Full audit automation
+
+
+Advisory intelligence
+
+
+
+
+                         80
+140. Final MVP Definition
+The initial version is successful if a CA firm can move from:
+
+
+         Excel + WhatsApp + shared folders + manual follow-up
+
+
+to:
+
+
+         One intelligent workspace controlling its compliance operation
+
+
+without requiring the firm to abandon its trusted accounting and tax filing systems.
+
+
+That gives the product a clear entry point, an achievable MVP, and a credible path toward becoming a much
+larger platform:
+
+
+
+Client OS
+↓
+
+
+
+Compliance OS
+↓
+
+
+
+Audit OS
+↓
+
+
+
+Advisory OS
+The end-state is not simply “software for Chartered Accountants.”
+
+
+It is:
+
+
+
+The intelligence and workflow infrastructure for a
+modern CA firm.
+
+
+
+
+                                                       81
+
