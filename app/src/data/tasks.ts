@@ -16,7 +16,7 @@ import type {
   WorkflowState,
 } from './types';
 
-export const DEMO_TODAY = new Date('2025-09-09T09:30:00+05:30');
+export const DEMO_TODAY = new Date();
 
 // --- seeded PRNG (mulberry32) so the dataset is stable across reloads ---
 function mulberry32(seed: number) {

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { DEMO_TODAY } from '@/data';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Command, Menu, Sparkles } from 'lucide-react';
 import Navbar from './Navbar';
@@ -123,7 +125,7 @@ export default function Layout() {
 
           {/* Date chip */}
           <span className="hidden rounded-full border border-line bg-paper px-3 py-1.5 font-mono text-[11px] text-ink-2 lg:inline-flex">
-            Tue, 09 Sep 2025
+            {format(DEMO_TODAY, 'EEE, dd MMM yyyy')}
           </span>
 
           <Avatar name={FIRM.team[0].name} size="sm" />

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { AGGREGATES, DEPENDENCY_CLIENTS, FIRM, getDeadlineGroups, REVIEW_COUNTS } from '@/data';
+import { AGGREGATES, DEPENDENCY_CLIENTS, FIRM, getDeadlineGroups, REVIEW_COUNTS, DEMO_TODAY } from '@/data';
 import DeadlineRing from '@/components/DeadlineRing';
 import { cn } from '@/lib/utils';
 import { averageWait } from '../dependency/dependencyModel';
@@ -47,7 +47,7 @@ export default function ReportSheet({ mode }: { mode: 'status' | 'deadlines' }) 
           <div>
             <div className="font-display text-[18px] leading-6 font-medium text-ink">{FIRM.name}</div>
             <div className="font-mono text-[11px] text-ink-3">
-              Firm Compliance Snapshot · {FIRM.fy} · Generated 09 Sep 2025, 09:12 IST
+              Firm Compliance Snapshot · {FIRM.fy} · Generated {format(DEMO_TODAY, 'dd MMM yyyy, HH:mm')} IST
             </div>
           </div>
           <div className="ml-auto text-right font-mono text-[11px] text-ink-3">

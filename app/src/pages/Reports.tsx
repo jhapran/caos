@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { DEMO_TODAY } from '@/data';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarClock, FileDown, Link2 } from 'lucide-react';
 import { SegmentedControl } from '@/components/Tabs';
@@ -83,7 +85,7 @@ export default function Reports() {
         <div>
           <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em] text-ink">Reports</h1>
           <p className="mt-1 text-[14px] text-ink-2">
-            Auto-generated from live Command Centre data · 09 Sep 2025
+            Auto-generated from live Command Centre data · {format(DEMO_TODAY, 'dd MMM yyyy')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
