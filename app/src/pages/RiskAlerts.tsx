@@ -159,7 +159,7 @@ export default function RiskAlerts() {
                 exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
                 transition={{ duration: 0.5, delay: 0.12 + i * 0.09, ease: 'easeOut' }}
                 className={cn(
-                  'cursor-pointer rounded-xl border border-line border-l-[3px] bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-3/40 hover:shadow-lift',
+                  'cursor-pointer rounded-xl border border-line bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-3/40 hover:shadow-lift',
                   SEVERITY_META[a.severity].border,
                   a.severity === 'critical' && status === 'active' && 'animate-gold-pulse',
                 )}

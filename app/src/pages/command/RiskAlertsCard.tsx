@@ -62,7 +62,7 @@ export default function RiskAlertsCard({ delay = 0 }: { delay?: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: EASE }}
       aria-label="Firm Risk Alerts"
-      className="rounded-xl border border-line border-l-[3px] border-l-critical bg-card shadow-card"
+      className="rounded-xl border border-line bg-card shadow-card"
     >
       <div className="flex items-center justify-between px-5 pt-4">
         <div className="flex items-center gap-2">

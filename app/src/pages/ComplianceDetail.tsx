@@ -716,7 +716,7 @@ function ComplianceDetailInner({ id }: { id: string }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, ease: 'easeOut' }}
-                  className="rounded-lg border-l-2 border-gold bg-paper-deep/60 px-3 py-2"
+                  className="rounded-lg bg-paper-deep/60 px-3 py-2"
                 >
                   <div className="text-[13px] leading-5 text-ink">“{n.text}”</div>
                   <div className="mt-1 text-[11px] text-ink-3">

@@ -25,7 +25,7 @@ export default function DependencyCard({ delay = 0 }: { delay?: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: EASE }}
       aria-label="Client Dependency"
-      className="rounded-xl border border-line border-l-[3px] border-l-warning bg-card shadow-card"
+      className="rounded-xl border border-line bg-card shadow-card"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
         <h2 className="text-[17px] leading-6 font-semibold text-ink">Client Dependency</h2>
