@@ -1,7 +1,7 @@
 # CAOS Specification Index
 
-- **Status:** Draft (Batch 1 — awaiting approval)
-- **Approval status:** Not approved
+- **Status:** Approved
+- **Approval status:** Approved (Batch 1)
 
 ## Purpose
 
@@ -37,11 +37,11 @@ documents move through review.
 
 | # | File | Title | Batch | R0 gate | Status |
 |---|---|---|---|---|---|
-| 00 | `00-index.md` | Specification Index | 1 | yes | Draft |
-| 01 | `01-decisions.md` | Architecture Decision Register | 1 | yes | Draft |
-| 02 | `02-domain-model.md` | Domain Model | 2 | yes | Not started |
-| 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Not started |
-| 04 | `04-authentication.md` | Authentication | 2 | yes | Not started |
+| 00 | `00-index.md` | Specification Index | 1 | yes | Approved |
+| 01 | `01-decisions.md` | Architecture Decision Register | 1 | yes | Approved |
+| 02 | `02-domain-model.md` | Domain Model | 2 | yes | Draft (Batch 2) |
+| 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Draft (Batch 2) |
+| 04 | `04-authentication.md` | Authentication | 2 | yes | Draft (Batch 2) |
 | 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Not started |
 | 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Not started |
 | 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Not started |

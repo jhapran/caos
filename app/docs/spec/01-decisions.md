@@ -1,7 +1,7 @@
 # 01 — Architecture Decision Register
 
-- **Status:** Draft (Batch 1 — awaiting approval)
-- **Approval status:** Not approved
+- **Status:** Approved
+- **Approval status:** Approved (Batch 1)
 
 ## Purpose
 
