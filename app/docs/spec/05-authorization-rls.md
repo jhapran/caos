@@ -1,7 +1,7 @@
 # 05 — Authorization & RLS
 
-- **Status:** Approved (architecture, Batch 3)
-- **Approval status:** Approved for architecture (Batch 3). Note: DEC-J mechanism remains provisional pending the harness-gate spike (RLS-MECH-02); spike outcome amends this document before backend migration.
+- **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit RLS-CRV-* family for `compliance_rule_versions`, SCH-32)
+- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). Note: DEC-J mechanism remains provisional pending the harness-gate spike (RLS-MECH-02); spike outcome amends this document before backend migration.
 
 ## Purpose
 
@@ -47,7 +47,8 @@ Authentication ("who are you?") is owned by `04-authentication.md`.
   database level regardless of role (TEST-RLS-*-02…05 per table).
 - **RLS-TEN-03:** System-default `compliance_types` rows (NULL firm_id,
   TEN-06) are readable by all authenticated staff; writable by nobody via
-  application roles (TEN-08).
+  application roles (TEN-08). The same reference-data pattern applies to
+  system-default `compliance_rule_versions` (RLS-CRV-01/02).
 
 ## 3. Active firm / context model
 
@@ -71,10 +72,12 @@ applicable relationship. No rule in this document may assume
 
 - **RLS-STF-01 Super Admin (firm-scoped):** full read/write within the firm,
   including user/membership management, firm settings, alert rules,
-  compliance type overrides. Platform-level operations are out of role scope.
+  compliance type overrides and firm-owned rule versions. Platform-level
+  operations are out of role scope.
 - **RLS-STF-02 Partner:** full read of the firm's portfolio; approve/review
-  work; manage engagements; view revenue/billing aggregates; firm-level
-  reports.
+  work; manage engagements; administer firm-owned compliance rule versions
+  (with super_admin, RLS-CRV-02); view revenue/billing aggregates;
+  firm-level reports.
 - **RLS-STF-03 Manager (portfolio-based, RLS-OQ-02 RESOLVED for R0):**
   read/write within the owned portfolio — clients where the manager's
   **membership** is the designated `manager_membership_id`, plus all related
@@ -141,7 +144,8 @@ applicable relationship. No rule in this document may assume
   membership creation and removal; role changes; MFA reset/recovery;
   break-glass support activation; firm-level data export; destructive
   firm/account operations; and security configuration changes (including
-  alert-rule and compliance-type administration).
+  alert-rule, compliance-type, and **compliance rule-version**
+  administration — including activation, RLS-CRV-03).
 - **RLS-AAL-02:** Step-up is **not** required for ordinary operational
   updates (routine task or compliance status changes, comments, checklist
   completion, assignment within one's authority).
@@ -174,7 +178,7 @@ Legend: ✔ full · ◐ scoped (see note) · ✖ denied · — n/a
 | Firm settings / memberships | ✔ | read | ✖ | ✖ | ✖ |
 | Clients / entities / registrations / contacts | ✔ | ✔ | ◐ portfolio | ◐ assigned-work clients | ◐ identity + billing fields only |
 | Engagements | ✔ | ✔ | ◐ portfolio | read ◐ | read ◐ |
-| Compliance types (firm overrides) | ✔ | ✔ | propose | ✖ | ✖ |
+| Compliance types & rule versions (firm-owned) | ✔ | ✔ | propose | ✖ | ✖ |
 | Compliance profiles / instances | ✔ | ✔ | ◐ portfolio | ◐ assigned | ✖ |
 | Tasks / checklist / dependencies | ✔ | ✔ | ◐ assign + supervise | ◐ assigned | ✖ |
 | Task comments / internal notes | ✔ | ✔ | ◐ | ◐ assigned work | ✖ |
@@ -205,7 +209,34 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
 - **RLS-REG-01** registrations: same scoping as clients; writes manager+.
 - **RLS-CON-01** contacts: same scoping; client-context read of own contacts (portal).
 - **RLS-ENG-01** engagements: partner/manager read; partner+ write; billing read letter/fee status only.
-- **RLS-CTY-01** compliance_types: all staff read (system defaults + own-firm overrides); overrides writable by super_admin/partner.
+- **RLS-CTY-01** compliance_types: all staff read (system defaults + own-firm overrides); overrides writable by super_admin/partner. Rule *versions* are covered by the separate RLS-CRV-* family below.
+- **RLS-CRV-01 (read)** compliance_rule_versions: all authenticated staff
+  read **active** system-default versions and same-firm versions applicable
+  to their tenant workflows (RLS-TEN-01/03). Cross-tenant firm-specific
+  versions are never visible. Non-active versions (`draft`,
+  `superseded`, `deprecated`) are visible only to super_admin/partner —
+  ordinary staff are not accidentally exposed to rules that are not in
+  effect.
+- **RLS-CRV-02 (write / administration):** create and draft-edit of
+  firm-owned versions is restricted to super_admin/partner — the same
+  privileged set as compliance-type administration (RLS-CTY-01); all other
+  operational roles are denied. System/global default versions (NULL
+  firm_id) are writable by nobody via application roles — migrations/seeds
+  only (TEN-08); firm users cannot mutate them.
+- **RLS-CRV-03 (activation):** version activation is privileged
+  (super_admin/partner) and is a security-configuration change requiring
+  AAL2 step-up (RLS-AAL-01). A statutory version may be activated only when
+  `domain_approval_status='approved'` (SCH-32 lifecycle invariant,
+  DM-OQ-01); the gate is enforced by the lifecycle design, not by
+  convention.
+- **RLS-CRV-04 (immutability support):** authorization grants **no update
+  path** to a version that is `active` or referenced by any compliance
+  instance; changes create a new version (SCH-32). No policy may undermine
+  this invariant (RLS-X01 applies).
+- **RLS-CRV-05 (service role):** service-role interaction with rule
+  versions follows RLS-SVC-01/02 — confined to Edge Functions and
+  operator-run scripts, self-auditing; never a casual bypass of
+  application authorization.
 - **RLS-CCP-01** client_compliance_profiles: read per client scoping; approve/write manager+; approval actor stamped (DM-11).
 - **RLS-CIN-01** compliance_instances: read per scoping (assigned-only for senior/article); state transitions via transition RPC only (RLS-4EY-02); direct table writes limited to manager+ non-state fields.
 - **RLS-TSK-01** tasks + task_dependencies + task_checklist_items: read per scoping; assignee may update own task status/fields within DM-SM-05; assignment/reassignment manager+; ad-hoc task creation any staff for own clients.
@@ -229,7 +260,7 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
 
 ## 14. Verification requirements (forward references to `11`)
 
-For **every tenant-owned table** (SCH-04…SCH-31 as applicable), the harness
+For **every tenant-owned table** (SCH-04…SCH-32 as applicable), the harness
 defines `TEST-RLS-<FAMILY>-01…10`:
 
 1. same-tenant authorized access succeeds
@@ -246,6 +277,25 @@ defines `TEST-RLS-<FAMILY>-01…10`:
 Plus: **TEST-RLS-STO-*** (storage), **TEST-RLS-4EY-01** (four-eyes RPC
 rejects self-approval), **TEST-RLS-SUP-01** (break-glass path leaves complete
 audit trail and expires).
+
+**TEST-RLS-CRV-01…10 (compliance_rule_versions, SCH-32):**
+
+1. active global/default rule version readable by ordinary staff where
+   appropriate (RLS-CRV-01)
+2. same-firm rule version readable where authorized (RLS-CRV-01)
+3. other-firm rule version unreadable (cross-tenant read fails)
+4. cross-tenant insert fails
+5. cross-tenant update fails
+6. ordinary staff rule-version creation denied (RLS-CRV-02)
+7. ordinary staff activation denied (RLS-CRV-03)
+8. authorized privileged administration succeeds (super_admin/partner)
+9. inactive/draft versions not exposed to ordinary staff beyond what
+   workflows require (RLS-CRV-01)
+10. system/default version mutation by firm users denied (RLS-CRV-02,
+    TEN-08)
+
+Plus **TEST-RLS-CRV-11:** statutory activation without
+`domain_approval_status='approved'` fails (RLS-CRV-03, SCH-32 gate).
 
 ## DEC-J: JWT claims vs membership lookup — comparison and spike design
 
@@ -310,7 +360,8 @@ this design confirmed.**
 ## Dependencies
 
 - Upstream: `02` (DM-X-05, roles), `03` (TEN-*, break-glass principles),
-  `04` (AUTH-01/08/13/14, AAL), `06` (tables, four_eyes_required flag).
+  `04` (AUTH-01/08/13/14, AAL), `06` (tables incl. SCH-32, four_eyes_required
+  flag).
 - Downstream: `07` (RPC enforcement points), `08` (audit of authz-relevant
   actions), `11` (TEST-RLS definitions), `12` (R0 slices).
 
@@ -319,7 +370,7 @@ this design confirmed.**
 | ID | Question | Owner | Status |
 |---|---|---|---|
 | DEC-J | Claims vs lookup mechanism | harness-gate spike (RLS-MECH-02) | **Open — provisional hybrid (C)** |
-| RLS-OQ-01 | Which actions require AAL2 step-up? | — | **Resolved directionally:** RLS-AAL-01/02/03 (step-up for membership/role/MFA-recovery/break-glass/export/destructive/security-config; not for routine operational updates; freshness window implementation-validated) |
+| RLS-OQ-01 | Which actions require AAL2 step-up? | — | **Resolved directionally:** RLS-AAL-01/02/03 (step-up for membership/role/MFA-recovery/break-glass/export/destructive/security-config — incl. rule-version administration; not for routine operational updates; freshness window implementation-validated) |
 | RLS-OQ-02 | Manager "portfolio" scope in R0? | — | **Resolved:** portfolio = designated-manager clients + related operational records + directly assigned tasks (RLS-STF-03); team-based inherited access deferred |
 | RLS-OQ-03 | May partners manage alert rules? | — | **Resolved:** super_admin + partner read/write; manager read-only; others none; all changes audited (RLS-ARL-01) |
 | RLS-OQ-04 | Client-visible flagging of documents (RLS-POR-02): explicit per-document flag vs type-based rule? | Release 1 spec | Open |
@@ -327,8 +378,8 @@ this design confirmed.**
 ## Acceptance Criteria
 
 - RLS-ACC-01: All 14 mandated sections present.
-- RLS-ACC-02: Every table in `06` is covered by exactly one RLS family here;
-  no policy is defined anywhere else.
+- RLS-ACC-02: Every table in `06` (SCH-01…SCH-32) is covered by exactly one
+  RLS family here; no policy is defined anywhere else.
 - RLS-ACC-03: The permission matrix covers all eight roles against clients,
   revenue, billing, workpapers-adjacent data, tasks, review items, documents,
   internal notes, risk scores, audit log, and portal data.
@@ -337,10 +388,17 @@ this design confirmed.**
   the harness gate.
 - RLS-ACC-05: All ten verification cases are specified per tenant table via
   TEST-RLS-* forward references.
+- RLS-ACC-06 (Batch 4 security closure): compliance_rule_versions has an
+  explicit family (RLS-CRV-01…05) covering read scoping, privileged
+  write/administration, gated statutory activation, immutability support,
+  and service-role restriction, with verification cases TEST-RLS-CRV-01…11.
 
 ## Consequence of Change
 
 Changing the matrix or the context model invalidates `06` references, `07`
 enforcement points, and the `11` test matrix. A DEC-J spike result
 contradicting RLS-MECH-01 amends this document before any backend migration
-proceeds (harness gate).
+proceeds (harness gate). Weakening the rule-version family (RLS-CRV-*) —
+including the statutory activation gate (RLS-CRV-03) or immutability support
+(RLS-CRV-04) — is a compliance/security-posture change requiring requester
+sign-off.

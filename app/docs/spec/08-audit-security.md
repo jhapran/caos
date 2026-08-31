@@ -1,7 +1,7 @@
 # 08 — Audit & Security Architecture
 
-- **Status:** Approved (architecture, Batch 3)
-- **Approval status:** Approved for architecture (Batch 3). Note: AUD-OQ-01 (retention values) and AUD-OQ-02 (context propagation mechanism) remain open/provisional as recorded.
+- **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit audit classification for `compliance_rule_versions`, SCH-32)
+- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). Note: AUD-OQ-01 (retention values) and AUD-OQ-02 (context propagation mechanism) remain open/provisional as recorded.
 
 ## Purpose
 
@@ -64,7 +64,8 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
 
 - **AUD-AUTHZ-01:** Depends on `05`: context model (RLS-CTX-*), four-eyes
   (RLS-4EY-*), break-glass (RLS-SUP-*), service-role restrictions
-  (RLS-SVC-*). Audit records their exercise.
+  (RLS-SVC-*), and rule-version authorization (RLS-CRV-*). Audit records
+  their exercise.
 
 ### 6. Audit event model
 
@@ -90,10 +91,36 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
   task status transitions and reassignment; review decisions (with
   rationale); alert acknowledge/snooze/resolve (including auto-resolution,
   DM-OQ-05); engagement status changes; client status changes (incl.
-  offboarding); break-glass session open/close and every action inside one;
+  offboarding); **compliance rule-version lifecycle (AUD-CRV-01)**;
+  break-glass session open/close and every action inside one;
   data export/delete operations; retention maintenance executions
   (AUD-RET-02); (deferred releases add: document URL issuance, portal logins,
   reminder sends, AI decisions).
+
+### 7a. Compliance rule-version audit (Batch 4 security closure)
+
+- **AUD-CRV-01 — classification.** Compliance rule-version administration
+  (SCH-32) is **security/compliance-sensitive**: it changes what obligations
+  exist and when they are due. Audited events: rule version **created**;
+  rule version **changed while mutable/draft**; rule version **activated**;
+  rule version **superseded/deprecated**; **domain-approval status change**;
+  **activation attempt denied** (security-significant denial, AUD-FAIL-01);
+  and any **privileged rule administration** path (including service-role/
+  seed writes, AUD-SVC-01).
+- **AUD-CRV-02 — record content.** Each rule-version audit row captures,
+  where applicable: actor (per the §10 actor model); firm context (`firm_id`,
+  or the NULL platform marker for system-default versions, AUD-EVT-03);
+  `object_type='compliance_rule_version'` with the version id; the parent
+  compliance type; old/new values (AUD-VAL-01 — including the
+  approval-state transition); correlation/request context
+  (`correlation_id`, IP/UA per AUD-CTX-*); server-generated timestamp
+  (AUD-INV-02).
+- **AUD-CRV-03 — actor distinguishability.** Seed/migration and system
+  writes to rule versions carry `actor_type='system'`/`'service'` with a
+  `service_name`; they must never masquerade as a human (AUD-ACT-05).
+  Activation by a privileged human carries `actor_type='human'` with the
+  administrator's `actor_user_id` and the AAL2 step-up context where
+  applicable (RLS-CRV-03, RLS-AAL-01).
 
 ### 8. Immutable audit-log requirements (invariants)
 
@@ -231,7 +258,8 @@ user-agent; this is designed, not assumed.** Options compared:
 - **AUD-FAIL-01 (AUD-OQ-04 RESOLVED directionally):** Routine RLS row denials
   are **not** persisted (no unbounded audit noise). Security-significant
   denials **are** audited: attempted cross-tenant access; privileged-operation
-  denial; break-glass denial; administrative/security endpoint denial; and
+  denial (including **denied rule-version activation**, AUD-CRV-01);
+  break-glass denial; administrative/security endpoint denial; and
   repeated suspicious authorization-failure patterns (thresholded/aggregated).
   Also recorded: audit-write failures (which abort operations, AUD-INV-05),
   break-glass misuse attempts, MFA challenge failures, and hook/spike
@@ -273,6 +301,7 @@ user-agent; this is designed, not assumed.** Options compared:
 - **TEST-AUD-08:** IP/UA/correlation context present on request-originated entries (post-spike mechanism).
 - **TEST-AUD-09:** actor-model invariants (AUD-ACT-05): system/service rows never carry a human `actor_user_id`; support rows always carry actor + session.
 - **TEST-AUD-10:** retention maintenance executes only via the privileged path, follows the recorded policy, and writes its own audit event (AUD-RET-02).
+- **TEST-AUD-11 (Batch 4 security closure):** rule-version lifecycle events (create, draft change, activation, supersede/deprecate, domain-approval status change) produce audit rows with actor, firm context, old/new values, and approval-state transition (AUD-CRV-01/02); denied activation attempts are recorded as security-significant denials (AUD-FAIL-01); system/service writes to rule versions carry non-human actor identity (AUD-CRV-03).
 
 ## Assumptions
 
@@ -286,8 +315,8 @@ user-agent; this is designed, not assumed.** Options compared:
 ## Dependencies
 
 - Upstream: `01` (DEC-O), `02` (DM-25, DM-22), `03` (TEN-17/18/23),
-  `04` (AUTH-08/10/11/13), `05` (RLS-SUP/SVC/AUD families), `06` (SCH-20,
-  SCH-FK-01).
+  `04` (AUTH-08/10/11/13), `05` (RLS-SUP/SVC/AUD/CRV families), `06`
+  (SCH-20, SCH-32, SCH-FK-01).
 - Downstream: `09` (system-event sources), `11` (TEST-AUD definitions),
   `13` (retention jobs, operational logging, backup/PITR).
 
@@ -298,7 +327,7 @@ user-agent; this is designed, not assumed.** Options compared:
 | AUD-OQ-01 | Retention values | requester + legal/CA-domain | **OPEN — AUD-RET-01 values are engineering placeholders requiring policy/legal/domain confirmation before production retention configuration is approved** |
 | AUD-OQ-02 | Final context-propagation mechanism (AUD-CTX-01 provisional B+C) | harness-gate spike | **Open — provisional** |
 | AUD-OQ-03 | Firms' visibility of their own support-access history? | — | **Resolved:** visible read-only to firm Super Admin and Partner; history remains immutable/audited (AUD-SUP-03) |
-| AUD-OQ-04 | Which denials are audit-worthy? | — | **Resolved directionally:** security-significant denials only (cross-tenant attempts, privileged/break-glass/security-endpoint denials, suspicious repetition); no routine-denial persistence (AUD-FAIL-01) |
+| AUD-OQ-04 | Which denials are audit-worthy? | — | **Resolved directionally:** security-significant denials only (cross-tenant attempts, privileged/break-glass/security-endpoint denials incl. denied rule-version activation, suspicious repetition); no routine-denial persistence (AUD-FAIL-01) |
 
 ## Acceptance Criteria
 
@@ -319,11 +348,17 @@ user-agent; this is designed, not assumed.** Options compared:
   history.
 - AUD-ACC-06: Every security/tenant/audit requirement references a TEST-AUD-*
   or TEST-RLS-* verification obligation.
+- AUD-ACC-07 (Batch 4 security closure): compliance rule-version
+  administration is explicitly classified as security/compliance-sensitive
+  (AUD-CRV-01) with defined record content (AUD-CRV-02), actor
+  distinguishability (AUD-CRV-03), and a verification obligation
+  (TEST-AUD-11).
 
 ## Consequence of Change
 
 The audit model is load-bearing for compliance claims (PRD §66–67) and for
 every write path's shape. Changing the propagation mechanism after the spike
 amends this spec and the `11` harness; weakening invariants (AUD-INV-*,
-AUD-ACT-05) or the retention boundary (AUD-RET-02) is a security-posture
-change requiring requester sign-off.
+AUD-ACT-05), the retention boundary (AUD-RET-02), or the rule-version audit
+coverage (AUD-CRV-*) is a security-posture change requiring requester
+sign-off.

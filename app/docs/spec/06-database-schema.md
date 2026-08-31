@@ -1,7 +1,7 @@
 # 06 — Database Schema (Design)
 
-- **Status:** Approved (architecture, Batch 3)
-- **Approval status:** Approved for architecture (Batch 3). Note: the Registration Scope Matrix (DM-27) is approved **for architecture only** — external practicing-CA / compliance-domain sign-off remains **mandatory before production statutory-rule activation** (this approval is not professional CA certification).
+- **Status:** Approved (architecture, Batch 3) — **amended by the Batch 4 closure amendment** (adds SCH-32 `compliance_rule_versions` and SCH-12 recurrence-provenance fields; satisfies AUTO-XREF-01) **and the Batch 4 security closure** (SCH-32 references the explicit RLS-CRV-* family in `05`)
+- **Approval status:** Approved for architecture (Batch 3); Batch 4 closure and security closure amendments approved (Batch 4). Note: the Registration Scope Matrix (DM-27) is approved **for architecture only** — external practicing-CA / compliance-domain sign-off remains **mandatory before production statutory-rule activation** (this approval is not professional CA certification).
 
 ## Purpose
 
@@ -14,12 +14,16 @@ appear here. No migration SQL is generated in Phase 2.
 
 ## Table inventory (authoritative)
 
-**Release 0: exactly 20 tables — SCH-01…SCH-20** (firms, profiles,
-firm_memberships, clients, legal_entities, client_relationships,
+**Release 0: exactly 21 tables — SCH-01…SCH-20 plus SCH-32** (firms,
+profiles, firm_memberships, clients, legal_entities, client_relationships,
 registrations, contacts, engagements, compliance_types,
 client_compliance_profiles, compliance_instances, tasks, task_dependencies,
 task_checklist_items, task_comments, review_items, alerts, alert_rules,
-audit_log).
+audit_log, **compliance_rule_versions**). SCH-32 was added by the Batch 4
+closure amendment (rule versioning / recurrence provenance, AUTO-XREF-01);
+per the no-renumbering convention (IDX: IDs are never renumbered after
+approval) it takes the next free ID rather than renumbering the deferred
+range.
 
 **Deferred: exactly 11 tables — SCH-21…SCH-31** (documents,
 document_versions, document_requests, reminder_sequences, communications,
@@ -33,6 +37,8 @@ prevention only; full design lands with each feature's release spec.
 - The Registration Scope Matrix (DM-27), resolved for architecture.
 - The tenant-aware referential integrity strategy (composite FKs).
 - The responsibility-reference rule (membership vs identity).
+- Rule versioning and recurrence provenance (Batch 4 closure amendment:
+  SCH-32, SCH-12 additions).
 
 ## Non-goals
 
@@ -67,8 +73,9 @@ prevention only; full design lands with each feature's release spec.
   firm at the constraint layer.
 - **SCH-RESP-02:** Fields representing **actor identity** (who performed an
   action: comment author, approver-of-record, acknowledger, resolver,
-  inviter, checklist completer) reference `auth.users`/profiles — the global
-  identity. Audit-log actor fields are actor identity (AUD-ACT-*).
+  inviter, checklist completer, rule-version creator) reference
+  `auth.users`/profiles — the global identity. Audit-log actor fields are
+  actor identity (AUD-ACT-*).
 - **SCH-RESP-03:** To make membership references enforceable at the
   constraint layer, `firm_memberships` carries `UNIQUE (firm_id, id)` and all
   responsibility references are composite: `(firm_id, <x>_membership_id)
@@ -99,6 +106,11 @@ prevention only; full design lands with each feature's release spec.
     composite FK impossible; safe because compliance types are reference data
     holding no tenant content — tenant isolation is carried by the
     referencing rows' own `firm_id`.
+  - **compliance_rule_versions (SCH-32, Batch 4 closure amendment):** same
+    reference-data exception family as compliance_types — NULL-`firm_id`
+    system-default versions make composite FKs impossible in the general
+    case; safe because versions are reference data holding no tenant
+    content, and instance rows referencing them carry their own `firm_id`.
   - **audit_log:** soft references only (object_id as text, actor as
     non-enforcing reference); safe and intentional — audit rows must survive
     object lifecycle and remain append-only (AUD-INV-*).
@@ -202,7 +214,7 @@ prevention only; full design lands with each feature's release spec.
 ### SCH-10 — compliance_types
 - **Purpose:** Rule objects (DM-10; PRD §26/§124). **R0.** Hybrid ownership: NULL `firm_id` = system default; else firm-owned (TEN-06…09).
 - **Columns:** `firm_id uuid` (NULL = system default); `type_key text NOT NULL`; `name text NOT NULL`; `category text NOT NULL`; `authority text`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `applicability jsonb`; `required_documents jsonb`; `checklist_template jsonb`; `workflow_template jsonb NOT NULL`; `client_approval_required bool NOT NULL DEFAULT false`; `filing_confirmation_required bool NOT NULL DEFAULT true`; `acknowledgement_required bool NOT NULL DEFAULT true`; `four_eyes_required bool NOT NULL DEFAULT true`; **`scope_kind text NOT NULL DEFAULT 'configurable'` CHECK in (`entity`,`registration`,`configurable`)** — the complete compliance-subject vocabulary (engagement is NOT a subject kind); **`registration_class text`** — the required registration type when `scope_kind='registration'`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`deprecated`).
-- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; `scope_kind`/`registration_class` for seeded system types follow the architecture-validated Registration Scope Matrix (DM-27) — **statutory rules are not activated in production until external CA/domain sign-off** (DM-OQ-01 status). Payroll is excluded from the statutory catalogue for R0 (SCH-OQ-06 resolution).
+- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; `scope_kind`/`registration_class` for seeded system types follow the architecture-validated Registration Scope Matrix (DM-27) — **statutory rules are not activated in production until external CA/domain sign-off** (DM-OQ-01 status). Payroll is excluded from the statutory catalogue for R0 (SCH-OQ-06 resolution). **Versioning (Batch 4 closure amendment):** the `frequency`/`due_rule` columns describe the type's default template; the *authoritative, applied* recurrence/due-rule content for any generated instance lives in `compliance_rule_versions` (SCH-32). Changing rule behaviour creates a new version — it never retroactively alters existing instances (AUTO-REC-07).
 - **Unique:** `(type_key, firm_id)` NULLS NOT DISTINCT (one default + one override per firm per key).
 - **Indexes:** `(type_key)`; `(firm_id)`.
 - **Audit sensitivity:** HIGH (rule changes alter obligations; changes are security-configuration events, RLS-AAL-01/AUD-CAT-01).
@@ -213,21 +225,21 @@ prevention only; full design lands with each feature's release spec.
 - **Columns:** `legal_entity_id uuid NOT NULL`; `compliance_type_id uuid NOT NULL`; `registration_id uuid`; `applicability_answers jsonb`; `status text NOT NULL DEFAULT 'proposed'` CHECK in (`proposed`,`active`,`suspended`,`ended`); `approved_by uuid`; `approved_at timestamptz`.
 - **FKs:** `(firm_id, legal_entity_id)` → legal_entities; compliance_type_id → compliance_types (SCH-FK-03 exception — reference data); `(firm_id, registration_id)` → registrations (nullable component); approved_by → auth.users (actor identity, SCH-RESP-02).
 - **Unique:** `(legal_entity_id, compliance_type_id, registration_id)` NULLS NOT DISTINCT.
-- **Invariants:** only `active` profiles generate instances (DM-11); approval actor recorded (PRD §72 step 9); when the compliance type's `scope_kind='registration'`, `registration_id` must reference a registration of the declared `registration_class` (validated at write path, DM-27); the TDS PAN-based statutory exception (DM-27) may substitute a PAN registration reference.
+- **Invariants:** only `active` profiles generate instances (DM-11); approval actor recorded (PRD §72 step 9); when the compliance type's `scope_kind='registration'`, `registration_id` must reference a registration of the declared `registration_class` (validated at write path, DM-27); the TDS PAN-based statutory exception (DM-27) may substitute a PAN registration reference. **Version resolution (Batch 4 closure amendment):** a profile does not pin a rule version; at generation time the recurrence generator resolves the compliance type's **active** rule version (SCH-32) effective for the target period and records it on the instance (SCH-12 provenance).
 - **Indexes:** `(legal_entity_id, status)`, `(firm_id, status)`.
 - **Audit sensitivity:** HIGH (approval decision).
 - **RLS:** RLS-CCP-*. **Tests:** TEST-RLS-CCP-*, TEST-AUD-02.
 
 ### SCH-12 — compliance_instances
 - **Purpose:** Obligation per entity per period (DM-12). **R0.** Tenant-owned.
-- **Columns:** `legal_entity_id uuid NOT NULL` (**required**, DEC-G); `compliance_type_id uuid NOT NULL`; `registration_id uuid` (DEC-G; **required where the type's `scope_kind='registration'`** — GST, TDS, PT, PF, ESI per DM-27 — **with one documented exception: TDS permits statutory PAN-based cases where TAN is not required**, in which case `registration_id` references the PAN registration or is NULL with the exception reason recorded in `period_meta`; this exception is TDS-specific and must not be generalised to ordinary TDS statement filing); `client_compliance_profile_id uuid`; `engagement_id uuid` (**optional association only** — engagement is never the compliance subject; statutory/audit compliance remains legal-entity scoped); `client_id uuid NOT NULL` (denormalized for RLS/query simplicity, trigger-maintained, never user-writable); **period — structured (SCH-OQ-01 RESOLVED):** `period_start date NOT NULL`; `period_end date NOT NULL`; `period_label text NOT NULL` (**presentation/convenience only, never authoritative**); `period_meta jsonb` (optional domain metadata: financial year, assessment year, tax quarter, statutory exception reasons — populated per family as needed, not over-modelled); `due_date date NOT NULL`; `state text NOT NULL DEFAULT 'not_started'` CHECK in the ten DM-SM-04 states (`not_started`,`information_requested`,`information_received`,`preparation`,`internal_review`,`client_approval`,`ready_to_file`,`filed`,`acknowledgement_received`,`closed`); `assignee_membership_id uuid`; `reviewer_membership_id uuid`; `partner_membership_id uuid` (partner-in-charge for the obligation; PRD §43); `priority text NOT NULL DEFAULT 'normal'`; `risk_score int` (derived cache, DM-X-03); `risk_factors jsonb`; `filed_at timestamptz`; `closed_at timestamptz`; `successor_instance_id uuid`.
-- **FKs:** `(firm_id, legal_entity_id)` → legal_entities; `(firm_id, registration_id)` → registrations (nullable); `(firm_id, client_compliance_profile_id)` → client_compliance_profiles; `(firm_id, engagement_id)` → engagements (nullable); `(firm_id, client_id)` → clients; compliance_type_id → compliance_types (SCH-FK-03 exception); `(firm_id, assignee_membership_id)` / `(firm_id, reviewer_membership_id)` / `(firm_id, partner_membership_id)` → firm_memberships (composite, SCH-RESP-03); successor → self.
-- **Checks:** `period_end >= period_start`.
-- **Unique:** `(compliance_type_id, legal_entity_id, registration_id, period_start)` NULLS NOT DISTINCT — one instance per obligation per period.
-- **Invariants:** state transitions validated per DM-SM-04 at the write path (RPC, API-*) — the CHECK constrains values, transitions are validated by the transition function; four-eyes separation enforced where the type requires it (RLS-4EY-*); assignee/reviewer/partner may differ from the engagement's responsible partner without warning (DM-OQ-02 resolution).
-- **Indexes:** `(firm_id, due_date, state)` — deadline board; `(firm_id, assignee_membership_id, state)` — My Work; `(client_id, period_start)`; `(firm_id, compliance_type_id, period_start)` — drill-downs.
+- **Columns:** `legal_entity_id uuid NOT NULL` (**required**, DEC-G); `compliance_type_id uuid NOT NULL`; `registration_id uuid` (DEC-G; **required where the type's `scope_kind='registration'`** — GST, TDS, PT, PF, ESI per DM-27 — **with one documented exception: TDS permits statutory PAN-based cases where TAN is not required**, in which case `registration_id` references the PAN registration or is NULL with the exception reason recorded in `period_meta`; this exception is TDS-specific and must not be generalised to ordinary TDS statement filing); `client_compliance_profile_id uuid`; `engagement_id uuid` (**optional association only** — engagement is never the compliance subject; statutory/audit compliance remains legal-entity scoped); `client_id uuid NOT NULL` (denormalized for RLS/query simplicity, trigger-maintained, never user-writable); **period — structured (SCH-OQ-01 RESOLVED):** `period_start date NOT NULL`; `period_end date NOT NULL`; `period_label text NOT NULL` (**presentation/convenience only, never authoritative**); `period_meta jsonb` (optional domain metadata: financial year, assessment year, tax quarter, statutory exception reasons — populated per family as needed, not over-modelled); `due_date date NOT NULL`; **recurrence provenance (Batch 4 closure amendment):** `rule_version_id uuid` — the applied rule version (SCH-32; NULL for manually created instances); `generation_source text NOT NULL DEFAULT 'manual'` CHECK in (`recurrence`,`manual`,`import`) — identifies recurrence-generated vs manual vs imported/seeded instances; `generated_at timestamptz` — when the generator created the instance (NULL unless `generation_source='recurrence'`); `calculated_due_date date` — the immutable due date the rule produced at generation time; `due_date` remains the *operative* date (statutory extensions change `due_date` via audited `compliance_instance.due_date_changed`, never `calculated_due_date`); `state text NOT NULL DEFAULT 'not_started'` CHECK in the ten DM-SM-04 states (`not_started`,`information_requested`,`information_received`,`preparation`,`internal_review`,`client_approval`,`ready_to_file`,`filed`,`acknowledgement_received`,`closed`); `assignee_membership_id uuid`; `reviewer_membership_id uuid`; `partner_membership_id uuid` (partner-in-charge for the obligation; PRD §43); `priority text NOT NULL DEFAULT 'normal'`; `risk_score int` (derived cache, DM-X-03); `risk_factors jsonb`; `filed_at timestamptz`; `closed_at timestamptz`; `successor_instance_id uuid`.
+- **FKs:** `(firm_id, legal_entity_id)` → legal_entities; `(firm_id, registration_id)` → registrations (nullable); `(firm_id, client_compliance_profile_id)` → client_compliance_profiles; `(firm_id, engagement_id)` → engagements (nullable); `(firm_id, client_id)` → clients; compliance_type_id → compliance_types (SCH-FK-03 exception); `rule_version_id` → compliance_rule_versions (SCH-FK-03 reference-data exception family); `(firm_id, assignee_membership_id)` / `(firm_id, reviewer_membership_id)` / `(firm_id, partner_membership_id)` → firm_memberships (composite, SCH-RESP-03); successor → self.
+- **Checks:** `period_end >= period_start`; recurrence-generated instances must carry `rule_version_id` and `generated_at` (CHECK: `generation_source='recurrence'` implies both present).
+- **Unique:** `(compliance_type_id, legal_entity_id, registration_id, period_start)` NULLS NOT DISTINCT — one instance per obligation per period. **Unchanged by the closure amendment:** the key deliberately excludes `rule_version_id`, so a new rule version can never accidentally duplicate an already-materialized obligation (compatible with the four-layer duplicate protection, AUTO-REC-03/08); a genuinely new obligation requires an explicit domain decision, not a version edit.
+- **Invariants:** state transitions validated per DM-SM-04 at the write path (RPC, API-*) — the CHECK constrains values, transitions are validated by the transition function; four-eyes separation enforced where the type requires it (RLS-4EY-*); assignee/reviewer/partner may differ from the engagement's responsible partner without warning (DM-OQ-02 resolution). **Provenance immutability:** `rule_version_id`, `generation_source`, `generated_at`, and `calculated_due_date` are set at insert and never updated (update guard) — historical interpretation is permanent (AUTO-REC-07). Manual/ad-hoc instances remain fully representable with `generation_source='manual'` and no recurrence provenance. **Design note:** because rule versions are immutable once active (SCH-32), the version reference *is* the applied-rule snapshot; if future due-date computation needs inputs beyond the version row (e.g. holiday calendars), an additional immutable inputs snapshot is required and must be added before such inputs are introduced.
+- **Indexes:** `(firm_id, due_date, state)` — deadline board; `(firm_id, assignee_membership_id, state)` — My Work; `(client_id, period_start)`; `(firm_id, compliance_type_id, period_start)` — drill-downs; `(rule_version_id)` — provenance queries.
 - **Audit sensitivity:** HIGH — state transitions, assignee changes, filing markers audited (PRD §67 example). Routine status changes do **not** require step-up MFA (RLS-AAL-01).
-- **RLS:** RLS-CIN-*. **Tests:** TEST-RLS-CIN-*, TEST-AUD-03.
+- **RLS:** RLS-CIN-*. **Tests:** TEST-RLS-CIN-*, TEST-AUD-03, TEST-AUTO-09.
 
 ### SCH-13 — tasks
 - **Purpose:** Execution activity, instance-linked or ad-hoc (DM-13, DEC-H). **R0.** Tenant-owned.
@@ -269,7 +281,7 @@ prevention only; full design lands with each feature's release spec.
 - **Purpose:** Review queue with real persistence (DM-21; DEC-T item 19). **R0.** Tenant-owned.
 - **Columns:** `client_id uuid NOT NULL`; `task_id uuid`; `compliance_instance_id uuid`; `type text NOT NULL`; `source text NOT NULL DEFAULT 'human'` CHECK in (`human`,`ai`); `title text NOT NULL`; `note text`; `status text NOT NULL DEFAULT 'pending'` CHECK in (`pending`,`approved`,`returned`,`escalated`,`dismissed`); `priority text NOT NULL DEFAULT 'normal'`; `submitted_by_membership_id uuid NOT NULL`; `submitted_at timestamptz NOT NULL DEFAULT now()`; `decided_by_membership_id uuid`; `decided_at timestamptz`; `decision_rationale text`; `ai_output_id uuid`; `sla_due_at timestamptz`.
 - **FKs:** `(firm_id, client_id)` → clients; `(firm_id, task_id)` → tasks; `(firm_id, compliance_instance_id)` → compliance_instances (nullable components); `(firm_id, submitted_by_membership_id)` / `(firm_id, decided_by_membership_id)` → firm_memberships (composite — review decisions are responsibility relationships requiring same-firm proof, SCH-RESP-01); ai_output_id → ai_outputs (deferred table, SCH-27).
-- **Invariants:** terminal decisions require decider + timestamp + rationale (DM-SM-06); reviewer ≠ submitter where four-eyes applies (RLS-4EY-*); decisions feed audit (PRD §83).
+- **Invariants:** terminal decisions require decider + timestamp + rationale (DM-SM-06); reviewer ≠ submitter where four-eyes applies (RLS-4EY-*); decisions feed audit (PRD §83). The `type` vocabulary is deliberately unresolved (API-OQ-01 = SCH-OQ-02) — final values land before schema-migration implementation.
 - **Indexes:** `(firm_id, status, priority)` — the queue; `(firm_id, submitted_by_membership_id, status)`.
 - **Audit sensitivity:** HIGH (decisions).
 - **RLS:** RLS-RVW-*. **Tests:** TEST-RLS-RVW-*, TEST-AUD-03.
@@ -297,6 +309,39 @@ prevention only; full design lands with each feature's release spec.
 - **Indexes:** `(firm_id, object_type, object_id)`; `(firm_id, created_at)`; `(actor_user_id, created_at)`; `(support_session_id)`.
 - **Audit sensitivity:** is the audit store itself.
 - **RLS:** RLS-AUD-* (select-only, privileged roles). **Tests:** TEST-RLS-AUD-*, TEST-AUD-01…10.
+
+### SCH-32 — compliance_rule_versions (Batch 4 closure amendment)
+- **Purpose:** Immutable, effective-dated versions of a compliance type's
+  recurrence/frequency and due-rule definition (AUTO-REC-07/09). A
+  ComplianceType describes *what* the obligation is; a rule version
+  captures *which exact rule produced instances*, so generated instances
+  never depend on the current mutable type configuration. **R0.**
+  Hybrid ownership mirroring compliance_types: NULL `firm_id` =
+  system-default version; else firm-owned (TEN-06 exception family,
+  SCH-FK-03).
+- **Columns:** `firm_id uuid` (NULL = system default); `compliance_type_id uuid NOT NULL`; `version int NOT NULL`; `effective_from date NOT NULL`; `effective_to date`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `status text NOT NULL DEFAULT 'draft'` CHECK in (`draft`,`active`,`superseded`,`deprecated`); `domain_approval_status text NOT NULL DEFAULT 'not_required'` CHECK in (`not_required`,`pending`,`approved`); `created_by uuid`; `created_at`.
+- **PK:** id. **FKs:** `compliance_type_id` → compliance_types (firm scope inherited from the type row — a firm-override type yields firm-owned versions; SCH-FK-03 reference-data family); `created_by` → auth.users (actor identity, SCH-RESP-02).
+- **Unique:** `(compliance_type_id, version)`.
+- **Checks/invariants:**
+  - **Immutability:** a version that has been `active` (or is referenced by
+    any compliance instance) is never updated; rule changes create a new
+    version (update guard). Historical interpretation is permanent.
+  - **Effective windows:** `effective_from`/`effective_to` windows for one
+    compliance type do not overlap; the generator uses exactly the version
+    `active` for the target period (SCH-11 resolution rule).
+  - **Statutory activation gate:** a version of a statutory compliance
+    type must not reach `status='active'` in production while
+    `domain_approval_status <> 'approved'` (DM-OQ-01). Architecture
+    approval of the Registration Scope Matrix is **not** professional
+    statutory-rule approval; the gate is an explicit lifecycle invariant,
+    not a convention.
+  - No instance may reference a `draft`/`deprecated` version at generation
+    time (generator invariant; write-path validated).
+- **Indexes:** `(compliance_type_id, status)`; `(firm_id)`.
+- **Lifecycle:** status column (`draft → active → superseded`/`deprecated`); never hard-deleted — versions are historical records.
+- **Audit sensitivity:** HIGH — version creation/activation changes obligations; activation is a security/compliance-configuration event (RLS-AAL-01) and is audited (AUD-CAT-01).
+- **RLS:** RLS-CRV-* (explicit rule-version family defined in `05` — Batch 4 security closure: read scoping, privileged administration, gated activation, immutability support; no policy text appears here).
+- **Tests:** TEST-RLS-CRV-01…11, TEST-AUD-11, TEST-AUTO-09.
 
 ## Deferred tables (dead-end prevention only)
 
@@ -327,6 +372,8 @@ BEFORE PRODUCTION STATUTORY-RULE ACTIVATION.** (Architecture validation per
 the requester's domain-scope review; this is **not** external CA
 certification.) The compliance-subject vocabulary is exactly
 `entity | registration | configurable`; engagement is never a subject kind.
+The statutory activation gate is enforced per rule version via
+`compliance_rule_versions.domain_approval_status` (SCH-32).
 
 | Compliance family | scope_kind | registration_class | registration_id on instance | Notes | Status |
 |---|---|---|---|---|---|
@@ -364,20 +411,22 @@ fires, establishment/location/jurisdiction data lives on
   `04-authentication.md` (identity model), `05-authorization-rls.md`
   (RLS-AAL-01 referenced for sensitivity classification).
 - Downstream: `07-api-contract.md` (RPC surface), `09-automation-events.md`
-  (recurrence, alert generation), `10-migration-seed.md` (fixture mapping),
+  (recurrence, alert generation — consumes SCH-32/SCH-12 provenance per the
+  Batch 4 closure amendment), `10-migration-seed.md` (fixture mapping),
   `11-testing-harness.md` (TEST-RLS/TEST-AUD definitions).
 
 ## Open Questions
 
 | ID | Question | Owner | Status |
 |---|---|---|---|
-| DM-OQ-01 | Registration Scope Matrix validation | — | **RESOLVED FOR ARCHITECTURE — EXTERNAL CA/DOMAIN SIGN-OFF REQUIRED BEFORE PRODUCTION STATUTORY-RULE ACTIVATION** (not external CA certification) |
+| DM-OQ-01 | Registration Scope Matrix validation | — | **RESOLVED FOR ARCHITECTURE — EXTERNAL CA/DOMAIN SIGN-OFF REQUIRED BEFORE PRODUCTION STATUTORY-RULE ACTIVATION** (not external CA certification); enforced per rule version via SCH-32 `domain_approval_status` |
 | SCH-OQ-01 | Period representation | — | **Resolved:** structured `period_start`/`period_end`/`period_label` (presentation-only) + optional `period_meta` jsonb — SCH-12 |
-| SCH-OQ-02 | `review_items.type` value set (mirrors demo: gst_reconciliation, tds_return, itr_computation, financial_statements, audit_workpaper?) | Batch 4 (`07`) | Open |
-| SCH-OQ-03 | Re-inviting a removed membership: new row vs status flip — affects unique constraint | `05`/`07` | Open |
+| SCH-OQ-02 | `review_items.type` value set (mirrors demo: gst_reconciliation, tds_return, itr_computation, financial_statements, audit_workpaper?) | Batch 4 (`07`) | Open (= API-OQ-01; final vocabulary before schema-migration implementation) |
+| SCH-OQ-03 | Re-inviting a removed membership: new row vs status flip — affects unique constraint | `05`/`07` | Open (= API-OQ-04) |
 | SCH-OQ-04 | Same-firm referential integrity mechanism | — | **Resolved:** composite tenant FKs (SCH-FK-01…03), extended to membership responsibility references (SCH-RESP-03); DDL details verified at harness gate (SCH-FK-04) |
 | SCH-OQ-05 | audit_log partitioning | — | **Resolved:** deferred for R0 — indexes + approved retention architecture suffice; partitioning later on measured volume |
 | SCH-OQ-06 | Does Payroll belong in the statutory ComplianceType catalogue? | — | **Resolved:** removed from the statutory catalogue for R0; payroll = operational/service/engagement workflow if needed; statutory payroll obligations remain TDS/PF/ESI/PT |
+| AUTO-XREF-01 | Recurrence rule versioning / generation provenance schema | — | **Satisfied (Batch 4 closure amendment):** SCH-32 `compliance_rule_versions` + SCH-12 provenance fields (`rule_version_id`, `generation_source`, `generated_at`, `calculated_due_date`) |
 
 ## Acceptance Criteria
 
@@ -398,13 +447,20 @@ fires, establishment/location/jurisdiction data lives on
   scope and its sign-off status.
 - SCH-ACC-06: No table lacks an authorization classification; no sensitive
   table lacks an audit classification.
-- SCH-ACC-07: The table inventory states exact counts (20 R0 / 11 deferred)
-  matching the SCH-01…31 enumeration.
+- SCH-ACC-07: The table inventory states exact counts (21 R0 / 11 deferred)
+  matching the SCH-01…20 + SCH-32 and SCH-21…31 enumeration.
 - SCH-ACC-08: The composite tenant-FK strategy lists its applications and
   documents every exception with its safety rationale.
 - SCH-ACC-09: Every tenant operational-responsibility field references
   firm_memberships via composite FK (SCH-RESP-01/03); actor-identity fields
   reference auth.users (SCH-RESP-02); the two are never conflated.
+- SCH-ACC-10 (Batch 4 closure amendment): Rule history is immutable
+  (SCH-32 invariants); generated instances retain full provenance
+  (SCH-12: applied rule version, generation source, generation timestamp,
+  calculated due date, structured period); manual instances remain
+  representable; the statutory activation gate is an explicit lifecycle
+  invariant (SCH-32 `domain_approval_status`); the instance uniqueness key
+  is unchanged so version changes cannot duplicate obligations.
 
 ## Consequence of Change
 
@@ -412,8 +468,12 @@ Column/constraint changes after Batch 4 approval invalidate the API contract
 and migration mapping; tenant-classification changes invalidate `03` and
 `05`; weakening the composite-FK strategy (SCH-FK-01) or the
 responsibility-reference rule (SCH-RESP) removes defence-in-depth layers and
-requires requester sign-off. The Registration Scope Matrix is now
+requires requester sign-off. The Registration Scope Matrix is
 architecture-resolved: changing a compliance type's scoping after instances
 exist requires a data migration plan recorded in `10`, and production
 statutory-rule activation additionally requires the external CA/domain
-sign-off recorded against DM-OQ-01.
+sign-off recorded against DM-OQ-01. The Batch 4 closure amendment (SCH-32 +
+SCH-12 provenance) did not alter approved Batch 3 decisions; weakening
+provenance immutability (SCH-32/SCH-12 update guards) breaks historical
+interpretation (AUTO-REC-07) and TEST-AUTO-09 and requires requester
+sign-off.

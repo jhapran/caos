@@ -42,12 +42,12 @@ documents move through review.
 | 02 | `02-domain-model.md` | Domain Model | 2 | yes | Approved |
 | 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Approved |
 | 04 | `04-authentication.md` | Authentication | 2 | yes | Approved |
-| 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture) |
-| 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Approved (architecture) |
-| 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Not started |
-| 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture) |
-| 09 | `09-automation-events.md` | Automation & Events | 4 | recurrence section only | Not started |
-| 10 | `10-migration-seed.md` | Fixture Migration & Seeding | 4 | yes | Not started |
+| 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
+| 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Approved (architecture; Batch 4 closure + security closure amendments approved) |
+| 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Approved (Batch 4) |
+| 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
+| 09 | `09-automation-events.md` | Automation & Events | 4 | recurrence section only | Approved (Batch 4) |
+| 10 | `10-migration-seed.md` | Fixture Migration & Seeding | 4 | yes | Approved (Batch 4) |
 | 11 | `11-testing-harness.md` | Testing & Verification Harness | 5 | yes | Not started |
 | 12 | `12-release-0-plan.md` | Release 0 Execution Plan | 6 | yes | Not started |
 | 13 | `13-operations-observability.md` | Operations & Observability (R0 scope) | 5 | yes | Not started |
