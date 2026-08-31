@@ -75,7 +75,28 @@ npm run db:start   # start the local Supabase dev stack (Docker; first run pulls
 npm run db:stop    # stop the local stack
 npm run db:status  # show local stack service URLs/health
 npm run db:reset   # reset the local DB: re-apply migrations + seed (destructive, local only)
+npm run db:seed:harness   # seed deterministic local Auth harness users (idempotent)
+npm run db:verify:harness # verify harness identities only (no creation)
+npm run db:reset:harness  # db reset + deterministic harness seed + verification
 ```
+
+## Deterministic Harness Seed (IMP-003)
+
+`tests/harness/registry.json` is the **authoritative local harness fixture
+registry**: fixed UUIDs/emails for Firm A / Firm B and the harness personas
+(every R0 role in both firms, plus multi-firm, suspended, removed, and
+staff/client-overlap identities). It reserves identifiers only — persona
+labels describe harness intent, not production roles/memberships.
+
+`npm run db:reset:harness` rebuilds the same harness state from a clean
+checkout: `supabase db reset` → `scripts/harness/seed-harness.mjs`, which
+creates the registry's Auth users through the **local Auth Admin API**
+(keys discovered dynamically via `supabase status -o env` — never
+committed; no direct auth-schema writes). The script is idempotent, fails
+loudly on identity conflicts, and hard-refuses non-local API URLs.
+`supabase/seed.sql` stays reserved for future R0 reference data
+(`docs/spec/10`). All harness identities are synthetic `@caos.test` local
+fixtures (MIG-SEED-06) — never production seed data.
 
 ## Local Supabase Development (IMP-002)
 
@@ -102,8 +123,12 @@ only**. Rules:
   development only**; they must never appear on LAN, Tailscale, or public
   interfaces;
 - **never bypass the dedicated network** (e.g. a bare `supabase start`
-  without `--network-id`, which binds `0.0.0.0`) for convenience — always
-  use `npm run db:start`;
+  or `supabase db reset` without `--network-id caos-supabase-local`,
+  which binds `0.0.0.0`) for convenience — always use `npm run db:start`
+  / `npm run db:reset` / `npm run db:reset:harness` (the global
+  `--network-id` flag is required on `db reset` too: without it the CLI
+  recreates the db container on the default network, breaking both
+  loopback binding and container DNS);
 - **stop the local stack when it is not actively being used**
   (`npm run db:stop`);
 - local MCP must remain **approval-gated** at all times;

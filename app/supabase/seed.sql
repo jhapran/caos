@@ -1,0 +1,17 @@
+-- supabase/seed.sql (IMP-003)
+--
+-- Intentionally contains NO application seed rows. The Release-0 public
+-- schema is not implemented yet; do not add inserts here for tables that
+-- do not exist.
+--
+-- Seed ownership:
+--   * SQL seed (this file): future R0 reference/system data per
+--     docs/spec/10-migration-seed.md (MIG-SEED-01/02), when the schema
+--     lands in later IMP packages.
+--   * Deterministic local Auth harness users:
+--     scripts/harness/seed-harness.mjs (npm run db:seed:harness,
+--     npm run db:reset:harness) using tests/harness/registry.json.
+--   * Harness verification: npm run db:verify:harness.
+--
+-- All seed content is synthetic and environment-labelled for local
+-- development only — never production seed data (MIG-SEED-06).

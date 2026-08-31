@@ -1,0 +1,38 @@
+{
+  "$meta": {
+    "purpose": "Deterministic LOCAL HARNESS fixture registry (IMP-003). Stable UUIDs and identities for future authentication tests, the DEC-J spike (TEST-SPIKE-J-*), the audit-context spike (TEST-SPIKE-CTX-*), and the RLS tenant-isolation harness (TEST-RLS-GEN-01).",
+    "scope": "Local development/test harness ONLY. This is NOT production seed data (MIG-SEED-06). Fixed UUID list satisfies the deterministic-id scheme (MIG-OQ-02 allows uuidv5 namespace OR fixed uuid list; this registry uses a fixed list).",
+    "personaNote": "Persona labels (super_admin, partner, manager, senior, article_executive, billing, multi_firm, suspended, removed, overlap) describe harness intent only. Production firms/memberships/roles/RLS are implemented by later IMP packages; this registry reserves identifiers and does not prejudge DEC-J.",
+    "credentialNote": "passwordLocalOnly is a non-secret LOCAL TEST FIXTURE credential. It must never be used for real accounts, hosted Supabase, or production.",
+    "specRefs": ["MIG-SEED-06", "MIG-OQ-02", "TEST-MIG-10", "TEST-RLS-GEN-01", "TEST-SPIKE-J-01", "TEST-SPIKE-J-02", "TEST-SPIKE-CTX-01"]
+  },
+  "passwordLocalOnly": "caos-harness-local-only",
+  "firms": {
+    "FIRM_A": {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "label": "Tenant-isolation fixture firm A"
+    },
+    "FIRM_B": {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "label": "Tenant-isolation fixture firm B"
+    }
+  },
+  "users": {
+    "USER_A_SUPER_ADMIN": { "id": "20000000-0000-4000-8000-000000000001", "email": "superadmin.a@caos.test", "firm": "FIRM_A", "persona": "super_admin" },
+    "USER_A_PARTNER": { "id": "20000000-0000-4000-8000-000000000002", "email": "partner.a@caos.test", "firm": "FIRM_A", "persona": "partner" },
+    "USER_A_MANAGER": { "id": "20000000-0000-4000-8000-000000000003", "email": "manager.a@caos.test", "firm": "FIRM_A", "persona": "manager" },
+    "USER_A_SENIOR": { "id": "20000000-0000-4000-8000-000000000004", "email": "senior.a@caos.test", "firm": "FIRM_A", "persona": "senior" },
+    "USER_A_ARTICLE": { "id": "20000000-0000-4000-8000-000000000005", "email": "article.a@caos.test", "firm": "FIRM_A", "persona": "article_executive" },
+    "USER_A_BILLING": { "id": "20000000-0000-4000-8000-000000000006", "email": "billing.a@caos.test", "firm": "FIRM_A", "persona": "billing" },
+    "USER_B_SUPER_ADMIN": { "id": "20000000-0000-4000-8000-000000000007", "email": "superadmin.b@caos.test", "firm": "FIRM_B", "persona": "super_admin" },
+    "USER_B_PARTNER": { "id": "20000000-0000-4000-8000-000000000008", "email": "partner.b@caos.test", "firm": "FIRM_B", "persona": "partner" },
+    "USER_B_MANAGER": { "id": "20000000-0000-4000-8000-000000000009", "email": "manager.b@caos.test", "firm": "FIRM_B", "persona": "manager" },
+    "USER_B_SENIOR": { "id": "20000000-0000-4000-8000-000000000010", "email": "senior.b@caos.test", "firm": "FIRM_B", "persona": "senior" },
+    "USER_B_ARTICLE": { "id": "20000000-0000-4000-8000-000000000011", "email": "article.b@caos.test", "firm": "FIRM_B", "persona": "article_executive" },
+    "USER_B_BILLING": { "id": "20000000-0000-4000-8000-000000000012", "email": "billing.b@caos.test", "firm": "FIRM_B", "persona": "billing" },
+    "USER_MULTI_FIRM": { "id": "20000000-0000-4000-8000-000000000013", "email": "multifirm@caos.test", "firms": ["FIRM_A", "FIRM_B"], "persona": "multi_firm" },
+    "USER_A_SUSPENDED": { "id": "20000000-0000-4000-8000-000000000014", "email": "suspended.a@caos.test", "firm": "FIRM_A", "persona": "suspended_membership" },
+    "USER_A_REMOVED": { "id": "20000000-0000-4000-8000-000000000015", "email": "removed.a@caos.test", "firm": "FIRM_A", "persona": "removed_membership" },
+    "USER_CLIENT_OVERLAP": { "id": "20000000-0000-4000-8000-000000000016", "email": "overlap@caos.test", "firm": "FIRM_A", "persona": "staff_client_overlap" }
+  }
+}
