@@ -36,7 +36,11 @@ DEC-P, or any other recorded open question.
   Portal UI, automated reminder *delivery*, WhatsApp, real AI provider
   integration, pgvector/RAG, native billing, advanced integrations,
   advanced workload recommendations, advanced team-based authorization,
-  enterprise observability platform (DEC-C/K/M, 01-decisions).
+  enterprise observability platform (DEC-C/K/M, 01-decisions). Also
+  explicitly deferred per DEC-T named deferrals: Ask CAOS / NL AI
+  assistant, a dedicated MVP Reporting module (PRD §87), and a dedicated
+  Client Dependency dashboard/view (PRD §14). No new R0 work packages are
+  created for these deferred views.
 - No execution of the DEC-J or audit-context spikes — they are scheduled
   here as work packages, not performed.
 

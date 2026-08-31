@@ -1,7 +1,7 @@
 # 03 — Tenancy & Environments
 
-- **Status:** Draft (Batch 2 — revised per review; awaiting approval)
-- **Approval status:** Not approved
+- **Status:** Approved (Batch 2)
+- **Approval status:** Approved (Batch 2). Open/provisional items remain governed by their recorded future gates — TEN-OQ-03 backup/PITR validation and exact implementation remain open, owned by `13` (OPS-OQ-02) and verified before production cutover; RPO ≤ 24 h / RTO ≤ 8 h (TEN-24) remain provisional engineering targets, not SLAs.
 
 ## Purpose
 
@@ -226,3 +226,13 @@ Environment changes (TEN-12…16, TEN-20/21) affect operations (13) and
 migration (10); region changes affect only provisioning, not schema. Weakening
 TEN-23 (support access) or TEN-24 (resilience targets) is a security/posture
 change requiring requester sign-off.
+
+## Approval Status
+
+Approved (Batch 2). TEN-OQ-01 (fixture demo default) and TEN-OQ-02
+(support access model) are resolved as recorded. Open/provisional items
+remain governed by their recorded future gates: TEN-OQ-03 — backup/restore
+validation and exact PITR/backup implementation remain open, owned by `13`
+(OPS-OQ-02) and verified before production cutover; RPO ≤ 24 h / RTO ≤ 8 h
+(TEN-24) remain provisional engineering targets, not contractual SLAs.
+DEC-P production-region approval remains a separate human gate.

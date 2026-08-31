@@ -226,6 +226,7 @@ REPLACE / DEMO-ONLY (API-INV-01).
 | `fetchClient` | Client 360 hub (ComplianceDetail/Client pages) | EVOLVE | Composite read: client + entities + registrations + contacts + engagements + compliance summary (DM-X-02); one contract, several underlying reads |
 | `fetchTasks` / `getTasks` / `getTasksForClient` | Task lists by client/compliance/category | EVOLVE | `tasks` read (RLS-TSK-01) with declared filters: client, instance, status, assignee, due window; paginated |
 | `fetchTask` | Task detail | EVOLVE | Task + checklist + comments + dependencies read (SCH-13…16) |
+| `getTask` | Synchronous internal fixture-era helper (`tasks.ts`); consumed by `api.ts` internals | DEMO-ONLY | No production counterpart. Production callers use the evolved `fetchTask` / domain-data contract above; `getTask` must not become a production backend API merely because it exists in the fixture implementation |
 | `fetchDeadlines` / `getDeadlineGroups` | Deadline board grouped by compliance/day | EVOLVE | Server-derived board over `compliance_instances(due_date, state)` (index SCH-12); grouping computed server-side |
 | `fetchDeadline` / `getDeadlineGroup` | Deadline group drill-down | EVOLVE | Same read model, single group |
 | `fetchDeadlineClients` / `getDeadlineClients` | Per-deadline client rows | EVOLVE | Instance rows for the group with client/entity/assignee projection |
@@ -265,6 +266,12 @@ REPLACE / DEMO-ONLY (API-INV-01).
 `DEMO_TODAY` — all DEMO-ONLY as data sources; their migration mapping to
 production entities is owned by `10-migration-seed.md`. `DEMO_TODAY` must be
 pinned before any migration work (TEN-22).
+
+### Workflow vocabulary export
+
+| Export | Current purpose / callers | Class | Target production responsibility |
+|---|---|---|---|
+| `WORKFLOW_STATES` (`src/data/types.ts`) | Fixture-era workflow-state constant consumed directly by UI components (`WorkflowStepper`, `ComplianceDetail`) | REPLACE | Production workflow vocabulary/state metadata derives from the approved domain state machines (DM-SM-01…06) and the production domain model; the fixture-era constant must not become the authoritative production workflow definition. Migration implication: current UI consumers may temporarily use an adapter-compatible export, but the source of truth moves to the approved production workflow/state model |
 
 ## Release 0 contracts
 

@@ -1,7 +1,7 @@
 # 02 — Domain Model
 
-- **Status:** Draft (Batch 2 — revised per review; awaiting approval)
-- **Approval status:** Not approved
+- **Status:** Approved (Batch 2)
+- **Approval status:** Approved (Batch 2). Later approved amendments: Batch 3 domain-scope validation (DM-OQ-01 resolved for architecture — DM-27 Registration Scope Matrix; Payroll removed from the statutory R0 catalogue) and Batch 4 recurrence rule-versioning/provenance cross-reference alignment. Open/provisional items remain governed by their recorded future gates — the Registration Scope Matrix is approved **for architecture only**; external practicing-CA/compliance-domain sign-off remains mandatory before production statutory-rule activation.
 
 ## Purpose
 
@@ -420,3 +420,16 @@ contract (07). Changing entity ownership, the hierarchy, the identity model,
 or a lifecycle after Batch 3 approval invalidates those specs and requires
 re-review; changes are recorded as superseding requirements, never silent
 edits.
+
+## Approval Status
+
+Approved (Batch 2). Later approved amendments: Batch 3 domain-scope
+validation (DM-OQ-01 resolved for architecture via the DM-27 Registration
+Scope Matrix; Payroll removed from the statutory ComplianceType catalogue
+for R0 — SCH-OQ-06 in `06`) and Batch 4 recurrence rule-versioning /
+generation-provenance cross-reference alignment (AUTO-XREF-01, SCH-32 /
+SCH-12 in `06`). Open/provisional items remain governed by their recorded
+future gates — in particular, the Registration Scope Matrix is approved
+**for architecture only**; external practicing-CA / compliance-domain
+sign-off remains mandatory before production statutory-rule activation.
+This approval is not professional CA certification.

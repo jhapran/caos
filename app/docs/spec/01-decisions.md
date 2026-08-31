@@ -226,6 +226,30 @@ workflows; Client Portal; automated reminder engine; external email sending;
 WhatsApp; real AI functionality; pgvector/RAG; native billing; advanced
 integrations.
 
+**Named deferrals (Final Spec Gate closure — no longer silent):**
+
+- **Ask CAOS / natural-language AI assistant (PRD §17, "Ask CAOS"):**
+  **not part of Release 0.** Covered by the approved real-AI/provider
+  deferral (DEC-C above); where fixture behavior exists it remains
+  DEMO-ONLY (`07` classifies `askCaos` DEMO-ONLY). DEC-C's provider-neutral
+  future architecture is unchanged.
+- **MVP Reporting (PRD §87):** Release 0 does **not** implement a separate
+  full Reporting module. Report-like operational needs already represented
+  by approved R0 surfaces are satisfied by those surfaces (Command Centre,
+  My Work, deadlines, review queue, alerts, aggregate/read models).
+  Dedicated report surfaces — Compliance Status, Employee Workload, Client
+  Delay, Document Request Status, Overdue Tasks, Review Turnaround — are
+  **deferred** unless an equivalent view is already explicitly included in
+  an approved R0 surface. Document Request Status is necessarily deferred
+  because the document-request workflow is outside Release 0.
+- **Client Dependency (PRD §14, Dashboard Section C):** **not** a
+  dedicated Release 0 dashboard module; a distinct Client Dependency
+  dashboard/view is **deferred**. Where dependency-related information is
+  already required by approved task/compliance/read-model contracts, it
+  may be represented within those approved surfaces (see the
+  `fetchDependencyClients` → server-derived "waiting on client" read-model
+  mapping in `07`).
+
 ## Assumptions
 
 - DEC-* IDs are stable; downstream specs cite them (e.g. "per DEC-E") rather

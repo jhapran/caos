@@ -1,7 +1,7 @@
 # 04 — Authentication
 
-- **Status:** Draft (Batch 2 — revised per review; awaiting approval)
-- **Approval status:** Not approved
+- **Status:** Approved (Batch 2)
+- **Approval status:** Approved (Batch 2). Open/provisional items remain governed by their recorded future gates — AUTH-OQ-02 exact platform session-configuration values are verified during implementation (not assumed; recorded in `13`, tested via `11` TEST-AUTH-*); the session figures in AUTH-08 are approved targets, not claimed platform behaviour.
 
 ## Purpose
 
@@ -228,3 +228,15 @@ Authentication choices are load-bearing for the authorization spike in `05`
 post-launch is a security-posture change requiring requester sign-off;
 changing flows (invite/login/reset) affects `05`, `08`, and the Release 0
 plan's first slice.
+
+## Approval Status
+
+Approved (Batch 2). AUTH-OQ-01 (manager MFA — MFA mandatory for all staff
+roles) and AUTH-OQ-03 (MFA device-loss recovery) are resolved as recorded.
+Open/provisional items remain governed by their recorded future gates:
+AUTH-OQ-02 — the session figures in AUTH-08 (1 h access token, rotating
+refresh, 12 h inactivity, 7 d absolute) are approved targets; exact
+platform configuration values are verified during implementation (not
+assumed; recorded in `13`, tested via `11` TEST-AUTH-*). Authorization
+remains owned by `05` (AUTH-00 boundary); nothing in this document defines
+authorization policy.

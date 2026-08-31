@@ -2,6 +2,13 @@
 
 - **Status:** Approved
 - **Approval status:** Approved (Batch 1)
+- **Final Spec Gate:** PASS — 2026-08-31
+- **Phase 2 status:** COMPLETE (specification authoring; all R0-gate specs 00–13 approved; required closure fixes applied)
+- **Next phase:** Harness Gate / IMP-000 (per `12-release-0-plan.md`; not started)
+
+All existing OPEN / PROVISIONAL items remain governed by their documented
+future gates (see `12` Open / Provisional Dependency Matrix); this gate
+result resolves none of them.
 
 ## Purpose
 
@@ -39,9 +46,9 @@ documents move through review.
 |---|---|---|---|---|---|
 | 00 | `00-index.md` | Specification Index | 1 | yes | Approved |
 | 01 | `01-decisions.md` | Architecture Decision Register | 1 | yes | Approved |
-| 02 | `02-domain-model.md` | Domain Model | 2 | yes | Approved |
-| 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Approved |
-| 04 | `04-authentication.md` | Authentication | 2 | yes | Approved |
+| 02 | `02-domain-model.md` | Domain Model | 2 | yes | Approved (Batch 2; Batch 3 targeted amendments approved) |
+| 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Approved (Batch 2) |
+| 04 | `04-authentication.md` | Authentication | 2 | yes | Approved (Batch 2) |
 | 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
 | 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Approved (architecture; Batch 4 closure + security closure amendments approved) |
 | 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Approved (Batch 4) |
