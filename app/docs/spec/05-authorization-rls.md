@@ -354,7 +354,8 @@ this design confirmed.**
 
 - RLS-A-01: The custom access-token hook capability is available on the
   target Supabase version — spike verifies; fallback is option B.
-- RLS-A-02: R0 "portfolio" scoping for managers uses `clients.manager_id`;
+- RLS-A-02: R0 "portfolio" scoping for managers uses
+  `clients.manager_membership_id` (designated manager is a FirmMembership);
   a team model, if added, extends rather than replaces this (RLS-OQ-02).
 
 ## Dependencies

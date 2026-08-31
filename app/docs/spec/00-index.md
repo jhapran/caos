@@ -48,9 +48,9 @@ documents move through review.
 | 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
 | 09 | `09-automation-events.md` | Automation & Events | 4 | recurrence section only | Approved (Batch 4) |
 | 10 | `10-migration-seed.md` | Fixture Migration & Seeding | 4 | yes | Approved (Batch 4) |
-| 11 | `11-testing-harness.md` | Testing & Verification Harness | 5 | yes | Not started |
+| 11 | `11-testing-harness.md` | Testing & Verification Harness | 5 | yes | Approved (Batch 5) |
 | 12 | `12-release-0-plan.md` | Release 0 Execution Plan | 6 | yes | Not started |
-| 13 | `13-operations-observability.md` | Operations & Observability (R0 scope) | 5 | yes | Not started |
+| 13 | `13-operations-observability.md` | Operations & Observability (R0 scope) | 5 | yes | Approved (Batch 5) |
 | 20 | `20-ai-services.md` | AI Service Abstraction (placeholder) | later | no | Not started |
 | 21 | `21-portal.md` | Client Portal (placeholder) | later | no | Not started |
 
