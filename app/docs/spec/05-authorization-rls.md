@@ -1,7 +1,7 @@
 # 05 — Authorization & RLS
 
-- **Status:** Draft (Batch 3, Revision Pass 2 — REVIEW REQUIRED; DEC-J mechanism pending harness-gate spike)
-- **Approval status:** Not approved
+- **Status:** Approved (architecture, Batch 3)
+- **Approval status:** Approved for architecture (Batch 3). Note: DEC-J mechanism remains provisional pending the harness-gate spike (RLS-MECH-02); spike outcome amends this document before backend migration.
 
 ## Purpose
 

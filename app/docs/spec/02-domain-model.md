@@ -270,17 +270,22 @@ now so the schema is forward-compatible, built in a later release.
 
 #### DM-27 — Registration Scope Matrix (requirement)
 
-A **Registration Scope Matrix** must be produced during the database/schema
-work (`06-database-schema.md`) and **validated by a CA-domain expert before
-Batch 3 receives final approval**. The matrix records, for each compliance
-type, whether its instances key off `registration_id` (and which registration
-class) or off the legal entity alone. Types explicitly requiring domain
-validation include — at minimum — GST (per-GSTIN / state-wise behaviour),
-TDS (per-TAN), Income Tax (per-PAN), ROC/MCA (per-CIN/entity), Professional
-Tax (state-specific), and other state-specific obligations. **The actual
-mappings must not be invented or resolved without that validation** (DM-OQ-01
-remains open until then). The architectural default stands meanwhile:
-`legal_entity_id` required, `registration_id` optional (DEC-G).
+The **Registration Scope Matrix** lives in `06-database-schema.md` and
+records, for each compliance family, whether its instances key off
+`registration_id` (and which registration class) or off the legal entity
+alone. **Status: resolved for architecture** (GST/TDS registration-scoped
+with classes GSTIN/TAN; Income Tax and ROC/MCA entity-scoped; PT/PF/ESI
+registration-scoped with state/establishment metadata; Payroll removed from
+the statutory catalogue for R0; Audit entity-scoped with optional engagement
+association; Certificates/custom configurable) — **subject to external
+practicing-CA sign-off before production statutory-rule activation** (this is
+not external CA certification). The architectural default stands:
+`legal_entity_id` required, `registration_id` optional (DEC-G), required per
+family only as the matrix declares. A first-class **Establishment** entity is
+deliberately not introduced in R0; establishment/location/jurisdiction data
+lives in registration metadata. Future-model trigger: introduce Establishment
+only if multiple registration families require persistent cross-registration
+grouping by operating location.
 
 ---
 
@@ -384,7 +389,7 @@ pending → approved | returned | escalated | dismissed
 
 | ID | Question | Owner spec | Status |
 |---|---|---|---|
-| DM-OQ-01 | **Registration-scoping conventions per compliance type** (GST per GSTIN/state-wise, TDS per TAN, Income Tax per PAN, ROC/MCA, Professional Tax, other state-specific obligations). Must be produced as the Registration Scope Matrix (DM-27) and validated by a CA-domain expert before Batch 3 final approval. | `06-database-schema.md` + CA-domain review | **Open — intentionally unresolved** |
+| DM-OQ-01 | Registration-scoping conventions per compliance type | — | **RESOLVED FOR ARCHITECTURE — EXTERNAL CA/DOMAIN SIGN-OFF REQUIRED BEFORE PRODUCTION STATUTORY-RULE ACTIVATION** (see DM-27 and the matrix in `06`) |
 | DM-OQ-02 | Assignee/reviewer vs engagement partner divergence | — | **Resolved:** divergence allowed, no warning; engagement partner = oversight, not execution; four-eyes enforced independently (DM-09/12/13) |
 | DM-OQ-03 | Offboarded-client visibility | — | **Resolved:** excluded from default views/queues; searchable/readable by authorized roles; immutable history retained; never silently deleted; retention periods deferred to `13` |
 | DM-OQ-04 | Task dependencies in R0? | — | **Resolved:** model + schema support task-to-task dependencies in R0; visualization, critical-path analysis, and dependency intelligence deferred (DM-13) |

@@ -1,7 +1,7 @@
 # 08 — Audit & Security Architecture
 
-- **Status:** Draft (Batch 3, Revision Pass 2 — REVIEW REQUIRED)
-- **Approval status:** Not approved
+- **Status:** Approved (architecture, Batch 3)
+- **Approval status:** Approved for architecture (Batch 3). Note: AUD-OQ-01 (retention values) and AUD-OQ-02 (context propagation mechanism) remain open/provisional as recorded.
 
 ## Purpose
 

@@ -1,7 +1,7 @@
 # 06 — Database Schema (Design)
 
-- **Status:** Draft (Batch 3, Revision Pass 2 — REVIEW REQUIRED; DM-OQ-01 open pending CA-domain validation)
-- **Approval status:** Not approved — must not be marked approved until DM-OQ-01 (Registration Scope Matrix) is human/CA-domain validated
+- **Status:** Approved (architecture, Batch 3)
+- **Approval status:** Approved for architecture (Batch 3). Note: the Registration Scope Matrix (DM-27) is approved **for architecture only** — external practicing-CA / compliance-domain sign-off remains **mandatory before production statutory-rule activation** (this approval is not professional CA certification).
 
 ## Purpose
 
@@ -30,7 +30,7 @@ prevention only; full design lands with each feature's release spec.
 ## Scope
 
 - Full design for the Release 0 tables (DEC-T).
-- The Registration Scope Matrix (DM-27) with proposed review baselines.
+- The Registration Scope Matrix (DM-27), resolved for architecture.
 - The tenant-aware referential integrity strategy (composite FKs).
 - The responsibility-reference rule (membership vs identity).
 
@@ -170,10 +170,13 @@ prevention only; full design lands with each feature's release spec.
 - **RLS:** RLS-ENT-* (shares entity family). **Tests:** TEST-RLS-ENT-*.
 
 ### SCH-07 — registrations
-- **Purpose:** Statutory identifiers (DM-06). **R0.** Tenant-owned.
-- **Columns:** `legal_entity_id uuid NOT NULL`; `type text NOT NULL` CHECK in (`PAN`,`GSTIN`,`TAN`,`CIN`,`LLPIN`,`DIN`,`PT`,`PF`,`ESI`,`OTHER`); `value text NOT NULL`; `state text` (for state-scoped registrations); `valid_from date`; `valid_to date`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`surrendered`,`expired`).
+- **Purpose:** Statutory identifiers (DM-06), including registration-scoped
+  compliance anchors (GSTIN, TAN, PT, PF, ESI per the DM-27 matrix). **R0.**
+  Tenant-owned.
+- **Columns:** `legal_entity_id uuid NOT NULL`; `type text NOT NULL` CHECK in (`PAN`,`GSTIN`,`TAN`,`CIN`,`LLPIN`,`DIN`,`PT`,`PF`,`ESI`,`OTHER`); `value text NOT NULL`; `state text` (state/jurisdiction for state-scoped registrations); `meta jsonb` (**establishment/location/jurisdiction metadata** — e.g. PF EPFO establishment code context, ESI ESIC employer sub-code/branch/location, PT employer-registration vs enrolment distinction); `valid_from date`; `valid_to date`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`surrendered`,`expired`).
 - **FKs:** `(firm_id, legal_entity_id)` → legal_entities(firm_id, id).
 - **Unique:** `(firm_id, type, value)`.
+- **Invariants:** **no first-class Establishment entity in R0** (DM-27 trigger note); establishment/location grouping lives in `meta` until the trigger condition fires.
 - **Indexes:** `(legal_entity_id)`; `(firm_id, value)` — powers identifier search (PRD §68).
 - **Audit sensitivity:** HIGH (identifiers are compliance-critical).
 - **RLS:** RLS-REG-*. **Tests:** TEST-RLS-REG-*, TEST-AUD-01.
@@ -191,15 +194,15 @@ prevention only; full design lands with each feature's release spec.
 - **Purpose:** Service scope + engagement-letter status (DM-09). **R0.** Tenant-owned.
 - **Columns:** `client_id uuid NOT NULL`; `responsible_partner_membership_id uuid NOT NULL`; `service_lines text[] NOT NULL DEFAULT '{}'`; `letter_status text NOT NULL DEFAULT 'not_started'` CHECK in (`not_started`,`issued`,`signed`,`expired`); `proposed_at timestamptz`; `signed_at timestamptz`; `period_label text`; `status text NOT NULL DEFAULT 'draft'` CHECK in (`draft`,`proposed`,`active`,`completed`,`terminated`); `termination_reason text`.
 - **FKs:** `(firm_id, client_id)` → clients; `(firm_id, responsible_partner_membership_id)` → firm_memberships (SCH-RESP-03).
-- **Invariants:** unsigned-letter alerts derive from `status='proposed'`/`letter_status` age (DM-09); responsible partner = oversight, not execution (DM-OQ-02 resolution). **An engagement is never a compliance subject** (scope vocabulary is exactly `entity | registration | configurable`); instances may *associate* an engagement (SCH-12).
+- **Invariants:** unsigned-letter alerts derive from `status='proposed'`/`letter_status` age (DM-09); responsible partner = oversight, not execution (DM-OQ-02 resolution). **An engagement is never a compliance subject** (scope vocabulary is exactly `entity | registration | configurable`); instances may *associate* an engagement (SCH-12). Payroll-style operational service work, where needed, is modelled via engagements/tasks — not as a statutory ComplianceType (SCH-OQ-06 resolution).
 - **Indexes:** `(client_id)`, `(firm_id, status)`.
 - **Audit sensitivity:** HIGH.
 - **RLS:** RLS-ENG-*. **Tests:** TEST-RLS-ENG-*.
 
 ### SCH-10 — compliance_types
 - **Purpose:** Rule objects (DM-10; PRD §26/§124). **R0.** Hybrid ownership: NULL `firm_id` = system default; else firm-owned (TEN-06…09).
-- **Columns:** `firm_id uuid` (NULL = system default); `type_key text NOT NULL`; `name text NOT NULL`; `category text NOT NULL`; `authority text`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `applicability jsonb`; `required_documents jsonb`; `checklist_template jsonb`; `workflow_template jsonb NOT NULL`; `client_approval_required bool NOT NULL DEFAULT false`; `filing_confirmation_required bool NOT NULL DEFAULT true`; `acknowledgement_required bool NOT NULL DEFAULT true`; `four_eyes_required bool NOT NULL DEFAULT true`; **`scope_kind text NOT NULL DEFAULT 'configurable'` CHECK in (`entity`,`registration`,`configurable`)** — the complete compliance-subject vocabulary (engagement is NOT a subject kind); **`registration_class text`** — declares the required registration type (e.g. `GSTIN`, `TAN`) when `scope_kind='registration'`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`deprecated`).
-- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; **`scope_kind`/`registration_class` values are populated only from the validated Registration Scope Matrix (DM-27)** — until then, rows ship as `configurable`.
+- **Columns:** `firm_id uuid` (NULL = system default); `type_key text NOT NULL`; `name text NOT NULL`; `category text NOT NULL`; `authority text`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `applicability jsonb`; `required_documents jsonb`; `checklist_template jsonb`; `workflow_template jsonb NOT NULL`; `client_approval_required bool NOT NULL DEFAULT false`; `filing_confirmation_required bool NOT NULL DEFAULT true`; `acknowledgement_required bool NOT NULL DEFAULT true`; `four_eyes_required bool NOT NULL DEFAULT true`; **`scope_kind text NOT NULL DEFAULT 'configurable'` CHECK in (`entity`,`registration`,`configurable`)** — the complete compliance-subject vocabulary (engagement is NOT a subject kind); **`registration_class text`** — the required registration type when `scope_kind='registration'`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`deprecated`).
+- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; `scope_kind`/`registration_class` for seeded system types follow the architecture-validated Registration Scope Matrix (DM-27) — **statutory rules are not activated in production until external CA/domain sign-off** (DM-OQ-01 status). Payroll is excluded from the statutory catalogue for R0 (SCH-OQ-06 resolution).
 - **Unique:** `(type_key, firm_id)` NULLS NOT DISTINCT (one default + one override per firm per key).
 - **Indexes:** `(type_key)`; `(firm_id)`.
 - **Audit sensitivity:** HIGH (rule changes alter obligations; changes are security-configuration events, RLS-AAL-01/AUD-CAT-01).
@@ -210,14 +213,14 @@ prevention only; full design lands with each feature's release spec.
 - **Columns:** `legal_entity_id uuid NOT NULL`; `compliance_type_id uuid NOT NULL`; `registration_id uuid`; `applicability_answers jsonb`; `status text NOT NULL DEFAULT 'proposed'` CHECK in (`proposed`,`active`,`suspended`,`ended`); `approved_by uuid`; `approved_at timestamptz`.
 - **FKs:** `(firm_id, legal_entity_id)` → legal_entities; compliance_type_id → compliance_types (SCH-FK-03 exception — reference data); `(firm_id, registration_id)` → registrations (nullable component); approved_by → auth.users (actor identity, SCH-RESP-02).
 - **Unique:** `(legal_entity_id, compliance_type_id, registration_id)` NULLS NOT DISTINCT.
-- **Invariants:** only `active` profiles generate instances (DM-11); approval actor recorded (PRD §72 step 9); when the compliance type's `scope_kind='registration'`, `registration_id` must reference a registration of the declared `registration_class` (validated at write path; matrix-gated, DM-27).
+- **Invariants:** only `active` profiles generate instances (DM-11); approval actor recorded (PRD §72 step 9); when the compliance type's `scope_kind='registration'`, `registration_id` must reference a registration of the declared `registration_class` (validated at write path, DM-27); the TDS PAN-based statutory exception (DM-27) may substitute a PAN registration reference.
 - **Indexes:** `(legal_entity_id, status)`, `(firm_id, status)`.
 - **Audit sensitivity:** HIGH (approval decision).
 - **RLS:** RLS-CCP-*. **Tests:** TEST-RLS-CCP-*, TEST-AUD-02.
 
 ### SCH-12 — compliance_instances
 - **Purpose:** Obligation per entity per period (DM-12). **R0.** Tenant-owned.
-- **Columns:** `legal_entity_id uuid NOT NULL` (**required**, DEC-G); `compliance_type_id uuid NOT NULL`; `registration_id uuid` (**optional**, DEC-G; required only where the type's validated `scope_kind='registration'`, DM-27); `client_compliance_profile_id uuid`; `engagement_id uuid` (**optional association only** — engagement is never the compliance subject; statutory/audit compliance remains legal-entity scoped); `client_id uuid NOT NULL` (denormalized for RLS/query simplicity, trigger-maintained, never user-writable); **period — structured (SCH-OQ-01 RESOLVED):** `period_start date NOT NULL`; `period_end date NOT NULL`; `period_label text NOT NULL` (**presentation/convenience only, never authoritative**); `period_meta jsonb` (optional domain metadata: financial year, assessment year, tax quarter — populated per family as needed, not over-modelled); `due_date date NOT NULL`; `state text NOT NULL DEFAULT 'not_started'` CHECK in the ten DM-SM-04 states (`not_started`,`information_requested`,`information_received`,`preparation`,`internal_review`,`client_approval`,`ready_to_file`,`filed`,`acknowledgement_received`,`closed`); `assignee_membership_id uuid`; `reviewer_membership_id uuid`; `partner_membership_id uuid` (partner-in-charge for the obligation; PRD §43); `priority text NOT NULL DEFAULT 'normal'`; `risk_score int` (derived cache, DM-X-03); `risk_factors jsonb`; `filed_at timestamptz`; `closed_at timestamptz`; `successor_instance_id uuid`.
+- **Columns:** `legal_entity_id uuid NOT NULL` (**required**, DEC-G); `compliance_type_id uuid NOT NULL`; `registration_id uuid` (DEC-G; **required where the type's `scope_kind='registration'`** — GST, TDS, PT, PF, ESI per DM-27 — **with one documented exception: TDS permits statutory PAN-based cases where TAN is not required**, in which case `registration_id` references the PAN registration or is NULL with the exception reason recorded in `period_meta`; this exception is TDS-specific and must not be generalised to ordinary TDS statement filing); `client_compliance_profile_id uuid`; `engagement_id uuid` (**optional association only** — engagement is never the compliance subject; statutory/audit compliance remains legal-entity scoped); `client_id uuid NOT NULL` (denormalized for RLS/query simplicity, trigger-maintained, never user-writable); **period — structured (SCH-OQ-01 RESOLVED):** `period_start date NOT NULL`; `period_end date NOT NULL`; `period_label text NOT NULL` (**presentation/convenience only, never authoritative**); `period_meta jsonb` (optional domain metadata: financial year, assessment year, tax quarter, statutory exception reasons — populated per family as needed, not over-modelled); `due_date date NOT NULL`; `state text NOT NULL DEFAULT 'not_started'` CHECK in the ten DM-SM-04 states (`not_started`,`information_requested`,`information_received`,`preparation`,`internal_review`,`client_approval`,`ready_to_file`,`filed`,`acknowledgement_received`,`closed`); `assignee_membership_id uuid`; `reviewer_membership_id uuid`; `partner_membership_id uuid` (partner-in-charge for the obligation; PRD §43); `priority text NOT NULL DEFAULT 'normal'`; `risk_score int` (derived cache, DM-X-03); `risk_factors jsonb`; `filed_at timestamptz`; `closed_at timestamptz`; `successor_instance_id uuid`.
 - **FKs:** `(firm_id, legal_entity_id)` → legal_entities; `(firm_id, registration_id)` → registrations (nullable); `(firm_id, client_compliance_profile_id)` → client_compliance_profiles; `(firm_id, engagement_id)` → engagements (nullable); `(firm_id, client_id)` → clients; compliance_type_id → compliance_types (SCH-FK-03 exception); `(firm_id, assignee_membership_id)` / `(firm_id, reviewer_membership_id)` / `(firm_id, partner_membership_id)` → firm_memberships (composite, SCH-RESP-03); successor → self.
 - **Checks:** `period_end >= period_start`.
 - **Unique:** `(compliance_type_id, legal_entity_id, registration_id, period_start)` NULLS NOT DISTINCT — one instance per obligation per period.
@@ -317,29 +320,32 @@ All deferred tables reference RLS families RLS-DOC-*, RLS-DREQ-*, RLS-RMD-*,
 RLS-COM-*, RLS-NTF-*, RLS-INV-*, RLS-AIO-*, RLS-INT-*, RLS-KNC-*, RLS-CPU-*
 defined at intent level in `05`.
 
-## Registration Scope Matrix (DM-27 — REQUIRES CA-DOMAIN VALIDATION)
+## Registration Scope Matrix (DM-27 — resolved for architecture)
 
-**Validation status of the whole matrix: UNVALIDATED.** Evaluated from the
-PRD only; the baseline column records the agreed review starting point —
-these are **proposed review defaults, not final approved CA-domain rules**
-(DM-OQ-01 remains OPEN). `scope_kind`/`registration_class` in
-`compliance_types` (SCH-10) ship as `configurable` until the matrix is
-human-validated. The compliance-subject vocabulary is exactly
-`entity | registration | configurable`; engagement is never a subject kind
-(SCH-09/SCH-12).
+**Status: RESOLVED FOR ARCHITECTURE — EXTERNAL CA/DOMAIN SIGN-OFF REQUIRED
+BEFORE PRODUCTION STATUTORY-RULE ACTIVATION.** (Architecture validation per
+the requester's domain-scope review; this is **not** external CA
+certification.) The compliance-subject vocabulary is exactly
+`entity | registration | configurable`; engagement is never a subject kind.
 
-| Compliance family | scope_kind baseline | registration_class | Cardinality expectation | PRD source / rationale | Confidence | Validation status |
-|---|---|---|---|---|---|---|
-| GST (GSTR-1, GSTR-3B, …) | registration | GSTIN | ~one instance per GSTIN per period; multi-state clients hold multiple GSTINs | §25 "GST registration?"; "Multiple states?"; §29 recurrence example | Medium | REQUIRES CA-DOMAIN VALIDATION |
-| TDS | registration | TAN | ~one instance per TAN per quarter | §25 "Does the client deduct TDS?"; §13 | Medium | REQUIRES CA-DOMAIN VALIDATION |
-| Income Tax / ITR | entity | — (PAN is identifier/context, not the instance-scope FK) | One per entity per assessment year | §18 identifiers; §20; §72 "Income Tax annual" | Medium | REQUIRES CA-DOMAIN VALIDATION |
-| ROC / MCA | entity | — (CIN/LLPIN is identifier/context) | One per company/LLP entity per year | §72 step 8; §18 | Medium | REQUIRES CA-DOMAIN VALIDATION |
-| Professional Tax | registration (provisional) | PT — state-specific | Unknown — per state registration | §25 "Multiple states?" (indirect only) | Low | REQUIRES CA-DOMAIN VALIDATION |
-| PF | registration (provisional — establishment/registration scope) | PF code | Unknown | §25 "PF?" | Low | REQUIRES CA-DOMAIN VALIDATION |
-| ESI | registration (provisional — establishment/registration scope) | ESI code | Unknown | §25 "ESI?" | Low | REQUIRES CA-DOMAIN VALIDATION |
-| Payroll | unresolved — **open question whether Payroll belongs in the statutory ComplianceType catalogue at all** (it may be a service/task family rather than a statutory obligation) | — | Unknown | §20 Payroll tab | Low | REQUIRES CA-DOMAIN VALIDATION (incl. catalogue membership) |
-| Audit (statutory/tax) | entity | — (PAN/CIN context; an Engagement may be associated separately via `engagement_id`, SCH-12) | Per entity per year | §25 audit applicability questions | Medium | REQUIRES CA-DOMAIN VALIDATION |
-| Certificates / custom recurring | configurable | per configuration | Per configuration | §20 "Certificates", "Custom recurring compliance" | Low | REQUIRES CA-DOMAIN VALIDATION |
+| Compliance family | scope_kind | registration_class | registration_id on instance | Notes | Status |
+|---|---|---|---|---|---|
+| GST (GSTR-1, GSTR-3B, …) | registration | GSTIN | **required** | Multi-state clients hold one GSTIN registration per state; ~one instance per GSTIN per period | Resolved for architecture; sign-off pending before production activation |
+| TDS | registration | TAN | **normally required** | Architecture permits statutory PAN-based exceptions where TAN is not required (`registration_id` → PAN registration, or NULL + exception reason in `period_meta`); the exception is TDS-specific and must not be generalised to ordinary TDS statement filing | Resolved for architecture; sign-off pending |
+| Income Tax / ITR | entity | — | not required | PAN is entity/taxpayer identifier/context, not the instance-scope FK | Resolved for architecture; sign-off pending |
+| ROC / MCA | entity | — | not required | CIN/LLPIN identifies the entity | Resolved for architecture; sign-off pending |
+| Professional Tax | registration | PT | required | State/jurisdiction-specific; distinguish employer registration vs enrolment where applicable (SCH-07 `meta`); **no single nationwide PT rule is modelled** | Resolved for architecture; sign-off pending |
+| PF | registration | EPFO establishment code | required | Establishment/sub-code/location metadata on the registration (`meta`), not a separate entity in R0 | Resolved for architecture; sign-off pending |
+| ESI | registration | ESIC employer code | required | Sub-code/branch/location metadata on the registration (`meta`) | Resolved for architecture; sign-off pending |
+| Audit (statutory/tax) | entity | — | not required | `engagement_id` may be associated separately (SCH-12); engagement is not the compliance subject | Resolved for architecture; sign-off pending |
+| Certificates / custom recurring | configurable | per configuration | resolved by the configured rule | A configured custom rule may resolve to entity or registration scope | Resolved for architecture; sign-off pending |
+| Payroll | **removed from the statutory ComplianceType catalogue for R0** (SCH-OQ-06) | — | — | If needed, payroll is modelled as an operational/service/engagement workflow (engagements + tasks); statutory payroll obligations remain the separate families: TDS, PF, ESI, Professional Tax | Resolved |
+
+**Future-model trigger (recorded):** introduce a first-class **Establishment**
+entity **only if** multiple registration families require persistent
+cross-registration grouping by operating location. Until that condition
+fires, establishment/location/jurisdiction data lives on
+`registrations.meta` (SCH-07).
 
 ## Assumptions
 
@@ -365,13 +371,13 @@ human-validated. The compliance-subject vocabulary is exactly
 
 | ID | Question | Owner | Status |
 |---|---|---|---|
-| DM-OQ-01 | Registration Scope Matrix validation (proposed baselines recorded; not final rules) | CA-domain expert + requester | **OPEN — blocks Batch 3 approval** |
+| DM-OQ-01 | Registration Scope Matrix validation | — | **RESOLVED FOR ARCHITECTURE — EXTERNAL CA/DOMAIN SIGN-OFF REQUIRED BEFORE PRODUCTION STATUTORY-RULE ACTIVATION** (not external CA certification) |
 | SCH-OQ-01 | Period representation | — | **Resolved:** structured `period_start`/`period_end`/`period_label` (presentation-only) + optional `period_meta` jsonb — SCH-12 |
 | SCH-OQ-02 | `review_items.type` value set (mirrors demo: gst_reconciliation, tds_return, itr_computation, financial_statements, audit_workpaper?) | Batch 4 (`07`) | Open |
 | SCH-OQ-03 | Re-inviting a removed membership: new row vs status flip — affects unique constraint | `05`/`07` | Open |
 | SCH-OQ-04 | Same-firm referential integrity mechanism | — | **Resolved:** composite tenant FKs (SCH-FK-01…03), extended to membership responsibility references (SCH-RESP-03); DDL details verified at harness gate (SCH-FK-04) |
 | SCH-OQ-05 | audit_log partitioning | — | **Resolved:** deferred for R0 — indexes + approved retention architecture suffice; partitioning later on measured volume |
-| SCH-OQ-06 | Does Payroll belong in the statutory ComplianceType catalogue, or is it a service/task family? (matrix row) | CA-domain expert + requester | **Open** |
+| SCH-OQ-06 | Does Payroll belong in the statutory ComplianceType catalogue? | — | **Resolved:** removed from the statutory catalogue for R0; payroll = operational/service/engagement workflow if needed; statutory payroll obligations remain TDS/PF/ESI/PT |
 
 ## Acceptance Criteria
 
@@ -387,9 +393,9 @@ human-validated. The compliance-subject vocabulary is exactly
 - SCH-ACC-04: Every tenant-owned table has a TEST-RLS-* reference; every
   HIGH/MEDIUM audit-sensitive table has a TEST-AUD-* reference.
 - SCH-ACC-05: The Registration Scope Matrix covers GST, TDS, Income Tax,
-  ROC/MCA, Professional Tax, PF and ESI as separate rows, Payroll (with the
-  catalogue-membership question), Audit, and Certificates/custom; each row
-  carries baseline, confidence, and REQUIRES CA-DOMAIN VALIDATION status.
+  ROC/MCA, Professional Tax, PF and ESI as separate rows, Payroll (removed),
+  Audit, and Certificates/custom; each row carries the architecture-validated
+  scope and its sign-off status.
 - SCH-ACC-06: No table lacks an authorization classification; no sensitive
   table lacks an audit classification.
 - SCH-ACC-07: The table inventory states exact counts (20 R0 / 11 deferred)
@@ -406,6 +412,8 @@ Column/constraint changes after Batch 4 approval invalidate the API contract
 and migration mapping; tenant-classification changes invalidate `03` and
 `05`; weakening the composite-FK strategy (SCH-FK-01) or the
 responsibility-reference rule (SCH-RESP) removes defence-in-depth layers and
-requires requester sign-off. The Registration Scope Matrix, once validated,
-becomes append-mostly: changing a compliance type's scoping after instances
-exist requires a data migration plan recorded in `10`.
+requires requester sign-off. The Registration Scope Matrix is now
+architecture-resolved: changing a compliance type's scoping after instances
+exist requires a data migration plan recorded in `10`, and production
+statutory-rule activation additionally requires the external CA/domain
+sign-off recorded against DM-OQ-01.
