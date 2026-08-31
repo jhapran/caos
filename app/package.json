@@ -11,7 +11,12 @@
     "test": "vitest",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "verify": "npm run lint && npm run test:unit && npm run build"
+    "verify": "npm run lint && npm run test:unit && npm run build",
+    "db:network": "docker network inspect caos-supabase-local >/dev/null 2>&1 || docker network create --opt com.docker.network.bridge.host_binding_ipv4=127.0.0.1 caos-supabase-local",
+    "db:start": "npm run db:network && supabase start --network-id caos-supabase-local",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -85,6 +90,7 @@
     "jsdom": "^30.0.1",
     "plugin-inspect-react-code": "^1.0.3",
     "postcss": "^8.5.6",
+    "supabase": "^2.116.0",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.23.12",

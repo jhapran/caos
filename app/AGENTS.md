@@ -71,7 +71,56 @@ npm run test       # Vitest in watch mode (unit/component tests in tests/)
 npm run test:unit  # Vitest, non-interactive single run
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # CI-equivalent for the current stage: lint + unit tests + build
+npm run db:start   # start the local Supabase dev stack (Docker; first run pulls images)
+npm run db:stop    # stop the local stack
+npm run db:status  # show local stack service URLs/health
+npm run db:reset   # reset the local DB: re-apply migrations + seed (destructive, local only)
 ```
+
+## Local Supabase Development (IMP-002)
+
+The Supabase CLI is a **project dev dependency** (`supabase` in
+`package.json`) — always use it via `npx supabase …` or the `db:*` scripts
+above so the version stays pinned for every agent/CI. Local stack config
+lives in `supabase/config.toml` (commit-safe; secrets via `env(...)`
+references only). **The local stack is development-only**: do not expose it
+publicly and never treat its default credentials as production-safe.
+
+**Migrations are authoritative.** `supabase/migrations/` (Git-tracked) is
+the only source of truth for schema change. MCP/console experiments are
+never final: experiment → review → Git migration → `db:reset` → tests →
+review → commit. A change that exists only in a running database is
+incomplete.
+
+**Local network exposure.** `npm run db:start` starts the stack on the
+dedicated Docker network `caos-supabase-local`, created with
+`com.docker.network.bridge.host_binding_ipv4=127.0.0.1` (`db:network`
+prepares it idempotently) — published host ports bind to **loopback
+only**. Rules:
+
+- local Supabase services and the MCP endpoint are for **trusted local
+  development only**; they must never appear on LAN, Tailscale, or public
+  interfaces;
+- **never bypass the dedicated network** (e.g. a bare `supabase start`
+  without `--network-id`, which binds `0.0.0.0`) for convenience — always
+  use `npm run db:start`;
+- **stop the local stack when it is not actively being used**
+  (`npm run db:stop`);
+- local MCP must remain **approval-gated** at all times;
+- do not change host firewall, router, Tailscale, or Docker daemon-wide
+  settings to manage this — the dedicated network is the control.
+
+**MCP.** `.kimi-code/mcp.json` configures `supabase-local`
+(`http://localhost:54321/mcp`, HTTP transport, no credentials) for local
+development. Hosted Supabase MCP, if ever added, must be **non-production
+only**, project-scoped (`project_ref=<dev-project>`), minimal feature
+groups, approval-gated, and OAuth-based — **production MCP write access is
+forbidden**. Do not paste tokens into any committed file.
+
+**Secrets.** `.gitignore` blocks `.env*` (except documented
+`.env.example/.template/.sample`); `supabase/.gitignore` covers CLI-local
+files. Never commit database passwords, JWT/signing keys, service-role
+keys, or tokens (OPS-ENV-05).
 
 **Verification — current vs target.** Since IMP-001, the frontend harness
 exists: Vitest + React Testing Library (`tests/`, jsdom, `@/` alias via

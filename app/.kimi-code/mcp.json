@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "supabase-local": {
+      "type": "http",
+      "url": "http://localhost:54321/mcp",
+      "description": "Local Supabase CLI dev stack (IMP-002). Development-only; no credentials required locally. MCP database changes are never the source of truth — Git-tracked migrations in supabase/migrations/ are (see AGENTS.md). Keep tool calls approval-gated; never point this config at a production project."
+    }
+  }
+}

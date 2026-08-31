@@ -4,3 +4,11 @@ dist
 test-results
 playwright-report
 playwright/.cache
+
+# Environment / secrets — never commit credentials (OPS-ENV-05).
+# supabase/.gitignore additionally covers CLI-local files (.temp, .branches).
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.sample
