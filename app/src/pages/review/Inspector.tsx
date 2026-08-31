@@ -82,18 +82,28 @@ export default function Inspector({ item, onApprove, onReturn, onReassign, retur
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const flashTimer = useRef<number | undefined>(undefined);
 
-  // Reset transient UI on selection change.
-  useEffect(() => {
+  // Reset transient UI on selection change — adjust during render.
+  const [prevItemId, setPrevItemId] = useState(item?.id);
+  if (item?.id !== prevItemId) {
+    setPrevItemId(item?.id);
     setReturnOpen(false);
     setReason('');
     setApprovedFlash(false);
-  }, [item?.id]);
+  }
 
-  // Keyboard "R" from the page opens + focuses the return reason field.
+  // Keyboard "R" from the page opens the return reason field — adjust
+  // during render when the request counter advances; the effect below owns
+  // only the DOM focus timeout.
+  const [prevReturnKey, setPrevReturnKey] = useState(returnRequestKey);
+  if (returnRequestKey !== prevReturnKey) {
+    setPrevReturnKey(returnRequestKey);
+    if (returnRequestKey > 0 && item) setReturnOpen(true);
+  }
+
   useEffect(() => {
     if (returnRequestKey > 0 && item) {
-      setReturnOpen(true);
-      window.setTimeout(() => reasonRef.current?.focus(), 250);
+      const t = window.setTimeout(() => reasonRef.current?.focus(), 250);
+      return () => window.clearTimeout(t);
     }
   }, [returnRequestKey, item]);
 

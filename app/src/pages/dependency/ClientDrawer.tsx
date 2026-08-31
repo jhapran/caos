@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileX2, Mail, MessageCircle, RotateCcw, Send, ShieldAlert } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import Drawer from '@/components/Drawer';
-import { getClient, useDemoStore } from '@/data';
+import { DEMO_TODAY, getClient, useDemoStore } from '@/data';
 import type { DependencyClient, Reminder } from '@/data';
 import { cn } from '@/lib/utils';
 import {
@@ -31,13 +31,16 @@ export default function ClientDrawer({
   const contact = client ? contactFor(client.clientId) : null;
   const record = client ? getClient(client.clientId) : undefined;
 
-  // Rebuild the merged template whenever the drawer target changes.
-  useEffect(() => {
-    if (client) {
-      setChannel(contactFor(client.clientId).channel);
-      setMessage(buildReminderMessage(client.clientName, client.missingDocs, client.clientId));
-    }
-  }, [client]);
+  // Rebuild the merged template whenever the drawer target changes —
+  // adjust during render. prevClientId starts undefined so the first
+  // render with a client performs the same initialization the old
+  // mount-effect did.
+  const [prevClientId, setPrevClientId] = useState<string | undefined>(undefined);
+  if (client && client.clientId !== prevClientId) {
+    setPrevClientId(client.clientId);
+    setChannel(contactFor(client.clientId).channel);
+    setMessage(buildReminderMessage(client.clientName, client.missingDocs, client.clientId));
+  }
 
   const history = useMemo<Reminder[]>(() => {
     if (!client) return [];
@@ -50,7 +53,7 @@ export default function ClientDrawer({
     const base = baseReminderCount(client.clientId);
     for (let i = 1; i < base; i++) {
       seeded.push({
-        sentAt: new Date(new Date(client.lastReminderAt ?? Date.now()).getTime() - i * 3 * 86400000).toISOString(),
+        sentAt: new Date(new Date(client.lastReminderAt ?? DEMO_TODAY.toISOString()).getTime() - i * 3 * 86400000).toISOString(),
         channel: i % 2 === 0 ? 'Email' : 'WhatsApp',
         by: ownerName(client.ownerId),
       });

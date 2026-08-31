@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, CheckCircle2 } from 'lucide-react';
@@ -52,11 +52,14 @@ export default function RiskAlerts() {
   );
   const navigate = useNavigate();
 
-  // Support ?alert= deep-links changing while mounted.
-  useEffect(() => {
-    const id = searchParams.get('alert');
-    if (id) setOpenId(id);
-  }, [searchParams]);
+  // Support ?alert= deep-links changing while mounted — adjust during
+  // render when the param actually changes.
+  const alertParam = searchParams.get('alert');
+  const [prevAlertParam, setPrevAlertParam] = useState(alertParam);
+  if (alertParam !== prevAlertParam) {
+    setPrevAlertParam(alertParam);
+    if (alertParam) setOpenId(alertParam);
+  }
 
   const statusOf = (id: string) => alerts.find((a) => a.id === id)?.status ?? 'active';
 

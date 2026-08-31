@@ -11,9 +11,17 @@ export function useCountUp(value: number, duration = 0.7): number {
   const [display, setDisplay] = useState(() => (prefersReducedMotion() ? value : 0));
   const fromRef = useRef(0);
 
+  // Reduced-motion: snap to the new value during render when it changes
+  // (docs-sanctioned adjust-during-render pattern; keeps effects for the
+  // animation subscription only).
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    if (prefersReducedMotion()) setDisplay(value);
+  }
+
   useEffect(() => {
     if (prefersReducedMotion()) {
-      setDisplay(value);
       return;
     }
     let raf = 0;

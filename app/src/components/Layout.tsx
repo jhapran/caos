@@ -60,9 +60,13 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
+  // Close the mobile nav on route change — adjust during render instead of
+  // an effect (React docs pattern for reacting to prop/location changes).
+  const [prevPath, setPrevPath] = useState(location.pathname);
+  if (prevPath !== location.pathname) {
+    setPrevPath(location.pathname);
     setMobileNav(false);
-  }, [location.pathname]);
+  }
 
   const crumbs = crumbsFor(location.pathname);
 

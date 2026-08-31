@@ -43,13 +43,13 @@ export default function ReviewQueue() {
   const selected = filtered.find((r) => r.id === selectedId) ?? null;
 
   // Keep selection valid as the list changes (approvals, filter switches).
-  useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-    } else if (!filtered.some((r) => r.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, selectedId]);
+  // Self-stabilizing adjust-during-render: after the correction re-render,
+  // the guard conditions are false and no further setState occurs.
+  if (filtered.length === 0) {
+    if (selectedId !== null) setSelectedId(null);
+  } else if (!filtered.some((r) => r.id === selectedId)) {
+    setSelectedId(filtered[0].id);
+  }
 
   const setFilter = (f: Filter) => {
     if (f === 'all') setSearchParams({}, { replace: true });

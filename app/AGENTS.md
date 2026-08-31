@@ -67,16 +67,21 @@ npm run dev        # Vite dev server on http://localhost:3000 (port set in vite.
 npm run build      # tsc -b (type check) + vite build → dist/
 npm run preview    # serve the production build locally
 npm run lint       # ESLint over the repo
+npm run test       # Vitest in watch mode (unit/component tests in tests/)
+npm run test:unit  # Vitest, non-interactive single run
+npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
+npm run verify     # CI-equivalent for the current stage: lint + unit tests + build
 ```
 
-**Verification — current vs target.** Today (pre-IMP-001) there is no test
-runner installed; verification is `npm run build` (includes full type
-checking) and `npm run lint`. The approved target harness
-(`docs/spec/11-testing-harness.md`) will additionally require: Vitest,
-React Testing Library, Supabase/RLS integration tests, auth tests,
-Playwright smoke tests, and a single CI-equivalent command. Once IMP-001
-lands, `npm run build` + `npm run lint` alone are no longer sufficient
-verification — follow `11-testing-harness.md` and the active work package.
+**Verification — current vs target.** Since IMP-001, the frontend harness
+exists: Vitest + React Testing Library (`tests/`, jsdom, `@/` alias via
+`vite.config.ts`), Playwright foundation (`e2e/`, `playwright.config.ts` —
+browser binaries are a separate explicit install), and `npm run verify` as
+the CI-equivalent command. The approved full harness
+(`docs/spec/11-testing-harness.md`) will additionally require
+Supabase/RLS integration tests and auth tests (IMP-002+), the DEC-J and
+audit-context spikes, and the business-flow Playwright suite
+(TEST-E2E-01…12) — at which point `verify` expands to include them.
 
 ## Deployment
 

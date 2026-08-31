@@ -27,17 +27,28 @@ export default function CommandPalette({
 
   const hits: SearchHit[] = useMemo(() => searchAll(query), [query]);
 
-  useEffect(() => {
+  // Reset transient state during render when the palette opens or the query
+  // changes (docs-sanctioned adjust-during-render pattern); effects below
+  // own only DOM focus and keyboard subscription.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setQuery('');
       setActiveIdx(0);
-      window.setTimeout(() => inputRef.current?.focus(), 30);
     }
-  }, [open]);
+  }
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (prevQuery !== query) {
+    setPrevQuery(query);
+    setActiveIdx(0);
+  }
 
   useEffect(() => {
-    setActiveIdx(0);
-  }, [query]);
+    if (!open) return;
+    const t = window.setTimeout(() => inputRef.current?.focus(), 30);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
@@ -65,19 +65,26 @@ export function AskCAOSBar({
 /** Streams text like a typewriter (14ms/char); respects prefers-reduced-motion. */
 export function useTypewriter(text: string, active = true): string {
   const [shown, setShown] = useState(() => (prefersReducedMotion() || !active ? text : ''));
-  const iRef = useRef(0);
+
+  // Reset the stream during render when the input changes (docs-sanctioned
+  // adjust-during-render pattern); the effect below owns only the interval.
+  const [prevInput, setPrevInput] = useState(() => `${text}${active}`);
+  const input = `${text}${active}`;
+  if (prevInput !== input) {
+    setPrevInput(input);
+    setShown(prefersReducedMotion() || !active ? text : '');
+  }
 
   useEffect(() => {
-    if (prefersReducedMotion() || !active) {
-      setShown(text);
-      return;
-    }
-    setShown('');
-    iRef.current = 0;
+    if (prefersReducedMotion() || !active) return;
     const id = window.setInterval(() => {
-      iRef.current += 1;
-      setShown(text.slice(0, iRef.current));
-      if (iRef.current >= text.length) window.clearInterval(id);
+      setShown((s) => {
+        if (s.length >= text.length) {
+          window.clearInterval(id);
+          return s;
+        }
+        return text.slice(0, s.length + 1);
+      });
     }, 14);
     return () => window.clearInterval(id);
   }, [text, active]);

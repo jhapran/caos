@@ -34,10 +34,13 @@ export default function AlertDrawer({
   const [exec, setExec] = useState<ExecState>('idle');
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
+  // Reset execution state during render when the drawer target changes.
+  const [prevAlertId, setPrevAlertId] = useState(alert?.id);
+  if (alert?.id !== prevAlertId) {
+    setPrevAlertId(alert?.id);
     setExec('idle');
     setProgress(0);
-  }, [alert?.id]);
+  }
 
   // Tick the execute progress chips 0.05s apart.
   useEffect(() => {
