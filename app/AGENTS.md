@@ -2,20 +2,46 @@
 
 Guidance for AI coding agents working in this repository.
 
-## Project Overview
+## Repository State: CURRENT vs TARGET
 
-This is **CAOS (CA Operating System)** — a front-end-only MVP demo of an AI-native
-practice, compliance & client operating system for Indian Chartered Accountant
-firms. It is a single-page React application built with Vite; there is **no
-backend**. All data is static in-memory fixtures with simulated latency.
+This repository is in transition. Two things are both true and must not be
+conflated:
 
-- Product spec: `docs/input/PRD.txt` (~4,800 lines) — the source of truth for
-  product intent, personas, and MVP modules (Command Centre, Client 360,
-  Compliance Engine, Review Queue, Ask CAOS, etc.).
+**CURRENT implementation (this Git baseline):** a front-end-only MVP demo —
+React + TypeScript + Vite, fixture-backed, all data static in-memory via
+`@/data`, no backend, no network calls, no tests installed.
+
+**APPROVED TARGET architecture (Release 0):** specified and approved in
+`docs/spec/` (Final Spec Gate: PASS, 2026-08-31). Release 0 adds a Supabase
+backend — PostgreSQL, Supabase Auth, Row Level Security, migrations as the
+schema-change source of truth, private/server boundaries where required —
+with isolated local / staging / production environments. The polished
+fixture demo is retained as a separate, dedicated deployment.
+
+Until implementation packages land, the CURRENT description remains the
+accurate picture of the code. Do not pretend Supabase is implemented; do
+not document future behavior as if it exists. When a section below
+describes target state, it says so explicitly.
+
+Authoritative sources:
+
+- Product intent: `docs/input/PRD.txt` (~4,800 lines) — personas and MVP
+  modules (Command Centre, Client 360, Compliance Engine, Review Queue,
+  Ask CAOS, etc.).
+- Approved target architecture: `docs/spec/00-index.md` …
+  `docs/spec/13-operations-observability.md`. `docs/spec/12-release-0-plan.md`
+  is the execution contract (work packages IMP-*, gates, sequencing).
 - `info.md` records the scaffolding environment (Node.js 20, Tailwind CSS
   v3.4.19, Vite v7.2.4, shadcn theme) — note its suggested `src/sections/`
   layout is stale; the actual layout is below.
-- `README.md` is the stock Vite template readme; it does not describe this app.
+- `README.md` is the stock Vite template readme; it does not describe this
+  app.
+
+## Project Overview
+
+This is **CAOS (CA Operating System)** — an AI-native practice, compliance
+& client operating system for Indian Chartered Accountant firms. It is a
+single-page React application built with Vite.
 
 ### Tech stack
 
@@ -27,7 +53,11 @@ backend**. All data is static in-memory fixtures with simulated latency.
   lucide icons) primitives live in `src/components/ui/`.
 - Radix UI primitives, framer-motion, GSAP (`@gsap/react`), lenis (smooth
   scroll), embla-carousel, recharts, sonner, react-hook-form + zod, date-fns.
-- No state library beyond React context; no test runner is installed.
+- No state library beyond React context.
+- **Target (Release 0, per `docs/spec/`):** Supabase — PostgreSQL, Auth,
+  RLS, Storage (Release 1), Edge Functions where justified, Realtime only
+  where justified. See `docs/spec/03-tenancy-environments.md` and
+  `docs/spec/06-database-schema.md`.
 
 ## Build and Run
 
@@ -39,14 +69,35 @@ npm run preview    # serve the production build locally
 npm run lint       # ESLint over the repo
 ```
 
-There are **no tests** in this project (no vitest/jest/playwright). Verification
-is `npm run build` (includes full type checking) and `npm run lint`.
+**Verification — current vs target.** Today (pre-IMP-001) there is no test
+runner installed; verification is `npm run build` (includes full type
+checking) and `npm run lint`. The approved target harness
+(`docs/spec/11-testing-harness.md`) will additionally require: Vitest,
+React Testing Library, Supabase/RLS integration tests, auth tests,
+Playwright smoke tests, and a single CI-equivalent command. Once IMP-001
+lands, `npm run build` + `npm run lint` alone are no longer sufficient
+verification — follow `11-testing-harness.md` and the active work package.
 
 ## Deployment
 
-Static SPA deployed to **Netlify**: `netlify.toml` runs `npm run build` and
-publishes `dist/`. SPA fallback is configured twice — keep both in sync if
-changed: `netlify.toml` redirects and `public/_redirects` (`/* → /index.html`).
+**Current:** static SPA deployed to **Netlify**: `netlify.toml` runs
+`npm run build` and publishes `dist/`. SPA fallback is configured twice —
+keep both in sync if changed: `netlify.toml` redirects and
+`public/_redirects` (`/* → /index.html`). This deployment is the fixture
+demo track.
+
+**Target (per `docs/spec/03`, `10`, `13`):** environment-isolated topology
+— local Supabase CLI for development, separate staging and production
+Supabase projects. Data-source selection is explicit per environment:
+
+- Dedicated demo/sales deployment: `DATA_SOURCE=fixture`
+- Local production-development: `DATA_SOURCE=supabase`
+- Staging: `DATA_SOURCE=supabase`
+- Production: `DATA_SOURCE=supabase`
+
+Production must **never** run fixture mode and must never silently fall
+back to it; invalid or missing `DATA_SOURCE` fails closed
+(`docs/spec/10-migration-seed.md`, MIG-DS-*).
 
 ## Code Organization
 
@@ -69,29 +120,54 @@ src/
   data/               THE DATA LAYER — see below.
   hooks/              Shared hooks (currently only use-mobile).
   lib/utils.ts        cn() (clsx + tailwind-merge). shadcn convention.
+docs/spec/            APPROVED SPECIFICATION SET — the target architecture
+                      and Release 0 execution plan. Read before implementing.
 ```
 
 ### Data layer (`src/data/`) — the key architectural pattern
 
-There is no API; the data layer simulates one:
+**This boundary is permanent.** React components must NOT import or execute
+Supabase (or any backend) queries directly. The target pattern is:
+
+```
+React component
+    ↓
+@/data / domain data layer
+    ↓
+fixture adapter  OR  Supabase adapter
+```
+
+The selected adapter depends on approved environment configuration
+(`DATA_SOURCE`, above). The production data-access contract is specified in
+`docs/spec/07-api-contract.md`; do not spread direct Supabase queries
+through React components (API-ARCH-02).
+
+Current fixture modules:
 
 - `types.ts` — all domain types (Firm, Client, TaskInstance, FirmAlert,
-  ReviewItem, …). Single source of truth for the domain model.
+  ReviewItem, …). Single source of truth for the current domain model;
+  the *approved production* domain model is `docs/spec/02-domain-model.md`.
 - `clients.ts`, `compliance.ts`, `tasks.ts`, `deadlines.ts`, `review.ts`,
   `alerts.ts`, `dependency.ts`, `askCaos.ts` — static fixture constants
   (`CLIENTS`, `TASKS`, `COMPLIANCE_MASTER`, …) plus pure selector helpers.
-  Fixtures are pinned to a demo clock (`DEMO_TODAY`) — do not use
-  `new Date()` for domain dates; use the fixture-relative dates.
 - `api.ts` — typed "API surface": sync getters (`getClients`, `getTasks`, …)
   and async fetchers (`fetchClients`, `fetchTask`, …) that wrap fixtures in
   `withLatency()` (150–400 ms simulated latency) so pages can show loading
   states. Also `searchAll()` powering the ⌘K palette and `askCaos()` for the
-  canned natural-language assistant.
+  canned natural-language assistant. Every barrel-reachable export is
+  classified KEEP / EVOLVE / REPLACE / DEMO-ONLY in
+  `docs/spec/07-api-contract.md` (API-INV-01).
 - `store.tsx` — `DemoStoreProvider` React context: a mutable overlay on top of
   the fixtures (review approvals/returns, reminders, alert ack/resolve, toasts,
   `resetDemo()`). Derived live counts via `useLiveAggregates()`.
 - `index.ts` — barrel re-exporting everything. **Always import data from
   `@/data`, never from the individual fixture modules.**
+
+**Fixture clock.** The pinned demo clock (`DEMO_TODAY`, fixture-relative
+dates, no `new Date()` for domain dates) applies to **fixture/demo mode
+only**. Production Supabase behavior must use real authoritative
+(server-generated) timestamps and must not inherit fixture-only
+`DEMO_TODAY` behavior (`docs/spec/10-migration-seed.md`, TEN-22).
 
 ## Code Style and Conventions
 
@@ -113,15 +189,67 @@ There is no API; the data layer simulates one:
 - shadcn/ui: primitives in `src/components/ui/` are generated; add new ones via
   the shadcn CLI conventions in `components.json` rather than hand-writing.
 - Pages own their data fetching through `@/data` fetchers and local state;
-  cross-page mutations go through `useDemoStore()` only.
-- Comments reference a `design.md` (e.g. "design.md §8") that is not in the
-  repo — treat `docs/input/PRD.txt` as the authoritative spec.
+  cross-page mutations go through `useDemoStore()` only (fixture mode;
+  production mutations follow `docs/spec/07-api-contract.md`).
+
+## Implementation Protocol (binding for all coding agents)
+
+Derived from `docs/spec/12-release-0-plan.md` (REL-WP-*, REL-MLH-*,
+REL-LOOP-*, REL-GIT-*) and `docs/spec/11-testing-harness.md` (TEST-MLH-*).
+
+**Every implementation task must declare:**
+
+- the IMP-* work package it belongs to (from `12-release-0-plan.md`)
+- requirement IDs being implemented
+- TEST-* IDs being satisfied
+- allowed scope (files/areas)
+- forbidden changes
+- acceptance checks (commands/families)
+- the current Git checkpoint
+
+**Rules:**
+
+- Agents must not silently redesign approved architecture. The repository
+  and `docs/spec/` are the source of truth — not model memory, not
+  narration.
+- If a specification is ambiguous or conflicting: **STOP, report the
+  ambiguity with spec references, do not invent architecture.**
+- Implementation may be performed by multiple LLMs. For security-sensitive
+  changes (RLS, authentication, service-role handling, audit, tenant
+  isolation, migrations, break-glass), where practical:
+  **IMPLEMENTER MODEL ≠ REVIEWER MODEL.**
+- Report changed files, map changes to requirement IDs and tests to
+  TEST-* IDs, run the acceptance checks, and report failures openly.
+
+**Git / change discipline:**
+
+- clean working tree before each IMP package
+- one bounded package per branch (`r0/imp-NNN-<slug>` off `main`)
+- no unrelated edits in a change set
+- required tests pass before commit
+- review the full diff before commit
+- recorded human approval for security-sensitive packages
+- one logical checkpoint per package; commit messages reference the IMP id
+  and primary requirement IDs
 
 ## Security Considerations
 
-- Demo-only app: no authentication, no real credentials, no network calls —
-  all "reminders"/"emails" are simulated in the store. Do not add real API
-  keys or endpoints; fixture data is fictional client data.
-- If a backend is ever added, keep secrets out of the repo (no `.env` is
-  currently used) and remember this is a fully client-side bundle — nothing in
-  `src/` is private.
+**Current (fixture baseline):** demo-only app — no authentication, no real
+credentials, no network calls; all "reminders"/"emails" are simulated in
+the store; fixture data is fictional client data.
+
+**Target (Release 0, binding once implementation begins — per
+`docs/spec/03`, `04`, `05`, `08`, `13`):**
+
+- **Never commit secrets.** No credentials in source control, ever.
+- Client-safe Supabase configuration (project URL, anon key) may exist only
+  through approved environment variables, clearly marked client-safe.
+- **Service-role credentials are server-only** — never exposed to the
+  browser, never imported by frontend code, never shipped in the bundle.
+- Production fails closed on missing/invalid security-critical
+  configuration (OPS-ENV-06).
+- Production has **no fixture fallback** (MIG-DS-05).
+- RLS is the authorization enforcement boundary
+  (`docs/spec/05-authorization-rls.md`); tenant isolation is verified by
+  the `11` harness, not by convention.
+- Audit and break-glass rules: `docs/spec/08-audit-security.md`.
