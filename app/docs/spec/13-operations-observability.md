@@ -183,6 +183,30 @@ observability platform — R0 needs reliable basics, executed well.
   AUTH-08; new logins fail visibly; no authorization decision is made on
   assumed state (RLS-PRIN-02 default deny).
 
+## Measured auth platform values (IMP-011 evidence, TEST-AUTH-15)
+
+Recorded 2026-09-01 from the running local stack (GoTrue v2.196.0) —
+measured, never assumed (AUTH-OQ-02 closure evidence for Release 0):
+
+- **Access-token lifetime:** 3600 s (measured `exp − iat` on issued JWTs).
+- **Session timebox:** `168h` (7 d) — `[auth.sessions] timebox` in
+  `supabase/config.toml`.
+- **Inactivity timeout:** `12h` — `[auth.sessions] inactivity_timeout`.
+- **Refresh-token rotation:** enabled; `refresh_token_reuse_interval = 10`.
+- **Reuse semantics (v1 legacy tokens, source-verified against
+  `internal/tokens/service.go`):** replaying the revoked *parent of the
+  currently active* token is tolerated indefinitely (client
+  fail-to-save recovery) and returns the active token; replaying an older
+  revoked token more than 10 s after its revocation is detected — 400
+  "Invalid Refresh Token: Already Used" — and the whole token family is
+  revoked. Family revocation does **not** destroy the session: issued
+  access tokens remain valid until their own expiry.
+- **Sign-up:** disabled platform-wide (`[auth] enable_signup = false`;
+  sign-up returns 422 `signup_disabled`) — invitation-only onboarding
+  (AUTH-03). Note: `[auth.email] enable_signup` must stay `true` in CLI
+  config (it gates the email provider itself, not self-registration).
+- **MFA:** TOTP enrol/verify enabled (`[auth.mfa.totp]`).
+
 ## Incident basics
 
 - **OPS-INC-01 — Lifecycle:** Detect → Assess → Contain → Recover →

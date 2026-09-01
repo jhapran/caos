@@ -27,8 +27,14 @@ describes target state, it says so explicitly.
 and IMP-010 has landed — `supabase/migrations/` now carries the production
 tenant core (`firms`, `profiles`, `firm_memberships`, SCH-01…03; no RLS
 policies yet — IMP-012; table grants revoked from anon/authenticated until
-then). The React app remains fixture-backed; the Supabase data-source
-adapter lands with IMP-014.
+then). IMP-011 (staff authentication) is IMPLEMENTED and awaiting human
+approval: a dual-mode auth adapter behind `@/data` (`src/data/auth/`),
+staff auth pages, authentication-level route protection, and invitation-only
+Supabase Auth config (`enable_signup = false`, TOTP on, session timebox
+168h / inactivity 12h). The React app remains fixture-backed by default
+(`VITE_DATA_SOURCE` unset = fixture demo track; `supabase` mode needs
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see `.env.example`); the
+Supabase data-source adapter lands with IMP-014.
 
 Authoritative sources:
 

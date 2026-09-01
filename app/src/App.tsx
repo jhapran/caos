@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import RequireAuth from './components/RequireAuth';
 import Landing from './pages/Landing';
 import MorningBrief from './pages/MorningBrief';
 import CommandCentre from './pages/CommandCentre';
@@ -11,6 +12,11 @@ import ReviewQueue from './pages/ReviewQueue';
 import ClientDependency from './pages/ClientDependency';
 import RiskAlerts from './pages/RiskAlerts';
 import Reports from './pages/Reports';
+import SignIn from './pages/auth/SignIn';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import MfaEnroll from './pages/auth/MfaEnroll';
+import MfaChallenge from './pages/auth/MfaChallenge';
 
 export default function App() {
   return (
@@ -18,8 +24,23 @@ export default function App() {
       {/* Landing — no app shell */}
       <Route path="/" element={<Landing />} />
 
-      {/* App shell (sidebar + topbar) — nested-route pattern with <Outlet/> */}
-      <Route element={<Layout />}>
+      {/* Staff authentication — no app shell (IMP-011) */}
+      <Route path="/auth/sign-in" element={<SignIn />} />
+      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+      <Route path="/auth/reset-password" element={<ResetPassword />} />
+      <Route path="/auth/mfa-enroll" element={<MfaEnroll />} />
+      <Route path="/auth/mfa-challenge" element={<MfaChallenge />} />
+
+      {/* App shell (sidebar + topbar) — nested-route pattern with <Outlet/>.
+          Authentication-level guard only (fixture mode passes through);
+          tenant authorization is RLS, not this guard (IMP-012). */}
+      <Route
+        element={
+          <RequireAuth>
+            <Layout />
+          </RequireAuth>
+        }
+      >
         <Route path="/brief" element={<MorningBrief />} />
         <Route path="/command" element={<CommandCentre />} />
         <Route path="/deadlines" element={<Deadlines />} />

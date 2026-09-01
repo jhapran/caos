@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. IMP-010 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint — security-critical (authentication).** IMP-012 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction after the IMP-011 checkpoint.
 
 ## Purpose
 
@@ -424,7 +424,7 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-010 — Tenant core schema & migration tooling** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting Git checkpoint**
+**IMP-010 — Tenant core schema & migration tooling** — **COMPLETE (2026-09-01 — Git checkpoint `c913b9d`)**
 
 - **Outcome:** migration `supabase/migrations/20260901000000_tenant_core.sql`
   creates exactly `firms` (SCH-01), `profiles` (SCH-02), `firm_memberships`
@@ -467,7 +467,40 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-011 — Staff authentication integration**
+**IMP-011 — Staff authentication integration** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint (security-critical: authentication)**
+
+- **Outcome:** dual-mode auth adapter behind the data layer
+  (`src/data/auth/` — fixture demo persona vs Supabase Auth service; React
+  never touches Supabase directly), central lazy browser client
+  (`src/lib/supabaseClient.ts`, anon key only) and fail-closed client-safe
+  env (`src/lib/env.ts`, MIG-DS-03 hard error in supabase mode; strict
+  DATA_SOURCE startup validation stays with IMP-014). Staff UI: sign-in
+  (password + magic link), forgot/reset password, TOTP enrol + challenge
+  pages, and `RequireAuth` authentication-level route protection with the
+  AUTH-10 client-side mandatory-MFA gate stub (no membership/role data
+  consulted — DEC-J). Invitation-only onboarding enforced by platform
+  config: `[auth] enable_signup = false` (422 `signup_disabled`; verified),
+  session targets `timebox = 168h` / `inactivity_timeout = 12h`, TOTP
+  enrol/verify enabled, loopback redirect URLs. No migration required —
+  IMP-010 migration byte-unchanged; zero RLS policies (IMP-012); zero
+  audit objects (IMP-013); anon/authenticated grants on the tenant core
+  remain revoked. Evidence: `tests/integration/auth/` 31 tests across
+  TEST-AUTH-01…09 + TEST-AUTH-14 + TEST-AUTH-15 config/measurement
+  assertions (TEST-AUTH-10/11 recorded as config verification); refresh
+  rotation asserted against actual GoTrue v2.196.0 v1-token semantics
+  (fail-to-save parent tolerance; hard "Already Used" detection +
+  family revocation beyond the 10 s reuse interval — recorded in `13`).
+  Component/unit: `tests/components/SignIn.test.tsx`,
+  `tests/unit/env.test.ts`, `tests/unit/authService.test.ts` (23/23 unit
+  total). Playwright `staff-auth` project (local-stack-gated, port 3100,
+  `VITE_DATA_SOURCE=supabase`): unauthenticated redirect, invalid
+  credentials, valid login → MFA-enrol gate (4/4 incl. smoke).
+  `npm run verify` green; `npm run verify:harness` 15/15 green;
+  secret/bundle scan clean. Mechanism-level caveats: invitation
+  admin-authz wrapper and device-loss audit row land with IMP-012/013;
+  DB AAL2 enforcement (RLS-AAL-01) is IMP-012; profile-creation
+  production RPC deferred. The package definition below is preserved as
+  executed.
 
 - **Purpose:** Supabase Auth for staff: email/password + magic link,
   TOTP MFA enrolment/challenge, AAL2 step-up plumbing, session handling

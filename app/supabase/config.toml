@@ -159,7 +159,8 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Local dev (3000) and the local staff-auth E2E dev server (3100) — loopback only.
+additional_redirect_urls = ["https://127.0.0.1:3000", "http://127.0.0.1:3000/**", "http://127.0.0.1:3100/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -172,7 +173,8 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-enable_signup = true
+# AUTH-03: staff onboarding is invitation-only — no open registration surface.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -217,6 +219,10 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
+# NOTE (IMP-011): in the Supabase CLI this key enables the EMAIL PROVIDER
+# itself (GOTRUE_EXTERNAL_EMAIL_ENABLED) — setting it false disables ALL
+# email logins. It must stay true; invitation-only onboarding (AUTH-03) is
+# enforced by the top-level [auth] enable_signup = false above.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
@@ -268,11 +274,14 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+# AUTH-08 approved targets: absolute session lifetime 7 days (168h);
+# inactivity timeout 12 hours. Verified during IMP-011 and recorded in
+# docs/spec/13-operations-observability.md (AUTH-OQ-02 platform values).
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "168h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "12h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -298,9 +307,11 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# AUTH-09/10: TOTP MFA is mandatory for all staff — enrolment and
+# challenge/verification are enabled (IMP-011).
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

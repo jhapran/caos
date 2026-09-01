@@ -1,98 +1,98 @@
 {
   "gate": "CAOS Harness Gate (verify:harness)",
-  "startedAt": "2026-09-01T08:16:46.888Z",
+  "startedAt": "2026-09-01T16:35:11.108Z",
   "phases": [
     {
       "name": "preflight",
       "ok": true,
       "detail": "node v24.18.0, docker ok, supabase CLI ok, decision evidence present",
-      "durationMs": 3473
+      "durationMs": 716
     },
     {
       "name": "stack-lifecycle",
       "ok": true,
       "detail": "stack already running — will be left running afterwards",
-      "durationMs": 1164
+      "durationMs": 916
     },
     {
       "name": "db-reset-seed",
       "ok": true,
       "detail": "  \"errors\": [], |   \"warnings\": [] | }",
-      "durationMs": 30854
+      "durationMs": 34814
     },
     {
       "name": "decision-evidence",
       "ok": true,
       "detail": "DEC-J = live membership lookup (05); AUD-OQ-02 = layered A+B+C (08); spike evidence committed",
-      "durationMs": 6
+      "durationMs": 7
     },
     {
       "name": "lint",
       "ok": true,
       "detail": "> my-app@0.0.0 lint | > eslint .",
-      "durationMs": 4101
+      "durationMs": 3850
     },
     {
       "name": "unit-tests",
       "ok": true,
-      "detail": "      Tests  12 passed (12) |    Start at  13:47:26 |    Duration  528ms (transform 132ms, setup 103ms, import 311ms, tests 26ms, environment 829ms)",
-      "durationMs": 816
+      "detail": "      Tests  23 passed (23) |    Start at  22:05:51 |    Duration  840ms (transform 395ms, setup 525ms, import 537ms, tests 312ms, environment 1.67s)",
+      "durationMs": 1159
     },
     {
       "name": "auth-integration",
       "ok": true,
-      "detail": "      Tests  9 passed (9) |    Start at  13:47:27 |    Duration  2.09s (transform 23ms, setup 0ms, import 31ms, tests 1.96s, environment 0ms)",
-      "durationMs": 2331
+      "detail": "      Tests  31 passed (31) |    Start at  22:05:52 |    Duration  23.91s (transform 220ms, setup 0ms, import 318ms, tests 34.79s, environment 0ms)",
+      "durationMs": 24142
     },
     {
       "name": "rls-integration",
       "ok": true,
-      "detail": "      Tests  18 passed (18) |    Start at  13:47:29 |    Duration  2.73s (transform 31ms, setup 0ms, import 39ms, tests 2.59s, environment 0ms)",
-      "durationMs": 2977
+      "detail": "      Tests  18 passed (18) |    Start at  22:06:16 |    Duration  4.32s (transform 35ms, setup 0ms, import 47ms, tests 4.18s, environment 0ms)",
+      "durationMs": 4551
     },
     {
       "name": "schema-integration",
       "ok": true,
-      "detail": "      Tests  18 passed (18) |    Start at  13:47:32 |    Duration  3.40s (transform 28ms, setup 0ms, import 36ms, tests 3.27s, environment 0ms)",
-      "durationMs": 3630
+      "detail": "      Tests  18 passed (18) |    Start at  22:06:21 |    Duration  3.39s (transform 33ms, setup 0ms, import 45ms, tests 3.25s, environment 0ms)",
+      "durationMs": 3651
     },
     {
       "name": "build",
       "ok": true,
-      "detail": "dist/assets/index-CdCyykVD.css  110.79 kB │ gzip:  18.23 kB | dist/assets/index-BdowmdmR.js   954.27 kB │ gzip: 285.09 kB | ✓ built in 2.74s",
-      "durationMs": 6295
+      "detail": "dist/assets/index-DMqr3NHa.css  110.92 kB │ gzip:  18.28 kB | dist/assets/index-BIWKt5G5.js   972.99 kB │ gzip: 289.39 kB | ✓ built in 2.84s",
+      "durationMs": 6472
     },
     {
       "name": "playwright-smoke",
       "ok": true,
-      "detail": " | [1/1] [chromium] › e2e/smoke.spec.ts:8:1 › app shell boots and serves the landing page |   1 passed (12.1s)",
-      "durationMs": 12486
+      "detail": "[3/4] [staff-auth] › e2e/staff-auth.spec.ts:36:1 › invalid password is rejected with an error | [4/4] [staff-auth] › e2e/staff-auth.spec.ts:45:1 › valid staff login lands on the mandatory MFA enrolment gate |   4 passed (3.8s)",
+      "durationMs": 5029
     },
     {
       "name": "network-binding",
       "ok": true,
       "detail": "all published Supabase services bound to 127.0.0.1 (docker + ss verified)",
-      "durationMs": 26
+      "durationMs": 48
     },
     {
       "name": "mcp-regression",
       "ok": true,
       "detail": "local MCP initialize HTTP 200 (loopback)",
-      "durationMs": 1528
+      "durationMs": 1307
     },
     {
       "name": "db-cleanliness",
       "ok": true,
       "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly IMP-010 tenant core (firms, profiles, firm_memberships); 16 deterministic identities verified",
-      "durationMs": 1395
+      "durationMs": 1620
     },
     {
       "name": "secret-scan",
       "ok": true,
       "detail": "no service-role key or JWT secret in tracked files or dist/ (TEST-SEC-01 harness level)",
-      "durationMs": 24
+      "durationMs": 31
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-09-01T08:17:57.996Z"
+  "finishedAt": "2026-09-01T16:36:39.425Z"
 }

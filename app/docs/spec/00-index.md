@@ -7,8 +7,9 @@
 - **Harness Gate:** PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verification from a fresh detached worktree: 14/14 phases green)
 - **Harness Engineering phase (IMP-000…IMP-005):** COMPLETE
 - **Next phase:** Release-0 implementation (per `12-release-0-plan.md`) — STARTED 2026-09-01
-- **Current package:** IMP-010 tenant core schema (IMPLEMENTED 2026-09-01; acceptance checks green; awaiting Git checkpoint)
-- **Next package:** IMP-011 (blocked until the IMP-010 checkpoint and a separate explicit implementation instruction)
+- **Current package:** IMP-011 staff authentication (IMPLEMENTED 2026-09-01; acceptance checks green; awaiting human approval and Git checkpoint — security-critical per `12`)
+- **Completed packages:** IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`)
+- **Next package:** IMP-012 (blocked until the IMP-011 human approval + checkpoint and a separate explicit implementation instruction)
 
 All existing OPEN / PROVISIONAL items remain governed by their documented
 future gates (see `12` Open / Provisional Dependency Matrix); this gate
