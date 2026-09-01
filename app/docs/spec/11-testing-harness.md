@@ -375,30 +375,55 @@ No UI-permutation coverage; everything else is component/API level.
   its acceptance commands pass in the repository and the output is
   recorded; chat claims are not evidence.
 
-## Harness Gate (H-GATE)
+## Harness Gate (H-GATE) — PASS
 
-All of the following must pass before substantial feature implementation
-begins (DEC-S; `10` Phase A gate):
+**HARNESS GATE: PASS — human approved 2026-09-01.** Evidence commit
+`305d133` (`test: establish executable Harness Gate`); exact committed-HEAD
+verified from a fresh detached worktree (`npm ci` →
+`npx playwright install chromium` → `npm run verify:harness`): **PASS —
+14/14 phases green**. Evidence record: `docs/harness/harness-gate.md` +
+`docs/harness/harness-gate-result.json`.
 
-- [ ] Test runner installed and executing (Vitest) — specification only in
-      Phase 2
-- [ ] Supabase CLI local stack boots from the migration chain from clean
-- [ ] Deterministic local seed loads (TEST-MIG-10) with Firm A / Firm B
-      and the full role set (TEST-RLS-GEN-01)
-- [ ] ESLint clean; `tsc -b` clean; production build succeeds
-      (TEST-STACK-04)
-- [ ] RLS integration tests run and pass for the foundation tables
-- [ ] Auth integration tests pass (TEST-AUTH-01…15 core)
+All of the following had to pass before substantial feature implementation
+began (DEC-S; `10` Phase A gate) — status recorded per item:
+
+- [x] Test runner installed and executing (Vitest) — **COMPLETE**
+- [x] Supabase CLI local stack boots and resets deterministically from clean
+      (loopback-bound; **COMPLETE** at harness level — the production
+      migration chain lands with IMP-010+)
+- [x] Deterministic local seed loads (TEST-MIG-10) with Firm A / Firm B
+      and the full role set (TEST-RLS-GEN-01) — **COMPLETE** (16
+      deterministic identities, `tests/harness/registry.json`)
+- [x] ESLint clean; `tsc -b` clean; production build succeeds
+      (TEST-STACK-04) — **COMPLETE**
+- [x] RLS integration tests run and pass for the foundation mechanism —
+      **COMPLETE** (18/18, resolved DEC-J live-membership-lookup mechanism
+      on temporary `hgate_*` harness tables; TEST-RLS-GEN-01…04,
+      TEST-RLS-MAT-01 mechanism level, TEST-AUTH-12/13 freshness; the
+      per-table production matrix lands with IMP-012+)
+- [x] Auth integration tests pass (TEST-AUTH core) — **COMPLETE**
+      (9/9: TEST-AUTH-02, TEST-AUTH-03, TEST-AUTH-09 + supporting
+      assertions; this is mechanism-level coverage, not the full
+      TEST-AUTH-01…15 production set)
 - [x] DEC-J spike executed and decision record appended to `05`
       (TEST-SPIKE-J-*) — **COMPLETE — executed 2026-08-31; decision approved 2026-09-01 (IMP-004; live membership
       lookup selected)**
 - [x] Audit-context spike executed and outcome recorded in `08`
       (TEST-SPIKE-CTX-01/02) — **COMPLETE (IMP-005; decision approved
       2026-09-01 — layered A+B+C, `08` AUD-CTX-01)**
-- [ ] Minimal Playwright smoke passes (TEST-E2E-01/02/12 at gate; full
-      set before Phase C exit)
-- [ ] Single CI-equivalent command runs the gate locally and in CI
-- [ ] Clean baseline: zero failing tests on the gate commit
+- [x] Minimal Playwright smoke passes — **COMPLETE** (1/1 shell smoke,
+      Chromium; no TEST-E2E-* business-flow ID claimed — the
+      TEST-E2E-01…12 suite lands with its owning packages)
+- [x] Single CI-equivalent command runs the gate locally and in CI —
+      **COMPLETE** (`npm run verify:harness`, `scripts/harness/gate.mjs`)
+- [x] Clean baseline: zero failing tests on the gate commit —
+      **COMPLETE** (fresh committed-HEAD worktree proof, commit `305d133`)
+
+Gate phases additionally verified on every `verify:harness` run: network
+binding loopback-only, local MCP initialize, database cleanliness (no
+`hgate_*`/`decj_*`/`audctx_*` objects, zero R0 tables), secret scan
+(TEST-SEC-01 harness level). This gate does **not** claim complete
+production coverage for Auth, RLS, audit, or E2E.
 
 ## Assumptions
 

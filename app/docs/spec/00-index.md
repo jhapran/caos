@@ -4,7 +4,10 @@
 - **Approval status:** Approved (Batch 1)
 - **Final Spec Gate:** PASS — 2026-08-31
 - **Phase 2 status:** COMPLETE (specification authoring; all R0-gate specs 00–13 approved; required closure fixes applied)
-- **Next phase:** Harness Gate / IMP-000 (per `12-release-0-plan.md`; not started)
+- **Harness Gate:** PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verification from a fresh detached worktree: 14/14 phases green)
+- **Harness Engineering phase (IMP-000…IMP-005):** COMPLETE
+- **Next phase:** Release-0 implementation (per `12-release-0-plan.md`)
+- **Next package:** IMP-010 (UNLOCKED by the Harness Gate; NOT STARTED — begins only on a separate explicit implementation instruction)
 
 All existing OPEN / PROVISIONAL items remain governed by their documented
 future gates (see `12` Open / Provisional Dependency Matrix); this gate
@@ -96,6 +99,8 @@ Notes on ordering (per approved plan):
 
 Release 0 implementation begins only after (a) all R0-gate specs are approved
 and (b) the testing harness per `11` is implemented and green (harness gate).
+Both conditions are satisfied: Final Spec Gate PASS 2026-08-31; Harness Gate
+PASS — human approved 2026-09-01 (evidence commit `305d133`).
 
 ## Requirement-ID conventions
 

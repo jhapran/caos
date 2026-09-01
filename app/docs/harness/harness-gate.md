@@ -1,9 +1,17 @@
-# Harness Gate Evidence — Candidate Record
+# Harness Gate Evidence — Approval Record
 
 **Date:** 2026-09-01
-**Status:** HARNESS GATE CANDIDATE: PASS — human approval NOT yet granted.
-This document is machine-produced evidence for human review. It does not
-mark the Harness Gate approved; the human gate decision is separate.
+**Status:** HARNESS GATE: PASS — human approved 2026-09-01.
+**Evidence commit:** `305d133` (`test: establish executable Harness Gate`),
+independently verified from a fresh detached worktree at the exact committed
+HEAD (`npm ci` → `npx playwright install chromium` →
+`npm run verify:harness`): PASS — 14/14 phases green, working tree clean
+after proof.
+**Machine evidence vs human approval:** the machine-generated candidate
+evidence below (and `harness-gate-result.json`) is preserved unchanged; this
+header records the separate human gate decision. IMP-000…IMP-005 are
+COMPLETE; the Harness Engineering phase is COMPLETE. IMP-010+ is UNLOCKED
+but NOT STARTED.
 
 ## Environment
 
@@ -198,4 +206,6 @@ No Release-0 production schema, no production migrations, no production
 RLS policies, no production audit triggers, no React auth screens, no
 hosted Supabase access, no IMP-010 work.
 
-**HARNESS GATE CANDIDATE: PASS**
+**HARNESS GATE: PASS — human approved 2026-09-01 (evidence commit `305d133`).**
+(Historical machine verdict at evidence-generation time: "HARNESS GATE
+CANDIDATE: PASS".)

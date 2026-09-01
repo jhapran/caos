@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** The Harness Gate itself remains incomplete: the remaining gate requirements (RLS/auth integration harness, Playwright smoke, CI-equivalent gate run) are still open.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. IMP-010 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction.
 
 ## Purpose
 
@@ -110,7 +110,7 @@ This spec owns the `REL-*` namespace:
 
 | Phase | Name | Packages | Gate at exit |
 |---|---|---|---|
-| R0-A | Harness Foundation | IMP-000…IMP-005 | **HARNESS GATE** (human approval) |
+| R0-A | Harness Foundation | IMP-000…IMP-005 | **HARNESS GATE — PASS** (human approved 2026-09-01, commit `305d133`) |
 | R0-B | Identity & Tenant Foundation | IMP-010…IMP-014 | Phase gate: TEST-AUTH-*, TEST-RLS-GEN-*, TEST-AUD-* green |
 | R0-C | Core Domain | IMP-020…IMP-022 | Phase gate: TEST-SCH-*, TEST-API-*, E2E 3–5 |
 | R0-D | Compliance Foundation | IMP-030…IMP-031 | Phase gate: TEST-SCH-*, TEST-RLS-CRV-*, scope invariants |
@@ -152,6 +152,15 @@ Sequencing rules:
   (COMPLETE — IMP-004, 2026-09-01),
   audit-context spike (COMPLETE — IMP-005, 2026-09-01), minimal Playwright
   smoke suite, CI-equivalent verification command, clean baseline.
+  **STATUS: PASS — human approved 2026-09-01.** Evidence commit `305d133`
+  (`test: establish executable Harness Gate`); exact committed-HEAD
+  verified from a fresh detached worktree (`npm ci` →
+  `npx playwright install chromium` → `npm run verify:harness`): 14/14
+  phases green. Evidence record: `docs/harness/harness-gate.md` +
+  `docs/harness/harness-gate-result.json`. IMP-000…IMP-005 are all
+  COMPLETE; the Harness Engineering phase is COMPLETE. IMP-010+ is
+  UNLOCKED by this gate — UNLOCKED does not mean STARTED: IMP-010 remains
+  NOT STARTED until a separate explicit implementation instruction.
 - **REL-HG-02:** Allowed before the gate: IMP-000…IMP-005 only, plus
   specification/documentation work. Everything else — including any
   production schema migration beyond spike scaffolding — is blocked.
@@ -226,11 +235,11 @@ Format and discipline:
 - **REL-WP-05:** A package is done only when its exit criteria hold *and*
   the Harness Gate remains green after merge.
 
-### PHASE R0-A — Harness Foundation (pre-gate; builds the gate)
+### PHASE R0-A — Harness Foundation (pre-gate; builds the gate) — **COMPLETE (Harness Gate PASS, human approved 2026-09-01, commit `305d133`)**
 
 ---
 
-**IMP-000 — Repository & implementation baseline**
+**IMP-000 — Repository & implementation baseline** — **COMPLETE (2026-09-01; Harness Gate PASS, commit `305d133`)**
 
 - **Purpose:** Establish the implementation-working baseline: agent/task
   prompt template, requirement-ID conventions, and a verified green
@@ -259,7 +268,7 @@ Format and discipline:
 
 ---
 
-**IMP-001 — Testing harness setup**
+**IMP-001 — Testing harness setup** — **COMPLETE (2026-09-01; Harness Gate PASS, commit `305d133`)**
 
 - **Purpose:** Install and configure Vitest + React Testing Library +
   Playwright skeleton; define the CI-equivalent single command.
@@ -288,7 +297,7 @@ Format and discipline:
 
 ---
 
-**IMP-002 — Local Supabase environment**
+**IMP-002 — Local Supabase environment** — **COMPLETE (2026-09-01; Harness Gate PASS, commit `305d133`)**
 
 - **Purpose:** Supabase CLI local stack (Postgres, Auth, Storage, Edge
   runtime) reproducible from the repo; no credentials committed.
@@ -313,7 +322,7 @@ Format and discipline:
 
 ---
 
-**IMP-003 — Deterministic development seed**
+**IMP-003 — Deterministic development seed** — **COMPLETE (2026-09-01; Harness Gate PASS, commit `305d133`)**
 
 - **Purpose:** Synthetic Firm A / Firm B with users in every R0 role,
   multi-firm user, suspended + removed memberships, staff+client overlap
@@ -403,9 +412,13 @@ Format and discipline:
 
 ---
 
-**HARNESS GATE — human approval checkpoint.** REL-HG-01…06 all verified;
-CI-equivalent command green on fresh checkout; both decision records
-committed. Exit: recorded approval. No R0-B work before this.
+**HARNESS GATE — human approval checkpoint — SATISFIED (2026-09-01).**
+REL-HG-01…06 all verified; CI-equivalent command green on fresh checkout
+(exact committed-HEAD `305d133`, 14/14 phases); both decision records
+committed. Exit: recorded human approval 2026-09-01. **Harness Engineering
+phase COMPLETE (IMP-000…IMP-005 all COMPLETE).** R0-B is UNLOCKED —
+IMP-010 is the next implementation package but remains NOT STARTED until a
+separate explicit implementation instruction.
 
 ### PHASE R0-B — Identity & Tenant Foundation (post-gate)
 
@@ -420,12 +433,13 @@ committed. Exit: recorded approval. No R0-B work before this.
   MIG-PRIN-01…07 (forward-only, ordering); DM-01…03, DM-X-05 (roles).
 - **TEST-* IDs:** TEST-SCH-01…03 (FKs, composite FKs, uniques);
   TEST-MIG-06/07 (ordering, integrity).
-- **Dependencies:** Harness Gate.
+- **Dependencies:** Harness Gate (PASS 2026-09-01 — dependency satisfied;
+  package itself NOT STARTED).
 - **Allowed scope:** `supabase/migrations/` for SCH-01…03; migration
   tooling config; updated dev seed to real schema.
 - **Non-goals:** no RLS policies here (IMP-012); no auth wiring (IMP-011).
 - **Expected files/areas:** `supabase/migrations/`, `supabase/seed*`.
-- **Entry criteria:** Harness Gate green.
+- **Entry criteria:** Harness Gate green (satisfied 2026-09-01).
 - **Acceptance criteria:** schema applies clean from empty; constraints
   enforced; seed migrates to real tables.
 - **Verification:** CI-equivalent + TEST-SCH-01…03.

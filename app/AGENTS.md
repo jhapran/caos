@@ -157,7 +157,8 @@ keys, or tokens (OPS-ENV-05).
 React Testing Library (`tests/{unit,components}`, jsdom, `@/` alias via
 `vite.config.ts`), Playwright (`e2e/`, `playwright.config.ts` — Chromium
 installed, smoke executed), and `npm run verify` as the fast CI-equivalent
-(lint + unit + build). The **Harness Gate candidate** additionally exists:
+(lint + unit + build). The **Harness Gate** additionally exists and is
+**PASS — human approved 2026-09-01** (evidence commit `305d133`):
 Auth integration tests (`tests/integration/auth`), RLS integration tests
 (`tests/integration/rls` — temporary `hgate_*` harness objects implementing
 the resolved DEC-J live-membership-lookup mechanism, applied/dropped per
@@ -166,7 +167,10 @@ run; NOT R0 schema), both Vitest node-environment via
 gate command (evidence: `docs/harness/harness-gate.md`). DEC-J and
 audit-context spikes are complete with decision records
 (`docs/harness/dec-j-spike.md`, `docs/harness/audit-context-spike.md`).
-**The Harness Gate must be green before IMP-010+ / any R0 schema work.**
+**The Harness Gate is PASS; IMP-010+ is unlocked but each production
+package still follows: spec package → implementation → tests → verification
+(`verify` / `verify:harness` must stay green) → human approval → Git
+checkpoint.**
 Remaining target-state gaps: business-flow Playwright suite
 (TEST-E2E-01…12) and production RLS/auth/audit tests land with their owning
 IMP packages.
