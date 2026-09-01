@@ -19,7 +19,10 @@
     "db:reset": "supabase db reset --network-id caos-supabase-local",
     "db:seed:harness": "node scripts/harness/seed-harness.mjs",
     "db:verify:harness": "node scripts/harness/seed-harness.mjs --check",
-    "db:reset:harness": "supabase db reset --network-id caos-supabase-local && npm run db:seed:harness"
+    "db:reset:harness": "supabase db reset --network-id caos-supabase-local && npm run db:seed:harness",
+    "spike:dec-j": "node scripts/spikes/dec-j/run.mjs",
+    "spike:dec-j:followup": "node scripts/spikes/dec-j/followup.mjs",
+    "spike:dec-j:cleanup": "node scripts/spikes/dec-j/teardown.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

@@ -1,0 +1,908 @@
+{
+  "meta": {
+    "date": "2026-08-31T19:59:25.816Z",
+    "supabaseCli": "2.116.0",
+    "images": [
+      "supabase_rest_app public.ecr.aws/supabase/postgrest:v16.1",
+      "supabase_auth_app public.ecr.aws/supabase/gotrue:v2.196.0",
+      "supabase_db_app public.ecr.aws/supabase/postgres:17.6.1.165"
+    ],
+    "hookClaimsPresent": true,
+    "benchmark": {
+      "warmup": 25,
+      "measured": 200,
+      "pageSize": 25
+    },
+    "completed": "2026-08-31T20:00:49.258Z"
+  },
+  "correctness": [
+    {
+      "candidate": "A",
+      "test": "same-firm authorized read",
+      "expected": "rows",
+      "observed": "HTTP 200, 5 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "cross-firm read (foreign filter)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "foreign user reading our firm rows",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "known foreign record ID attack",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "cross-firm insert",
+      "expected": "denied",
+      "observed": "HTTP 403 {\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security ",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "cross-firm update",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "cross-firm delete",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "unauthorized role insert (billing)",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "authorized role insert (partner)",
+      "expected": "201",
+      "observed": "HTTP 201, id=100003",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "authorized role update (manager)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "unauthorized role delete (senior)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "authorized role delete (partner)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "same-firm authorized read",
+      "expected": "rows",
+      "observed": "HTTP 200, 5 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "cross-firm read (foreign filter)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "cross-firm read (foreign active-firm header)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "foreign user asserting our firm header",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "known foreign record ID attack",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "cross-firm insert",
+      "expected": "denied",
+      "observed": "HTTP 403 {\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security ",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "cross-firm update",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "cross-firm delete",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "unauthorized role insert (billing)",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "authorized role insert (partner)",
+      "expected": "201",
+      "observed": "HTTP 201, id=100003",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "authorized role update (manager)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "unauthorized role delete (senior)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "authorized role delete (partner)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "same-firm authorized read",
+      "expected": "rows",
+      "observed": "HTTP 200, 5 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "cross-firm read (foreign filter)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "cross-firm read (foreign active-firm header)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "foreign user asserting our firm header",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "known foreign record ID attack",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "cross-firm insert",
+      "expected": "denied",
+      "observed": "HTTP 403 {\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security ",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "cross-firm update",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "cross-firm delete",
+      "expected": "0 rows affected",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "unauthorized role insert (billing)",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "authorized role insert (partner)",
+      "expected": "201",
+      "observed": "HTTP 201, id=100003",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "authorized role update (manager)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "unauthorized role delete (senior)",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows affected",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "authorized role delete (partner)",
+      "expected": "1 row",
+      "observed": "HTTP 200, 1 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "suspended membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "removed membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "suspended membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "removed membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "suspended membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "removed membership read",
+      "expected": "0 rows",
+      "observed": "HTTP 200, 0 rows",
+      "pass": true
+    }
+  ],
+  "freshness": [
+    {
+      "candidate": "A",
+      "test": "role downgrade: stale token retains old privilege",
+      "expected": "yes (stale)",
+      "observed": "stale token DELETED row (HTTP 200)",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "role downgrade: fresh token has new (reduced) role",
+      "expected": "delete denied",
+      "observed": "HTTP 200, 0 rows deleted",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "role downgrade: stale token retains old privilege",
+      "expected": "no",
+      "observed": "stale token denied (0 rows)",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "role downgrade: fresh token has new (reduced) role",
+      "expected": "delete denied",
+      "observed": "HTTP 200, 0 rows deleted",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "role downgrade: stale token retains old privilege",
+      "expected": "no",
+      "observed": "stale token denied (0 rows)",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "role downgrade: fresh token has new (reduced) role",
+      "expected": "delete denied",
+      "observed": "HTTP 200, 0 rows deleted",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "suspension: stale token retains access",
+      "expected": "yes (stale)",
+      "observed": "before=5 rows, stale-after-suspend=5 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "suspension: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "removal: stale token retains access",
+      "expected": "yes (stale)",
+      "observed": "stale-after-remove=5 rows",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "removal: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "suspension: stale token retains access",
+      "expected": "no",
+      "observed": "before=5 rows, stale-after-suspend=0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "suspension: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "removal: stale token retains access",
+      "expected": "no",
+      "observed": "stale-after-remove=0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "removal: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "suspension: stale token retains access",
+      "expected": "no",
+      "observed": "before=5 rows, stale-after-suspend=0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "suspension: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "removal: stale token retains access",
+      "expected": "no",
+      "observed": "stale-after-remove=0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "removal: fresh token denied",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "pass": true
+    }
+  ],
+  "switching": [
+    {
+      "candidate": "B",
+      "test": "A -> B -> A context switch (same token, header only)",
+      "expected": "isolated each hop",
+      "observed": "firm=A -> 50 rows, all-correct-tenant=true | firm=B -> 50 rows, all-correct-tenant=true | firm=A -> 50 rows, all-correct-tenant=true",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "A -> B -> A context switch (same token, header only)",
+      "expected": "isolated each hop",
+      "observed": "firm=A -> 50 rows, all-correct-tenant=true | firm=B -> 50 rows, all-correct-tenant=true | firm=A -> 50 rows, all-correct-tenant=true",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "A -> B -> A context switch (trusted metadata + token refresh)",
+      "expected": "isolated each hop; stale token cannot see new firm",
+      "observed": "A:50ok=true B:50ok=true A:50ok=true stale-foreign-visible=0",
+      "pass": true
+    }
+  ],
+  "overlap": [
+    {
+      "candidate": "B",
+      "test": "staff ctx sees full firm portfolio",
+      "expected": "60000",
+      "observed": "60000",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "client ctx sees only granted client rows",
+      "expected": "3000 (CL-100)",
+      "observed": "3000",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "client ctx to foreign firm",
+      "expected": "0",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "B",
+      "test": "client ctx cannot write staff resource",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "staff ctx sees full firm portfolio",
+      "expected": "60000",
+      "observed": "60000",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "client ctx sees only granted client rows",
+      "expected": "3000 (CL-100)",
+      "observed": "3000",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "client ctx to foreign firm",
+      "expected": "0",
+      "observed": "0 rows",
+      "pass": true
+    },
+    {
+      "candidate": "C",
+      "test": "client ctx cannot write staff resource",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "staff ctx sees full firm portfolio (claim context)",
+      "expected": "60000",
+      "observed": "60000",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "client ctx sees only granted rows (claim context)",
+      "expected": "3000",
+      "observed": "3000",
+      "pass": true
+    },
+    {
+      "candidate": "A",
+      "test": "client ctx cannot write staff resource",
+      "expected": "denied",
+      "observed": "HTTP 403",
+      "pass": true
+    }
+  ],
+  "tokens": [
+    {
+      "candidate": "all",
+      "test": "expired access token rejected",
+      "expected": "401",
+      "observed": "HTTP 401",
+      "pass": true
+    }
+  ],
+  "benchmarks": {
+    "A": {
+      "p50": 4.57,
+      "p95": 5.54,
+      "min": 2.65,
+      "max": 18.53,
+      "n": 200
+    },
+    "B": {
+      "p50": 3.98,
+      "p95": 5.14,
+      "min": 1.79,
+      "max": 7.47,
+      "n": 200
+    },
+    "C": {
+      "p50": 5.22,
+      "p95": 6.31,
+      "min": 2.88,
+      "max": 6.83,
+      "n": 200
+    }
+  },
+  "explains": {
+    "A": {
+      "planningMs": 0.701,
+      "executionMs": 1.041,
+      "scans": [
+        "Index Scan on decj_resources_a using decj_resources_a_firm"
+      ]
+    },
+    "B": {
+      "planningMs": 1.31,
+      "executionMs": 0.285,
+      "scans": [
+        "Index Scan on decj_resources_b using decj_resources_b_firm",
+        "Seq Scan on decj_memberships",
+        "Bitmap Heap Scan on decj_client_access",
+        "Bitmap Index Scan on undefined using decj_client_access_lookup"
+      ]
+    },
+    "C": {
+      "planningMs": 0.839,
+      "executionMs": 2.13,
+      "scans": [
+        "Index Scan on decj_resources_c using decj_resources_c_firm"
+      ]
+    }
+  },
+  "jwtSizes": [
+    {
+      "label": "1 membership",
+      "membershipsEmbedded": 1,
+      "tokenBytes": 1192,
+      "decjClaimBytes": 248
+    },
+    {
+      "label": "2 memberships (multi-firm)",
+      "membershipsEmbedded": 2,
+      "tokenBytes": 1488,
+      "decjClaimBytes": 388
+    },
+    {
+      "label": "5 memberships",
+      "membershipsEmbedded": 5,
+      "tokenBytes": 2048,
+      "decjClaimBytes": 808
+    },
+    {
+      "label": "20 memberships",
+      "membershipsEmbedded": 20,
+      "tokenBytes": 4848,
+      "decjClaimBytes": 2908
+    }
+  ],
+  "followup": {
+    "label": "INDEPENDENT REVIEW FOLLOW-UP",
+    "date": "2026-09-01T03:21:10.679Z",
+    "question": "Candidate B live membership lookup at ~100k membership rows vs Candidate C",
+    "membershipRows": 100013,
+    "correctness": [
+      {
+        "candidate": "B",
+        "test": "same-firm authorized access",
+        "expected": "rows",
+        "observed": "HTTP 200, 5 rows",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "known foreign ID denial",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "cross-firm denial (foreign header)",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "cross-firm insert denial",
+        "expected": "denied",
+        "observed": "HTTP 403",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "suspension: stale token access",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "removal: stale token access",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "role downgrade: stale token retains delete",
+        "expected": "no",
+        "observed": "denied",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "role upgrade: stale token gains new role",
+        "expected": "immediate grant",
+        "observed": "stale token DELETED (immediate grant)",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "multi-firm A->B->A switching",
+        "expected": "isolated each hop",
+        "observed": "A:50rows ok=true | B:50rows ok=true | A:50rows ok=true",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "overlap: staff ctx full portfolio",
+        "expected": "60000",
+        "observed": "60000",
+        "pass": true
+      },
+      {
+        "candidate": "B",
+        "test": "overlap: client ctx granted rows only",
+        "expected": "3000",
+        "observed": "3000",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "same-firm authorized access",
+        "expected": "rows",
+        "observed": "HTTP 200, 5 rows",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "known foreign ID denial",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "cross-firm denial (foreign header)",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "cross-firm insert denial",
+        "expected": "denied",
+        "observed": "HTTP 403",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "suspension: stale token access",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "removal: stale token access",
+        "expected": "0 rows",
+        "observed": "0 rows",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "role downgrade: stale token retains delete",
+        "expected": "no",
+        "observed": "denied",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "role upgrade: stale token gains new role",
+        "expected": "fail closed until refresh",
+        "observed": "stale token denied (fails closed)",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "multi-firm A->B->A switching",
+        "expected": "isolated each hop",
+        "observed": "A:50rows ok=true | B:50rows ok=true | A:50rows ok=true",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "overlap: staff ctx full portfolio",
+        "expected": "60000",
+        "observed": "60000",
+        "pass": true
+      },
+      {
+        "candidate": "C",
+        "test": "overlap: client ctx granted rows only",
+        "expected": "3000",
+        "observed": "3000",
+        "pass": true
+      }
+    ],
+    "benchmarks": {
+      "B": {
+        "p50": 4.2,
+        "p95": 5.25,
+        "min": 1.79,
+        "max": 6.42,
+        "n": 200
+      },
+      "C": {
+        "p50": 4.12,
+        "p95": 5.4,
+        "min": 2.26,
+        "max": 7.04,
+        "n": 200
+      }
+    },
+    "scaling": {
+      "1": {
+        "B": {
+          "p50": 2.94,
+          "p95": 3.84,
+          "min": 1.4,
+          "max": 4.85,
+          "n": 100
+        },
+        "C": {
+          "p50": 3.42,
+          "p95": 4.9,
+          "min": 2.06,
+          "max": 5.86,
+          "n": 100
+        },
+        "tokenBytesC": 1192
+      },
+      "5": {
+        "B": {
+          "p50": 3.06,
+          "p95": 3.93,
+          "min": 1.32,
+          "max": 6.63,
+          "n": 100
+        },
+        "C": {
+          "p50": 4.17,
+          "p95": 5.82,
+          "min": 2.29,
+          "max": 8.79,
+          "n": 100
+        },
+        "tokenBytesC": 2048,
+        "decjClaimBytes": 808
+      },
+      "20": {
+        "B": {
+          "p50": 3.9,
+          "p95": 4.74,
+          "min": 2.37,
+          "max": 5.2,
+          "n": 100
+        },
+        "C": {
+          "p50": 4.56,
+          "p95": 7.32,
+          "min": 3.22,
+          "max": 10.41,
+          "n": 100
+        },
+        "tokenBytesC": 4848,
+        "decjClaimBytes": 2908
+      }
+    },
+    "explains": {
+      "B": {
+        "planningMs": 1.313,
+        "executionMs": 0.224,
+        "scans": [
+          "Index Scan on decj_resources_b using decj_resources_b_firm",
+          "Index Only Scan on decj_memberships using decj_memberships_lookup",
+          "Bitmap Heap Scan on decj_client_access",
+          "Bitmap Index Scan on undefined using decj_client_access_lookup"
+        ]
+      },
+      "C": {
+        "planningMs": 1.034,
+        "executionMs": 2.137,
+        "scans": [
+          "Index Scan on decj_resources_c using decj_resources_c_firm"
+        ]
+      }
+    },
+    "jwtSizes": [
+      {
+        "note": "token bytes in hook-enabled env (B ignores decj claims)",
+        "tokenBytes": 1192
+      }
+    ],
+    "signInLatencyMs": {
+      "USER_A_PARTNER": 110.2,
+      "USER_A_SENIOR": 98.7,
+      "USER_A_MANAGER": 84.8,
+      "USER_MULTI_FIRM": 84.8,
+      "USER_CLIENT_OVERLAP": 89.5
+    },
+    "completed": "2026-09-01T03:22:07.951Z"
+  }
+}
