@@ -1,0 +1,310 @@
+{
+  "spike": "IMP-005 — audit context propagation (AUD-OQ-02 / TEST-SPIKE-CTX-01/02)",
+  "executedAt": "2026-09-01T04:57:51.500Z",
+  "environment": {
+    "node": "v24.18.0",
+    "supabaseCli": "2.116.0",
+    "postgres": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "stack": "local Supabase CLI, loopback-only network caos-supabase-local"
+  },
+  "candidateLettering": "Task lettering: A=header-GUC trigger, B=explicit RPC, C=server wrapper. spec 11 TEST-SPIKE-CTX-01 letters: A=RPC, B=header-GUC, C=security-definer wrapper.",
+  "tests": [
+    {
+      "id": "PROBE-01",
+      "ok": true,
+      "detail": "auth.uid() resolves to caller (20000000-0000-4000-8000-000000000002) — JWT identity trusted"
+    },
+    {
+      "id": "PROBE-02",
+      "ok": true,
+      "detail": "request.headers GUC visible to SQL; credentials redacted in probe output"
+    },
+    {
+      "id": "PROBE-03",
+      "ok": true,
+      "detail": "arbitrary client headers ARE visible as raw text; XFF arrives as client value + gateway-appended peer (\"203.0.113.99, 172.20.0.1\") — left hops untrusted, right-most gateway-asserted"
+    },
+    {
+      "id": "PROBE-04",
+      "ok": true,
+      "detail": "inet_client_addr() inside PostgREST = \"172.20.0.9\" — the DB never sees the browser connection directly (PostgREST is the TCP peer)"
+    },
+    {
+      "id": "GUC-01",
+      "ok": true,
+      "detail": "SET LOCAL / set_config(...,true) dies at transaction end (post-commit value: post:<gone>)"
+    },
+    {
+      "id": "GUC-02",
+      "ok": true,
+      "detail": "session-level SET persists for the whole connection — DANGEROUS under pooling; any GUC mechanism must be transaction-local"
+    },
+    {
+      "id": "GUC-03",
+      "ok": true,
+      "detail": "transaction-local GUC visible within its request, gone on the next pooled request (next=\"\" — placeholder quirk, no value leak)"
+    },
+    {
+      "id": "A-01",
+      "ok": true,
+      "detail": "trigger captured actor (auth.uid), firm, correlation/request id, XFF (\"203.0.113.7, 172.20.0.1\"), UA on a plain table write"
+    },
+    {
+      "id": "A-02",
+      "ok": true,
+      "detail": "spoofed x-actor-*/x-service-name/x-support-session headers IGNORED — actor stays auth.uid(), human"
+    },
+    {
+      "id": "A-03",
+      "ok": true,
+      "detail": "client-supplied XFF preserved verbatim + gateway-appended hop (\"198.51.100.23, 172.20.0.1\") — client portion SPOOFABLE, best-effort evidence only (AUD-CTX-02)"
+    },
+    {
+      "id": "A-04",
+      "ok": true,
+      "detail": "sequential A/B/A/B requests: zero cross-request context leakage (actor, firm, correlation all correct)"
+    },
+    {
+      "id": "A-05",
+      "ok": true,
+      "detail": "20 concurrent pooled requests: zero context leakage across users/firms"
+    },
+    {
+      "id": "A-06",
+      "ok": true,
+      "detail": "cross-firm insert (A user -> firm B context) denied by RLS (HTTP 403)"
+    },
+    {
+      "id": "A-07",
+      "ok": true,
+      "detail": "suspended and removed memberships denied on direct writes (live lookup)"
+    },
+    {
+      "id": "A-08",
+      "ok": true,
+      "detail": "overlap identity: client context requires live client grant; staff context uses membership; contexts do not inherit"
+    },
+    {
+      "id": "B-01",
+      "ok": true,
+      "detail": "RPC mutation+audit: actor derived from auth.uid(), firm live-validated, single audit row"
+    },
+    {
+      "id": "B-02",
+      "ok": true,
+      "detail": "caller-supplied actor keys in RPC payload rejected at API boundary (HTTP 404 — unknown args fail function resolution); actor can only derive from auth.uid()"
+    },
+    {
+      "id": "B-03",
+      "ok": true,
+      "detail": "RPC foreign-firm spoof rejected by live membership validation (HTTP 403: audctx: no live active membership for firm 10000000-0000-4000-8000-000000000002)"
+    },
+    {
+      "id": "B-04",
+      "ok": true,
+      "detail": "RPC suspended/removed memberships rejected (live lookup, not token state)"
+    },
+    {
+      "id": "B-05",
+      "ok": true,
+      "detail": "service actor: browser token DENIED (HTTP 403); service_role-only definer function writes actor_type=service, NULL user"
+    },
+    {
+      "id": "B-06",
+      "ok": true,
+      "detail": "support actor: valid open session writes actor+session id; another user's session and unknown sessions rejected"
+    },
+    {
+      "id": "B-07",
+      "ok": true,
+      "detail": "RPC client context validated against live client_access grant (CL-100 ok, CL-999 denied)"
+    },
+    {
+      "id": "C-00",
+      "ok": true,
+      "detail": "wrapper listening on 127.0.0.1:5499 (loopback only)"
+    },
+    {
+      "id": "C-01",
+      "ok": true,
+      "detail": "wrapper: token validated server-side, request_id generated server-side, IP observed by wrapper (127.0.0.1), RLS still enforced downstream"
+    },
+    {
+      "id": "C-02",
+      "ok": true,
+      "detail": "wrapper rejects missing and invalid tokens (401) before any DB work"
+    },
+    {
+      "id": "C-03",
+      "ok": true,
+      "detail": "caller spoof headers (x-actor-*, even the wrapper secret) cannot change identity on the human path"
+    },
+    {
+      "id": "C-04",
+      "ok": true,
+      "detail": "service path: secret-less call 403; server-side call writes actor_type=service with server-fixed service_name (browser can never reach service role)"
+    },
+    {
+      "id": "C-05",
+      "ok": true,
+      "detail": "wrapper foreign-firm attempt rejected downstream by live validation (HTTP 403)"
+    },
+    {
+      "id": "F-01",
+      "ok": true,
+      "detail": "A path: forced audit-write failure rolled back the resource mutation in the same transaction (0 rows, 0 events)"
+    },
+    {
+      "id": "F-02",
+      "ok": true,
+      "detail": "B path: masquerading audit row rejected (HTTP 403); mutation+audit failed atomically — fail-closed verified"
+    },
+    {
+      "id": "F-03",
+      "ok": true,
+      "detail": "actor-model CHECK (AUD-ACT-05): system+actor_user_id rejected even for privileged writers; legitimate system seed row intact"
+    }
+  ],
+  "spoofMatrix": {
+    "actor_user_id": {
+      "A": "IGNORED (A-02)",
+      "B": "IGNORED — derived from auth.uid() (B-02)",
+      "C": "IGNORED — derived from validated token (C-03)"
+    },
+    "actor_type": {
+      "A": "IGNORED (A-02)",
+      "B": "IGNORED — human via RPC; service only via service_role function (B-05)",
+      "C": "IGNORED on human path; service path server-secret gated (C-04)"
+    },
+    "firm_id": {
+      "A": "VALIDATED — RLS live lookup, foreign firm denied (A-06)",
+      "B": "VALIDATED — explicit live check (B-03)",
+      "C": "VALIDATED — downstream live check (C-05)"
+    },
+    "service_name": {
+      "A": "IGNORED (A-02)",
+      "B": "server-only via definer function (B-05)",
+      "C": "server-fixed constant (C-04)"
+    },
+    "support_session": {
+      "A": "IGNORED (A-02)",
+      "B": "VALIDATED — open session owned by caller (B-06)",
+      "C": "not exposed by wrapper"
+    },
+    "correlation_id": {
+      "A": "UNTRUSTED-METADATA recorded (A-01)",
+      "B": "UNTRUSTED-METADATA recorded (B-01)",
+      "C": "accepted or generated server-side, recorded (C-01)"
+    },
+    "request_id": {
+      "A": "UNTRUSTED-METADATA (A-01)",
+      "B": "UNTRUSTED-METADATA",
+      "C": "server-generated UUID (C-01)"
+    },
+    "ip_headers": {
+      "A": "UNTRUSTED-METADATA — spoofable (A-03)",
+      "B": "UNTRUSTED-METADATA",
+      "C": "wrapper-observed socket IP (stronger, proxy-dependent) (C-01)"
+    },
+    "user_agent": {
+      "A": "UNTRUSTED-METADATA (A-01)",
+      "B": "UNTRUSTED-METADATA",
+      "C": "wrapper-observed header (C-01)"
+    }
+  },
+  "perf": {
+    "A_direct_postgrest_trigger": {
+      "runs": 120,
+      "p50": 5.56,
+      "p95": 6.69,
+      "min": 3.6,
+      "max": 7.31
+    },
+    "B_rpc": {
+      "runs": 120,
+      "p50": 5.59,
+      "p95": 6.81,
+      "min": 3.79,
+      "max": 7.16
+    },
+    "C_wrapper_rpc": {
+      "runs": 120,
+      "p50": 40.04,
+      "p95": 44.53,
+      "min": 34.15,
+      "max": 1981.25
+    }
+  },
+  "evidence": {
+    "directPostgrestProbe": {
+      "txid": 1898,
+      "auth_uid": "20000000-0000-4000-8000-000000000002",
+      "jwt_role": "authenticated",
+      "backend_pid": 871,
+      "jwt_claim_keys": [
+        "aal",
+        "amr",
+        "aud",
+        "exp",
+        "iat",
+        "iss",
+        "sub",
+        "role",
+        "email",
+        "phone",
+        "session_id",
+        "app_metadata",
+        "is_anonymous",
+        "user_metadata"
+      ],
+      "request_headers": {
+        "host": "supabase_rest_app:3000",
+        "accept": "*/*",
+        "prefer": "return=representation",
+        "x-real-ip": "172.20.0.1",
+        "connection": "keep-alive",
+        "user-agent": "audctx-probe/1.0",
+        "content-type": "application/json",
+        "x-actor-type": "service",
+        "x-request-id": "probe-req-1",
+        "content-length": "2",
+        "sec-fetch-mode": "cors",
+        "accept-encoding": "gzip, deflate",
+        "accept-language": "*",
+        "x-actor-user-id": "20000000-0000-4000-8000-000000000008",
+        "x-forwarded-for": "203.0.113.99, 172.20.0.1",
+        "x-correlation-id": "probe-corr-1",
+        "x-forwarded-host": "127.0.0.1",
+        "x-forwarded-path": "/rest/v1/rpc/audctx_probe_context",
+        "x-forwarded-port": "54321",
+        "x-forwarded-proto": "http",
+        "x-forwarded-prefix": "/rest/v1/"
+      },
+      "inet_client_addr": "172.20.0.9",
+      "inet_server_port": 5432
+    },
+    "inetClientAddr": "172.20.0.9",
+    "gucScope": {
+      "txLocalAfterCommit": "post:<gone>",
+      "sessionLevelPersists": "session-value",
+      "nextRequestValue": ""
+    },
+    "rpcSpoofHttpStatus": 404
+  },
+  "trustClassification": {
+    "auth.uid()": "TRUSTED (GoTrue-validated JWT, request.jwt.claims GUC set by PostgREST)",
+    "selected firm_id (header/body)": "UNTRUSTED context until live FirmMembership/client_access validation (DEC-J)",
+    "caller-provided actor_user_id": "UNTRUSTED — never accepted by any candidate; actor always derived",
+    "caller-provided actor_type=service": "UNTRUSTED — service identity only via service_role-only definer function",
+    "correlation_id": "UNTRUSTED-METADATA — recordable, end-to-end linkage (AUD-INV-06), not authorization evidence",
+    "request_id": "A/B: UNTRUSTED-METADATA if client-supplied; C: server-generated (trusted provenance)",
+    "user-agent": "UNTRUSTED-METADATA — client-controlled header",
+    "IP (x-forwarded-for)": "UNTRUSTED-METADATA — spoofable verbatim (A-03); C wrapper-observed socket IP is stronger but still proxy-dependent (AUD-CTX-02 best-effort)",
+    "inet_client_addr()": "DERIVED but useless for browser identity — always the PostgREST peer (PROBE-04)"
+  },
+  "summary": {
+    "total": 31,
+    "passed": 31,
+    "failed": 0
+  }
+}
