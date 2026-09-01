@@ -23,6 +23,13 @@ accurate picture of the code. Do not pretend Supabase is implemented; do
 not document future behavior as if it exists. When a section below
 describes target state, it says so explicitly.
 
+**Release-0 implementation status (2026-09-01):** the Harness Gate is PASS
+and IMP-010 has landed — `supabase/migrations/` now carries the production
+tenant core (`firms`, `profiles`, `firm_memberships`, SCH-01…03; no RLS
+policies yet — IMP-012; table grants revoked from anon/authenticated until
+then). The React app remains fixture-backed; the Supabase data-source
+adapter lands with IMP-014.
+
 Authoritative sources:
 
 - Product intent: `docs/input/PRD.txt` (~4,800 lines) — personas and MVP
@@ -72,6 +79,7 @@ npm run test:unit  # Vitest, non-interactive single run (tests/unit, tests/compo
 npm run test:integration # Vitest node integration tests (tests/integration; needs local Supabase + db:reset:harness)
 npm run test:auth  # Auth integration tests only (GoTrue, deterministic harness users)
 npm run test:rls   # RLS integration tests only (hgate_* harness tables; live-lookup mechanism)
+npm run test:schema # Schema integration tests only (IMP-010 tenant core; TEST-SCH-02/03)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # fast CI-equivalent: lint + unit tests + build
 npm run verify:harness # FULL Harness Gate: preflight → stack → reset+seed → lint →

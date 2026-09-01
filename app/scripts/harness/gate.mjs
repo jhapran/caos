@@ -142,6 +142,10 @@ async function main() {
   currentPhase = 'rls-integration';
   run('rls-integration', 'npm run test:rls');
 
+  // IMP-010: tenant-core schema tests (TEST-SCH-02/03 + structural).
+  currentPhase = 'schema-integration';
+  run('schema-integration', 'npm run test:schema');
+
   currentPhase = 'build';
   run('build', 'npm run build');
 
@@ -201,12 +205,22 @@ async function main() {
        where table_schema = 'public' and (table_name like 'hgate%' or table_name like 'decj%' or table_name like 'audctx%')`,
     ).trim();
     if (stray) throw new Error(`stray harness/spike tables remain: ${stray}`);
+    // IMP-010: production schema now exists. The gate distinguishes the
+    // EXPECTED committed-migration tables from anything unexpected; the
+    // forbidden temporary-object check above is unchanged.
+    const expectedTables = ['firm_memberships', 'firms', 'profiles']; // IMP-010 tenant core (SCH-01…03)
     const appTables = psql(
-      `select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'`,
+      `select coalesce(string_agg(table_name, ',' order by table_name), '')
+       from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'`,
     ).trim();
-    if (appTables !== '0') throw new Error(`public application-table count is ${appTables}, expected 0`);
+    const actual = appTables ? appTables.split(',') : [];
+    if (actual.join(',') !== expectedTables.join(',')) {
+      throw new Error(
+        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010 migrations)`,
+      );
+    }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
-    return 'no hgate_/decj_/audctx_ objects; public R0 table count = 0; 16 deterministic identities verified';
+    return 'no hgate_/decj_/audctx_ objects; public tables = exactly IMP-010 tenant core (firms, profiles, firm_memberships); 16 deterministic identities verified';
   });
 
   currentPhase = 'secret-scan';

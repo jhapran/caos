@@ -1,24 +1,24 @@
 {
   "gate": "CAOS Harness Gate (verify:harness)",
-  "startedAt": "2026-09-01T07:00:11.434Z",
+  "startedAt": "2026-09-01T08:16:46.888Z",
   "phases": [
     {
       "name": "preflight",
       "ok": true,
       "detail": "node v24.18.0, docker ok, supabase CLI ok, decision evidence present",
-      "durationMs": 936
+      "durationMs": 3473
     },
     {
       "name": "stack-lifecycle",
       "ok": true,
       "detail": "stack already running — will be left running afterwards",
-      "durationMs": 953
+      "durationMs": 1164
     },
     {
       "name": "db-reset-seed",
       "ok": true,
       "detail": "  \"errors\": [], |   \"warnings\": [] | }",
-      "durationMs": 31526
+      "durationMs": 30854
     },
     {
       "name": "decision-evidence",
@@ -30,37 +30,43 @@
       "name": "lint",
       "ok": true,
       "detail": "> my-app@0.0.0 lint | > eslint .",
-      "durationMs": 3806
+      "durationMs": 4101
     },
     {
       "name": "unit-tests",
       "ok": true,
-      "detail": "      Tests  12 passed (12) |    Start at  12:30:48 |    Duration  528ms (transform 213ms, setup 107ms, import 294ms, tests 24ms, environment 821ms)",
-      "durationMs": 824
+      "detail": "      Tests  12 passed (12) |    Start at  13:47:26 |    Duration  528ms (transform 132ms, setup 103ms, import 311ms, tests 26ms, environment 829ms)",
+      "durationMs": 816
     },
     {
       "name": "auth-integration",
       "ok": true,
-      "detail": "      Tests  9 passed (9) |    Start at  12:30:49 |    Duration  2.47s (transform 27ms, setup 0ms, import 35ms, tests 2.34s, environment 0ms)",
-      "durationMs": 2706
+      "detail": "      Tests  9 passed (9) |    Start at  13:47:27 |    Duration  2.09s (transform 23ms, setup 0ms, import 31ms, tests 1.96s, environment 0ms)",
+      "durationMs": 2331
     },
     {
       "name": "rls-integration",
       "ok": true,
-      "detail": "      Tests  18 passed (18) |    Start at  12:30:52 |    Duration  2.86s (transform 31ms, setup 0ms, import 40ms, tests 2.73s, environment 0ms)",
-      "durationMs": 3082
+      "detail": "      Tests  18 passed (18) |    Start at  13:47:29 |    Duration  2.73s (transform 31ms, setup 0ms, import 39ms, tests 2.59s, environment 0ms)",
+      "durationMs": 2977
+    },
+    {
+      "name": "schema-integration",
+      "ok": true,
+      "detail": "      Tests  18 passed (18) |    Start at  13:47:32 |    Duration  3.40s (transform 28ms, setup 0ms, import 36ms, tests 3.27s, environment 0ms)",
+      "durationMs": 3630
     },
     {
       "name": "build",
       "ok": true,
-      "detail": "dist/assets/index-CdCyykVD.css  110.79 kB │ gzip:  18.23 kB | dist/assets/index-BdowmdmR.js   954.27 kB │ gzip: 285.09 kB | ✓ built in 2.68s",
-      "durationMs": 6198
+      "detail": "dist/assets/index-CdCyykVD.css  110.79 kB │ gzip:  18.23 kB | dist/assets/index-BdowmdmR.js   954.27 kB │ gzip: 285.09 kB | ✓ built in 2.74s",
+      "durationMs": 6295
     },
     {
       "name": "playwright-smoke",
       "ok": true,
-      "detail": " | [1/1] [chromium] › e2e/smoke.spec.ts:8:1 › app shell boots and serves the landing page |   1 passed (2.6s)",
-      "durationMs": 2967
+      "detail": " | [1/1] [chromium] › e2e/smoke.spec.ts:8:1 › app shell boots and serves the landing page |   1 passed (12.1s)",
+      "durationMs": 12486
     },
     {
       "name": "network-binding",
@@ -72,21 +78,21 @@
       "name": "mcp-regression",
       "ok": true,
       "detail": "local MCP initialize HTTP 200 (loopback)",
-      "durationMs": 6483
+      "durationMs": 1528
     },
     {
       "name": "db-cleanliness",
       "ok": true,
-      "detail": "no hgate_/decj_/audctx_ objects; public R0 table count = 0; 16 deterministic identities verified",
-      "durationMs": 2107
+      "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly IMP-010 tenant core (firms, profiles, firm_memberships); 16 deterministic identities verified",
+      "durationMs": 1395
     },
     {
       "name": "secret-scan",
       "ok": true,
       "detail": "no service-role key or JWT secret in tracked files or dist/ (TEST-SEC-01 harness level)",
-      "durationMs": 27
+      "durationMs": 24
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-09-01T07:01:13.082Z"
+  "finishedAt": "2026-09-01T08:17:57.996Z"
 }

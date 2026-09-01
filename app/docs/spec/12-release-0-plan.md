@@ -424,7 +424,24 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-010 — Tenant core schema & migration tooling**
+**IMP-010 — Tenant core schema & migration tooling** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting Git checkpoint**
+
+- **Outcome:** migration `supabase/migrations/20260901000000_tenant_core.sql`
+  creates exactly `firms` (SCH-01), `profiles` (SCH-02), `firm_memberships`
+  (SCH-03) with approved columns, CHECK vocabularies, uniques
+  `(firm_id, user_id)` + `(firm_id, id)`, indexes `(user_id)` +
+  `(firm_id, status)` (DEC-J live-lookup path served by the
+  `(firm_id, user_id)` unique index), and the shared `updated_at` trigger
+  (schema convention, not audit). Table grants revoked from
+  anon/authenticated — fail-closed until IMP-012 (RLS + grants per `05`).
+  Evidence: `tests/integration/schema/tenant-core.test.ts` (18 tests:
+  TEST-SCH-02/03 tenant-core portion + structural/security assertions);
+  double `db:reset:harness` from migration history with byte-identical
+  public schema (pg_dump hash match); Harness Gate regression 15/15 green
+  (new `schema-integration` phase; db-cleanliness now expects exactly the
+  IMP-010 table set, spike-leak checks unchanged). TEST-MIG-07 is NOT
+  claimed at this package (no data-source adapter until IMP-014).
+  The package definition below is preserved as executed.
 
 - **Purpose:** Forward-only migration tooling plus the tenant core tables:
   `firms`, `profiles`, `firm_memberships` (SCH-01…03) with constraints,
@@ -433,8 +450,7 @@ separate explicit implementation instruction.
   MIG-PRIN-01…07 (forward-only, ordering); DM-01…03, DM-X-05 (roles).
 - **TEST-* IDs:** TEST-SCH-01…03 (FKs, composite FKs, uniques);
   TEST-MIG-06/07 (ordering, integrity).
-- **Dependencies:** Harness Gate (PASS 2026-09-01 — dependency satisfied;
-  package itself NOT STARTED).
+- **Dependencies:** Harness Gate (PASS 2026-09-01 — dependency satisfied).
 - **Allowed scope:** `supabase/migrations/` for SCH-01…03; migration
   tooling config; updated dev seed to real schema.
 - **Non-goals:** no RLS policies here (IMP-012); no auth wiring (IMP-011).
