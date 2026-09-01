@@ -209,3 +209,24 @@ hosted Supabase access, no IMP-010 work.
 **HARNESS GATE: PASS — human approved 2026-09-01 (evidence commit `305d133`).**
 (Historical machine verdict at evidence-generation time: "HARNESS GATE
 CANDIDATE: PASS".)
+
+## Gate evolution addendum (2026-09-01)
+
+The gate definition in `scripts/harness/gate.mjs` is authoritative and has
+evolved since the approval record above (which remains historical evidence,
+preserved unchanged):
+
+- **IMP-010** added the `schema-integration` phase and changed
+  `db-cleanliness`: public tables must now be exactly the IMP-010 tenant core
+  (`firms`, `profiles`, `firm_memberships`) — the historical "public R0
+  application table count = 0" expectation applied only until IMP-010 landed.
+  The `hgate_*` / `decj_*` / `audctx_*` leak check is unchanged.
+- **IMP-011** expanded `auth-integration` (31 tests: invitation, magic link,
+  password recovery, MFA/TOTP, session policy, revocation, core sign-in).
+- **IMP-012** extended `db-cleanliness` to also assert the production RLS
+  posture: RLS enabled on all three tenant-core tables and the exact 7-policy
+  inventory. `rls-integration` now runs the hgate mechanism suite plus the
+  production tenant-core RLS suite (`tests/integration/rls/tenant-core-rls.test.ts`).
+- Integration file execution is strictly sequential
+  (`fileParallelism: false` in `vitest.integration.config.ts`) because
+  fixtures create/delete the same deterministic rows across files.

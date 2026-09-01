@@ -219,8 +219,34 @@ async function main() {
         `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010 migrations)`,
       );
     }
+    // IMP-012: foundational production RLS is now part of the expected
+    // posture — the gate fails on RLS absence/regression on the tenant core.
+    const rlsTables = psql(
+      `select coalesce(string_agg(c.relname, ',' order by c.relname), '')
+       from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`,
+    ).trim();
+    if (rlsTables !== expectedTables.join(',')) {
+      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012)`);
+    }
+    const expectedPolicies = [
+      'firm_memberships:memberships_insert_super_admin_aal2',
+      'firm_memberships:memberships_select_own_or_active_firm',
+      'firm_memberships:memberships_update_super_admin_aal2',
+      'firms:firms_select_member',
+      'firms:firms_update_super_admin',
+      'profiles:profiles_select_own_or_shared_firm',
+      'profiles:profiles_update_self',
+    ];
+    const policies = psql(
+      `select coalesce(string_agg(tablename || ':' || policyname, ',' order by tablename || ':' || policyname), '')
+       from pg_policies where schemaname = 'public'`,
+    ).trim();
+    if (policies !== expectedPolicies.join(',')) {
+      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012)`);
+    }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
-    return 'no hgate_/decj_/audctx_ objects; public tables = exactly IMP-010 tenant core (firms, profiles, firm_memberships); 16 deterministic identities verified';
+    return 'no hgate_/decj_/audctx_ objects; public tables = exactly IMP-010 tenant core (firms, profiles, firm_memberships); IMP-012 RLS posture verified (RLS enabled on all 3, 7 expected policies); 16 deterministic identities verified';
   });
 
   currentPhase = 'secret-scan';

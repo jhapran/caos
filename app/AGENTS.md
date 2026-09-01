@@ -23,18 +23,22 @@ accurate picture of the code. Do not pretend Supabase is implemented; do
 not document future behavior as if it exists. When a section below
 describes target state, it says so explicitly.
 
-**Release-0 implementation status (2026-09-01):** the Harness Gate is PASS
-and IMP-010 has landed — `supabase/migrations/` now carries the production
-tenant core (`firms`, `profiles`, `firm_memberships`, SCH-01…03; no RLS
-policies yet — IMP-012; table grants revoked from anon/authenticated until
-then). IMP-011 (staff authentication) is IMPLEMENTED and awaiting human
-approval: a dual-mode auth adapter behind `@/data` (`src/data/auth/`),
-staff auth pages, authentication-level route protection, and invitation-only
-Supabase Auth config (`enable_signup = false`, TOTP on, session timebox
-168h / inactivity 12h). The React app remains fixture-backed by default
-(`VITE_DATA_SOURCE` unset = fixture demo track; `supabase` mode needs
-`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see `.env.example`); the
-Supabase data-source adapter lands with IMP-014.
+**Release-0 implementation status (2026-09-01):** the Harness Gate is PASS,
+IMP-010 has landed (`supabase/migrations/` carries the production tenant
+core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and IMP-011
+(staff authentication) is COMPLETE: a dual-mode auth adapter behind `@/data`
+(`src/data/auth/`), staff auth pages, authentication-level route protection,
+and invitation-only Supabase Auth config (`enable_signup = false`, TOTP on,
+session timebox 168h / inactivity 12h). IMP-012 (foundational RLS) is
+IMPLEMENTED and awaiting human approval: RLS is enabled on all three
+tenant-core tables (7 policies; DEC-J live `firm_memberships` lookup; the
+untrusted `x-active-firm` request header selects firm context but grants
+nothing by itself; least-privilege `authenticated` grants restored, anon
+still zero; AAL2 enforced at the database for membership administration).
+No production audit objects yet — IMP-013. The React app remains
+fixture-backed by default (`VITE_DATA_SOURCE` unset = fixture demo track;
+`supabase` mode needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see
+`.env.example`); the Supabase data-source adapter lands with IMP-014.
 
 Authoritative sources:
 
@@ -84,7 +88,7 @@ npm run test       # Vitest in watch mode (unit/component tests in tests/)
 npm run test:unit  # Vitest, non-interactive single run (tests/unit, tests/components)
 npm run test:integration # Vitest node integration tests (tests/integration; needs local Supabase + db:reset:harness)
 npm run test:auth  # Auth integration tests only (GoTrue, deterministic harness users)
-npm run test:rls   # RLS integration tests only (hgate_* harness tables; live-lookup mechanism)
+npm run test:rls   # RLS integration tests only (hgate_* mechanism harness + production tenant-core RLS)
 npm run test:schema # Schema integration tests only (IMP-010 tenant core; TEST-SCH-02/03)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # fast CI-equivalent: lint + unit tests + build

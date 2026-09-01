@@ -17,8 +17,13 @@ export default defineConfig({
     include: ['tests/integration/**/*.test.ts'],
     testTimeout: 30_000,
     hookTimeout: 180_000,
-    // Integration tests share local Supabase state — run sequentially.
+    // Integration tests share local Supabase state — files must run
+    // strictly sequentially (fixtures create/delete the same rows).
+    // fileParallelism: false is the Vitest 4 switch; a bare
+    // `forks: { singleFork: true }` key is silently ignored and left
+    // files racing each other's fixtures.
     pool: 'forks',
-    forks: { singleFork: true },
+    fileParallelism: false,
+    maxWorkers: 1,
   },
 });

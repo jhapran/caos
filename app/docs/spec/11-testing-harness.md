@@ -400,7 +400,10 @@ began (DEC-S; `10` Phase A gate) — status recorded per item:
       **COMPLETE** (18/18, resolved DEC-J live-membership-lookup mechanism
       on temporary `hgate_*` harness tables; TEST-RLS-GEN-01…04,
       TEST-RLS-MAT-01 mechanism level, TEST-AUTH-12/13 freshness; the
-      per-table production matrix lands with IMP-012+)
+      per-table production matrix lands with IMP-012+ — UPDATE 2026-09-01:
+      tenant-core production matrix landed with IMP-012; TEST-RLS-GEN-01…04
+      / MAT-01 re-verified on the production tables per the spike regression
+      requirement above)
 - [x] Auth integration tests pass (TEST-AUTH core) — **COMPLETE**
       (9/9: TEST-AUTH-02, TEST-AUTH-03, TEST-AUTH-09 + supporting
       assertions; this is mechanism-level coverage, not the full
@@ -421,9 +424,11 @@ began (DEC-S; `10` Phase A gate) — status recorded per item:
 
 Gate phases additionally verified on every `verify:harness` run: network
 binding loopback-only, local MCP initialize, database cleanliness (no
-`hgate_*`/`decj_*`/`audctx_*` objects, zero R0 tables), secret scan
-(TEST-SEC-01 harness level). This gate does **not** claim complete
-production coverage for Auth, RLS, audit, or E2E.
+`hgate_*`/`decj_*`/`audctx_*` objects; public tables exactly the committed
+production migration set — the IMP-010 tenant core — with the IMP-012 RLS
+posture asserted: RLS enabled on all three tables plus the exact policy
+inventory), secret scan (TEST-SEC-01 harness level). This gate does **not**
+claim complete production coverage for Auth, RLS, audit, or E2E.
 
 ## Assumptions
 

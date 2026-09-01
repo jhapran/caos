@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint — security-critical (authentication).** IMP-012 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction after the IMP-011 checkpoint.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint — security-critical (RLS/tenant isolation).** IMP-013 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction after the IMP-012 checkpoint.
 
 ## Purpose
 
@@ -467,7 +467,7 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-011 — Staff authentication integration** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint (security-critical: authentication)**
+**IMP-011 — Staff authentication integration** — **COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`)**
 
 - **Outcome:** dual-mode auth adapter behind the data layer
   (`src/data/auth/` — fixture demo persona vs Supabase Auth service; React
@@ -529,7 +529,66 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-012 — Foundational RLS**
+**IMP-012 — Foundational RLS** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint (security-critical: RLS/tenant isolation)**
+
+- **Outcome:** production migration
+  `supabase/migrations/20260901120000_foundational_rls.sql` enables RLS on
+  the IMP-010 tenant core (`firms`, `profiles`, `firm_memberships`) with 7
+  policies — `firms_select_member`, `firms_update_super_admin`;
+  `profiles_select_own_or_shared_firm`, `profiles_update_self`;
+  `memberships_select_own_or_active_firm`,
+  `memberships_insert_super_admin_aal2`,
+  `memberships_update_super_admin_aal2` — and restores least-privilege
+  `authenticated` grants (table-level SELECT on firms/memberships;
+  column-level SELECT(id, full_name, avatar_url) + UPDATE on profiles;
+  column-level INSERT/UPDATE on memberships/firms; anon unchanged at zero;
+  no DELETE anywhere). DEC-J mechanism: helpers
+  `active_membership_role(uuid)` and `shares_active_firm_with(uuid)` are
+  SECURITY DEFINER (RLS self-recursion avoidance / selector-independent
+  shared-firm predicate; pinned `search_path`, owned by postgres, EXECUTE
+  to `authenticated` only) and `req_active_firm()` SECURITY INVOKER reads
+  the untrusted `x-active-firm` header — a selector grants nothing by
+  itself; every check resolves `auth.uid()` + live `firm_memberships`
+  status/role. AAL2 enforcement is inline
+  `(select auth.jwt() ->> 'aal') = 'aal2'` on membership administration
+  (RLS-AAL-01). FORCE RLS intentionally NOT set on the tenant core:
+  RLS-PRIN-02's forced requirement targets tenant-owned SCH-04+ tables;
+  forcing SCH-01…03 would recurse the DEFINER membership helper and break
+  owner-run seeds (no JWT) — documented exception, asserted in
+  `tests/integration/schema/rls-catalog.test.ts`. Verified behavior (33
+  tests, `tests/integration/rls/tenant-core-rls.test.ts`, real PostgREST
+  calls with signed-in tokens; service role only for fixture setup /
+  controlled membership mutation / teardown): same-firm read,
+  cross-firm read/insert/update/delete denial, known foreign ids leak
+  nothing, forged selector grants nothing, self-elevation denied,
+  `invited_by` server-derived, suspension/removal/downgrade/upgrade take
+  effect on the next authorization check with the same pre-issued token,
+  multi-firm A→B→A isolation, aal1 denied / aal2 allowed /
+  aal2+wrong-role denied / aal2+wrong-firm denied (real TOTP enrolment),
+  anon denied. Catalog suite (11 tests) asserts RLS state, exact policy
+  inventory, exact grants, helper security properties, and the
+  index-served DEC-J lookup path. Runtime discovery recorded: PostgREST
+  applies the SELECT policy to write row-scans and RETURNING — membership
+  administration therefore sends `x-active-firm` for the administered
+  firm, and profile writes use `Prefer: return=minimal`. Harness fix:
+  `vitest.integration.config.ts` now sets `fileParallelism: false`
+  (`forks: { singleFork: true }` was silently ignored by Vitest 4 and let
+  fixture-sharing files race). Harness Gate `db-cleanliness` phase now
+  also asserts RLS enabled on all 3 tables + the exact 7-policy
+  inventory; all other checks unchanged. Acceptance: `db:reset:harness`
+  ×2 from scratch — identical schema, 16/16 deterministic identities;
+  `test:auth` 31/31; `test:rls` 51/51 (hgate 18 + tenant-core 33);
+  `test:schema` 29/29; `test:integration` 111/111; `test:e2e` 4/4;
+  `npm run verify` green; `npm run verify:harness` 15/15 green;
+  `supabase db lint --level warning` clean. IMP-010 migration
+  byte-unchanged; zero audit objects (IMP-013); zero domain tables.
+  Honest non-claims: TEST-RLS-MAT-02/03 need domain tables (later
+  packages); TEST-RLS-SUP-01 break-glass shape deferred (IMP-013/072);
+  RLS-AAL-03 AAL-freshness window not fixed here; production staff/client
+  overlap coverage deferred to the owning client-access package (harness
+  mechanism test stands); portfolio scoping (RLS-A-02) lands with the
+  table-owning package. The package definition below is preserved as
+  executed.
 
 - **Purpose:** Implement the approved RLS foundation per the DEC-J
   decision record: tenant context, membership checks, portfolio scoping,

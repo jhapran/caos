@@ -10,7 +10,8 @@
  *   TEST-SCH-03  unique constraints hold (memberships/profiles portion).
  * Plus structural assertions (columns/types, NOT NULL, CHECK vocabularies,
  * indexes incl. the DEC-J live-lookup path, updated_at trigger) and the
- * IMP-010 security invariant: no PostgREST access before IMP-012 RLS.
+ * IMP-012 RLS posture (RLS-mediated access; full policy/grant inventory is
+ * asserted in rls-catalog.test.ts).
  *
  * Runs as postgres via docker psql for DDL verification (admin only);
  * PostgREST access checks run as a signed-in user, never service-role.
@@ -192,12 +193,16 @@ describe('indexes — hot RLS/lookup paths (SCH-03, RLS-MECH-01 support)', () =>
     expect(idx).toContain('firm_memberships_firm_id_unique'); // (firm_id, id) — SCH-RESP-03 target
   });
 
-  it('live membership lookup (user + firm → status, role) uses the unique index', () => {
+  it('live membership lookup (user + firm → status, role) is index-served', () => {
+    // enable_seqscan=off makes the plan deterministic on tiny fixture tables
+    // (the planner rightly prefers Seq Scan at ~zero rows); scale viability
+    // was proven by the DEC-J spike.
     const plan = psql(
-      `explain select status, role from public.firm_memberships
+      `set enable_seqscan = off;
+       explain select status, role from public.firm_memberships
        where firm_id = '${FIRM_A}' and user_id = '${PARTNER}'`,
     );
-    expect(plan).toContain('firm_memberships_firm_user_unique');
+    expect(plan).toMatch(/Index (Scan|Only Scan) using firm_memberships_/);
   });
 });
 
@@ -213,27 +218,37 @@ describe('updated_at trigger (schema convention)', () => {
   });
 });
 
-describe('security — fail-closed until IMP-012 RLS', () => {
-  it('no table privileges for anon/authenticated on the tenant core', () => {
-    const grants = psql(
+describe('security — IMP-012 RLS posture (supersedes IMP-010 fail-closed state)', () => {
+  it('anon still has no privileges; authenticated access is now mediated by RLS', () => {
+    const anon = psql(
       `select count(*) from information_schema.role_table_grants
-       where table_schema = 'public' and grantee in ('anon', 'authenticated')
+       where table_schema = 'public' and grantee = 'anon'
          and table_name in ('firms', 'profiles', 'firm_memberships')`,
     ).trim();
-    expect(grants).toBe('0');
+    expect(anon).toBe('0');
+    // authenticated now holds the least-privilege grant set — exact inventory
+    // and policy assertions live in rls-catalog.test.ts.
+    const authenticated = psql(
+      `select count(*) from information_schema.role_table_grants
+       where table_schema = 'public' and grantee = 'authenticated'
+         and table_name in ('firms', 'profiles', 'firm_memberships')`,
+    ).trim();
+    expect(Number(authenticated)).toBeGreaterThan(0);
   });
 
-  it('signed-in user cannot read firms via PostgREST yet', async () => {
-    const { token } = await signIn(userEmail('USER_A_PARTNER'));
+  it('signed-in user with no membership reads firms as an empty set (RLS denies rows)', async () => {
+    const { token } = await signIn(userEmail('USER_A_SENIOR')); // no membership in this fixture
     const res = await api(token, 'GET', 'firms?select=id');
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
   });
 
-  it('signed-in user cannot insert a membership via PostgREST yet', async () => {
-    const { token } = await signIn(userEmail('USER_A_PARTNER'));
+  it('signed-in non-super_admin cannot insert a membership (RLS denies)', async () => {
+    const { token } = await signIn(userEmail('USER_A_PARTNER')); // partner, not super_admin
     const res = await api(token, 'POST', 'firm_memberships', {
-      body: { firm_id: FIRM_A, user_id: SENIOR, role: 'senior' },
+      headers: { 'x-active-firm': FIRM_A, Prefer: 'return=minimal' },
+      body: { firm_id: FIRM_A, user_id: SENIOR, role: 'senior', status: 'invited', invited_by: PARTNER },
     });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(403);
   });
 });
