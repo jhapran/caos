@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint — security-critical (RLS/tenant isolation).** IMP-013 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction after the IMP-012 checkpoint.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is IMPLEMENTED (2026-09-02); acceptance checks green; awaiting human approval and Git checkpoint — security-critical (audit).** IMP-014 is UNLOCKED but NOT STARTED — it begins only on a separate explicit implementation instruction after the IMP-013 checkpoint.
 
 ## Purpose
 
@@ -529,7 +529,7 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-012 — Foundational RLS** — **IMPLEMENTED (2026-09-01); acceptance checks green; awaiting human approval and Git checkpoint (security-critical: RLS/tenant isolation)**
+**IMP-012 — Foundational RLS** — **COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`)**
 
 - **Outcome:** production migration
   `supabase/migrations/20260901120000_foundational_rls.sql` enables RLS on
@@ -588,7 +588,13 @@ separate explicit implementation instruction.
   overlap coverage deferred to the owning client-access package (harness
   mechanism test stands); portfolio scoping (RLS-A-02) lands with the
   table-owning package. The package definition below is preserved as
-  executed.
+  executed. **Superseded by IMP-013 (2026-09-02):** the firm_memberships
+  INSERT/UPDATE policies (`memberships_insert_super_admin_aal2`,
+  `memberships_update_super_admin_aal2`) and the column write grants were
+  removed when membership administration moved to Layer-B RPCs
+  (API-ARCH-04 / AUD-CTX-04) — the policy inventory is now 6 and the gate
+  expectation updated accordingly; all read policies and the DEC-J
+  mechanism are unchanged.
 
 - **Purpose:** Implement the approved RLS foundation per the DEC-J
   decision record: tenant context, membership checks, portfolio scoping,
@@ -620,7 +626,77 @@ separate explicit implementation instruction.
 
 ---
 
-**IMP-013 — Audit foundation**
+**IMP-013 — Audit foundation** — **IMPLEMENTED (2026-09-02); acceptance checks green; awaiting human approval and Git checkpoint (security-critical: audit)**
+
+- **Outcome:** production migration
+  `supabase/migrations/20260902000000_audit_foundation.sql` implements the
+  resolved AUD-OQ-02 layered A+B+C architecture. **SCH-20 `audit_log`**:
+  append-only, soft references only (SCH-FK-03), actor-model CHECK
+  (AUD-ACT-05), the four spec'd indexes, no `updated_at`; RLS enabled AND
+  forced (tenant-owned rows, RLS-PRIN-02 — safe because every writer is a
+  postgres-owned definer) with one SELECT policy
+  `audit_select_partner_admin` (RLS-AUD-01); grants: SELECT to
+  `authenticated` only, nothing for anon, and NO table privilege for
+  service_role (Layer-C writes go through the definer writers, which run
+  as the owner). **Layer A:** `audit_trg_row()` AFTER trigger on firms /
+  firm_memberships / profiles (the R0 HIGH/MEDIUM tables) — actor from
+  `auth.uid()` / jwt `role='service_role'` / operator fallback
+  (`human` / `service` / `system:database-operator`), firm/object from the
+  row, old/new per AUD-VAL-01; AUD-VAL-02 redaction review recorded: none
+  identified. **Layer B** (API-ARCH-04 / AUD-CTX-04 / API-R0-FRM):
+  membership administration moved off raw PostgREST writes onto
+  `invite_member` / `change_membership_role` / `suspend_membership` /
+  `remove_membership` (super_admin + AAL2 + live DEC-J membership check;
+  mutation + audit atomic in one transaction; 42501 denials) and
+  self-service `accept_invitation` (no AAL2 — acceptance precedes MFA
+  enrolment, AUTH-10 ordering). The IMP-012 INSERT/UPDATE policies and
+  column write grants on firm_memberships were dropped/revoked here
+  (policy inventory 7→6); IMP-010/IMP-012 migration files byte-unchanged.
+  Re-invite of removed memberships deliberately NOT implemented
+  (SCH-OQ-03/API-OQ-04 OPEN — surfaces as 409). **Layer C foundation:**
+  `write_audit_event()` (authenticated; actor always `auth.uid()`; live
+  membership guard), `write_audit_event_server()` (service_role only; full
+  AUD-ACT actor model; server-asserted metadata), and
+  `mirror_login_history()` (service_role only; mirrors
+  `auth.audit_log_entries` as system-actor NULL-firm platform rows,
+  idempotent — AUD-LOGIN-01/02; scheduler binding deferred, decision N).
+  Internal `audit_write()` is owner-only. Metadata trust model per
+  AUD-CTX-02: ip/UA/XFF/correlation recorded from request headers as
+  non-authoritative metadata; actor/firm NEVER from headers (spoofing
+  battery tested). Fail-closed (AUD-CTX-05): mutation + audit succeed or
+  roll back together on both the trigger and RPC paths, proven via a
+  psql-only `app.audit_fault` test hook (unreachable from PostgREST).
+  Request-context state is transaction-local only (AUD-CTX-03);
+  sequential + concurrent leakage tests green. Documented deviations:
+  profile audit rows carry `firm_id = NULL` with a human/system actor
+  (profiles are global identity data, TEN-04 — extends the AUD-EVT-03
+  marker wording; the actor-model CHECK is still enforced); mirror rows
+  carry the GoTrue-server-generated entry timestamp (AUD-INV-02 intent —
+  never client-supplied). **Tests:** new
+  `tests/integration/audit/audit.test.ts` (31) — TEST-AUD-01/02/04/07/08/09
+  plus the spoofing battery, leakage/concurrency, RPC authorization matrix
+  with same-token freshness, RLS-AUD-01 reads, Layer-C behavior, and
+  SCH-20 structure; `tenant-core-rls.test.ts` now drives administration
+  through the RPCs and asserts the raw write path is closed (rls 52/52);
+  invitation acceptance uses the production `accept_invitation` RPC
+  (auth 31/31); the catalog suite asserts the new function/grant/policy
+  inventory (schema 30/30). **Deferred with reasons:** TEST-AUD-03 (no
+  instance/task/review/alert tables), TEST-AUD-05 (no support_sessions
+  table in the R0 schema inventory — IMP-072), TEST-AUD-06 (MFA-recovery
+  Edge Function deferred; the Layer-C contract it will use IS tested),
+  TEST-AUD-10 (AUD-OQ-01 OPEN — no retention path exists to test;
+  immutability coverage stands), TEST-AUD-11 (SCH-32 rule versions land in
+  a later package). **AUD-OQ-01 remains OPEN** — no retention, purge,
+  archival, or legal-hold behavior implemented. Harness Gate: new
+  `audit-integration` phase; db-cleanliness now expects exactly 4 tables /
+  6 policies / FORCE on audit_log; all other checks unchanged. Acceptance:
+  `db:reset:harness` ×2 from scratch — identical 117-line schema
+  fingerprint, 16/16 deterministic identities; test:auth 31/31;
+  test:rls 52/52; test:schema 30/30; test:audit 31/31;
+  test:integration 144/144; test:e2e 4/4; `npm run verify` green;
+  `npm run verify:harness` 16/16; `supabase db lint --level warning`
+  clean; no hgate_/decj_/audctx_ objects; no domain tables; no frontend
+  changes. The package definition below is preserved as specified.
 
 - **Purpose:** `audit_log` (SCH-20) with the actor model, immutability
   invariants, context propagation per the IMP-005 decision record, and

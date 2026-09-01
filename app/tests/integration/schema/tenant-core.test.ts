@@ -37,6 +37,12 @@ function sqlError(sql: string): string {
 
 beforeAll(() => {
   psql(`
+    delete from public.firm_memberships where firm_id = '${FIRM_A}';
+    delete from public.profiles where id in ('${PARTNER}', '${MANAGER}');
+    delete from public.firms where id = '${FIRM_A}';
+    delete from public.audit_log
+      where firm_id = '${FIRM_A}' or object_id in ('${PARTNER}', '${MANAGER}')
+         or (object_type = 'firm' and coalesce(new_value ->> 'name', old_value ->> 'name') like 'tmp-%');
     insert into public.firms (id, name, frn, city) values
       ('${FIRM_A}', 'Schema Test Firm A', 'AAATEST0001', 'Testpur');
     insert into public.profiles (id, full_name) values
@@ -53,20 +59,26 @@ afterAll(() => {
     delete from public.firm_memberships where firm_id = '${FIRM_A}';
     delete from public.profiles where id in ('${PARTNER}', '${MANAGER}');
     delete from public.firms where id = '${FIRM_A}';
+    -- IMP-013: fixture writes produce audit rows; remove them as the
+    -- operator (append-only applies to application roles, AUD-INV-01).
+    delete from public.audit_log
+      where firm_id = '${FIRM_A}' or object_id in ('${PARTNER}', '${MANAGER}')
+         or (object_type = 'firm' and coalesce(new_value ->> 'name', old_value ->> 'name') like 'tmp-%');
   `);
 });
 
 describe('structure — tables, columns, PKs', () => {
-  it('exactly the three IMP-010 tables exist in public', () => {
+  it('exactly the IMP-010 tenant-core tables + IMP-013 audit_log exist in public', () => {
     // Scoped to production objects: temporary harness/spike tables
     // (hgate_/decj_/audctx_) are managed by their own suites and by the
     // gate cleanliness phase; they may coexist during a combined run.
+    // IMP-013 added audit_log (SCH-20); no other tables may appear.
     const tables = psql(
       `select string_agg(table_name, ',' order by table_name) from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
          and table_name not like 'hgate%' and table_name not like 'decj%' and table_name not like 'audctx%'`,
     ).trim();
-    expect(tables).toBe('firm_memberships,firms,profiles');
+    expect(tables).toBe('audit_log,firm_memberships,firms,profiles');
   });
 
   it('expected columns and types exist', () => {
@@ -243,7 +255,9 @@ describe('security — IMP-012 RLS posture (supersedes IMP-010 fail-closed state
     expect(res.body).toEqual([]);
   });
 
-  it('signed-in non-super_admin cannot insert a membership (RLS denies)', async () => {
+  it('signed-in non-super_admin cannot insert a membership (no INSERT grant since IMP-013)', async () => {
+    // IMP-013 closed the raw write path entirely (Layer-B RPC transition):
+    // this now fails at the SQL grant layer before any policy is consulted.
     const { token } = await signIn(userEmail('USER_A_PARTNER')); // partner, not super_admin
     const res = await api(token, 'POST', 'firm_memberships', {
       headers: { 'x-active-firm': FIRM_A, Prefer: 'return=minimal' },

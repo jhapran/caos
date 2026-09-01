@@ -23,19 +23,26 @@ accurate picture of the code. Do not pretend Supabase is implemented; do
 not document future behavior as if it exists. When a section below
 describes target state, it says so explicitly.
 
-**Release-0 implementation status (2026-09-01):** the Harness Gate is PASS,
-IMP-010 has landed (`supabase/migrations/` carries the production tenant
-core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and IMP-011
-(staff authentication) is COMPLETE: a dual-mode auth adapter behind `@/data`
-(`src/data/auth/`), staff auth pages, authentication-level route protection,
-and invitation-only Supabase Auth config (`enable_signup = false`, TOTP on,
-session timebox 168h / inactivity 12h). IMP-012 (foundational RLS) is
-IMPLEMENTED and awaiting human approval: RLS is enabled on all three
-tenant-core tables (7 policies; DEC-J live `firm_memberships` lookup; the
-untrusted `x-active-firm` request header selects firm context but grants
-nothing by itself; least-privilege `authenticated` grants restored, anon
-still zero; AAL2 enforced at the database for membership administration).
-No production audit objects yet — IMP-013. The React app remains
+**Release-0 implementation status (2026-09-02):** the Harness Gate is PASS
+(16/16), IMP-010 has landed (`supabase/migrations/` carries the production
+tenant core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and
+IMP-011 (staff authentication) is COMPLETE: a dual-mode auth adapter behind
+`@/data` (`src/data/auth/`), staff auth pages, authentication-level route
+protection, and invitation-only Supabase Auth config (`enable_signup =
+false`, TOTP on, session timebox 168h / inactivity 12h). IMP-012
+(foundational RLS) is COMPLETE: RLS is enabled on all three tenant-core
+tables (DEC-J live `firm_memberships` lookup; the untrusted `x-active-firm`
+request header selects firm context but grants nothing by itself;
+least-privilege `authenticated` grants, anon zero; AAL2 enforced at the
+database). IMP-013 (audit foundation) is IMPLEMENTED and awaiting human
+approval: `audit_log` (SCH-20, append-only, RLS enabled + forced, SELECT
+for partner/super_admin of the owning firm only), the Layer-A audit trigger
+on the three tenant-core tables, Layer-B membership-administration RPCs
+(`invite_member` / `change_membership_role` / `suspend_membership` /
+`remove_membership` / `accept_invitation` — raw PostgREST writes to
+`firm_memberships` are closed; super_admin + AAL2 + live membership, atomic
+mutation+audit), and the Layer-C server-writer contract plus
+`mirror_login_history()` (service_role only). The React app remains
 fixture-backed by default (`VITE_DATA_SOURCE` unset = fixture demo track;
 `supabase` mode needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see
 `.env.example`); the Supabase data-source adapter lands with IMP-014.
@@ -89,7 +96,8 @@ npm run test:unit  # Vitest, non-interactive single run (tests/unit, tests/compo
 npm run test:integration # Vitest node integration tests (tests/integration; needs local Supabase + db:reset:harness)
 npm run test:auth  # Auth integration tests only (GoTrue, deterministic harness users)
 npm run test:rls   # RLS integration tests only (hgate_* mechanism harness + production tenant-core RLS)
-npm run test:schema # Schema integration tests only (IMP-010 tenant core; TEST-SCH-02/03)
+npm run test:schema # Schema integration tests only (tenant core + catalog posture; TEST-SCH-02/03)
+npm run test:audit # Audit integration tests only (IMP-013 audit foundation; TEST-AUD-*)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # fast CI-equivalent: lint + unit tests + build
 npm run verify:harness # FULL Harness Gate: preflight → stack → reset+seed → lint →

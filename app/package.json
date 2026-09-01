@@ -14,6 +14,7 @@
     "test:auth": "vitest run -c vitest.integration.config.ts tests/integration/auth",
     "test:rls": "vitest run -c vitest.integration.config.ts tests/integration/rls",
     "test:schema": "vitest run -c vitest.integration.config.ts tests/integration/schema",
+    "test:audit": "vitest run -c vitest.integration.config.ts tests/integration/audit",
     "test:e2e": "playwright test",
     "verify": "npm run lint && npm run test:unit && npm run build",
     "verify:harness": "node scripts/harness/gate.mjs",

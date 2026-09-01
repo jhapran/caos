@@ -4,10 +4,10 @@
  *
  * Mechanism level: the admin/invite path creates (or reuses) the identity
  * and a FirmMembership in `invited` state; first use sets a password and
- * acceptance transitions the membership to `active`. The production
- * authorization wrapper (who may invite — RLS-MEM, AAL2 step-up) and the
- * audit rows land with IMP-012/013; this test proves the auth mechanics
- * end to end on the real IMP-010 tables.
+ * acceptance transitions the membership to `active`. IMP-013 landed the
+ * production acceptance path: the `accept_invitation` Layer-B RPC (the
+ * invitee flips their OWN invited row; the write policies/grants for raw
+ * membership administration no longer exist).
  *
  * Security: the access token must carry identity claims only — never
  * firm/role/membership authority (DEC-J, AUTH-00).
@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   adminGenerateLink,
+  api,
   authPost,
   authPutUser,
   decodeJwt,
@@ -32,7 +33,9 @@ let userId;
 
 function cleanupRows() {
   psql(`delete from public.firm_memberships where firm_id = '${FIRM_A}';
-        delete from public.firms where id = '${FIRM_A}'`);
+        delete from public.firms where id = '${FIRM_A}';
+        delete from public.audit_log where firm_id = '${FIRM_A}';
+        delete from public.audit_log where object_id = '${userId ?? ''}'`);
 }
 
 describe('TEST-AUTH-01 — invitation mechanism', () => {
@@ -71,12 +74,21 @@ describe('TEST-AUTH-01 — invitation mechanism', () => {
     expect(updated.status).toBe(200);
   });
 
-  it('acceptance transitions membership to active; sign-in then works', async () => {
-    // System step (production: membership-admin RPC, IMP-012/013).
-    psql(`update public.firm_memberships set status = 'active'
-          where firm_id = '${FIRM_A}' and user_id = '${userId}'`);
+  it('acceptance transitions membership to active via the production RPC; sign-in then works', async () => {
+    // IMP-013 production path: the invitee self-accepts their own invited
+    // membership through the accept_invitation Layer-B RPC (no AAL2 —
+    // acceptance precedes MFA enrolment, AUTH-10 ordering).
     const session = await signIn(EMAIL, FIRST_PASSWORD);
     expect(session.ok).toBe(true);
+    const accepted = await api(session.token, 'POST', 'rpc/accept_invitation', {
+      body: { p_firm_id: FIRM_A },
+    });
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.status).toBe('active');
+    const status = psql(
+      `select status from public.firm_memberships where firm_id = '${FIRM_A}' and user_id = '${userId}'`,
+    ).trim();
+    expect(status).toBe('active');
   });
 
   it('access token carries identity claims only — no firm/role authority', async () => {

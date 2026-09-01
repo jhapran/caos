@@ -27,6 +27,14 @@
  *   aal2 allowed, aal2 + wrong role denied, aal2 + wrong firm denied);
  *   RLS-SVC-03 — anon without a session gets nothing.
  *
+ * IMP-013 amendment: membership administration is no longer a raw table
+ * write (API-ARCH-04 / AUD-CTX-04 / API-R0-FRM). The INSERT/UPDATE policies
+ * and column write grants on firm_memberships were dropped by the audit
+ * migration; the administration cases below exercise the Layer-B RPCs
+ * (invite_member / change_membership_role / suspend_membership /
+ * remove_membership) and assert the raw PostgREST write path is closed.
+ * The SELECT policy and all read/freshness semantics are unchanged.
+ *
  * NOT claimed here: TEST-RLS-MAT-02/03 (tasks/audit tables don't exist),
  * TEST-RLS-SUP-01 (break-glass shape needs IMP-013 audit machinery),
  * staff/client overlap production coverage (no client-access tables yet —
@@ -117,6 +125,11 @@ function seedFixture() {
     update public.firm_memberships set role = 'senior',      status = 'active' where id = '${M.seniorA}';
     update public.profiles set full_name = 'Senior A' where id = '${userId('USER_A_SENIOR')}';
     delete from public.firm_memberships where firm_id in ('${FIRM_A}', '${FIRM_B}') and status = 'invited';
+    -- IMP-013: audit rows from a previously interrupted run would skew
+    -- audit-count assertions; reset them for this fixture's scope.
+    delete from public.audit_log
+      where firm_id in ('${FIRM_A}', '${FIRM_B}')
+         or object_id in (${PROFILE_USERS.map((k) => `'${userId(k)}'`).join(',')});
   `);
 }
 
@@ -125,6 +138,11 @@ function cleanupFixture() {
     delete from public.firm_memberships where firm_id in ('${FIRM_A}', '${FIRM_B}');
     delete from public.profiles where id in (${PROFILE_USERS.map((k) => `'${userId(k)}'`).join(',')});
     delete from public.firms where id in ('${FIRM_A}', '${FIRM_B}');
+    -- IMP-013: fixture writes now produce audit rows; remove them as the
+    -- operator (append-only applies to application roles, AUD-INV-01).
+    delete from public.audit_log
+      where firm_id in ('${FIRM_A}', '${FIRM_B}')
+         or object_id in (${[...PROFILE_USERS.map((k) => userId(k)), inviteeId].filter(Boolean).map((id) => `'${id}'`).join(',')});
   `);
 }
 
@@ -346,92 +364,122 @@ describe('TEST-RLS-MEM — firm_memberships read policies (RLS-MEM-01, RLS-CTX-0
   });
 });
 
-describe('TEST-RLS-MEM — membership administration (RLS-MEM-01 + RLS-AAL-01)', () => {
-  it('06 unauthorized role (senior) cannot invite — denied as an authorization error', async () => {
-    const r = await api(seniorA.token, 'POST', 'firm_memberships', {
+describe('TEST-RLS-MEM — membership administration RPCs (RLS-MEM-01 + RLS-AAL-01, IMP-013 Layer B)', () => {
+  it('raw table writes are closed: INSERT/UPDATE grants removed for everyone (API-ARCH-04)', async () => {
+    // Even the aal2 super_admin can no longer write firm_memberships
+    // directly — administration goes through the Layer-B RPCs only.
+    const post = await api(aal2Token, 'POST', 'firm_memberships', {
       headers: H(FIRM_A),
-      body: { firm_id: FIRM_A, user_id: inviteeId, role: 'senior', status: 'invited', invited_by: userId('USER_A_SENIOR') },
+      body: { firm_id: FIRM_A, user_id: inviteeId, role: 'senior', status: 'invited', invited_by: userId('USER_A_SUPER_ADMIN') },
+    });
+    expect(post.status).toBe(403);
+    const patch = await api(aal2Token, 'PATCH', `firm_memberships?id=eq.${M.seniorA}`, {
+      headers: H(FIRM_A),
+      body: { role: 'partner' },
+    });
+    expect(patch.status).toBe(403);
+    expect(psql(`select role from public.firm_memberships where id = '${M.seniorA}'`).trim()).toBe('senior');
+  });
+
+  it('06 unauthorized role (senior) cannot invite — RPC denies as an authorization error', async () => {
+    const r = await api(seniorA.token, 'POST', 'rpc/invite_member', {
+      headers: H(FIRM_A),
+      body: { p_firm_id: FIRM_A, p_user_id: inviteeId, p_role: 'senior' },
     });
     expect(r.status).toBe(403);
   });
 
   it('RLS-AAL-01: aal1 super_admin is DENIED membership administration', async () => {
-    const r = await api(sA.token, 'POST', 'firm_memberships', {
+    const r = await api(sA.token, 'POST', 'rpc/invite_member', {
       headers: H(FIRM_A),
-      body: { firm_id: FIRM_A, user_id: inviteeId, role: 'senior', status: 'invited', invited_by: userId('USER_A_SUPER_ADMIN') },
+      body: { p_firm_id: FIRM_A, p_user_id: inviteeId, p_role: 'senior' },
     });
     expect(r.status).toBe(403);
   });
 
-  it('RLS-AAL-01: aal2 super_admin invites (invite path works at the policy layer)', async () => {
-    // Membership administration happens inside the selected firm context
-    // (RLS-CTX-01): the x-active-firm header accompanies the command.
-    const r = await api(aal2Token, 'POST', 'firm_memberships', {
+  it('RLS-AAL-01: aal2 super_admin invites; inviter identity is server-derived', async () => {
+    const r = await api(aal2Token, 'POST', 'rpc/invite_member', {
       headers: H(FIRM_A),
-      body: { firm_id: FIRM_A, user_id: inviteeId, role: 'senior', status: 'invited', invited_by: userId('USER_A_SUPER_ADMIN') },
+      body: { p_firm_id: FIRM_A, p_user_id: inviteeId, p_role: 'senior' },
     });
-    expect(r.status).toBe(201);
-    const status = psql(
-      `select status from public.firm_memberships where firm_id = '${FIRM_A}' and user_id = '${inviteeId}'`,
-    ).trim();
-    expect(status).toBe('invited');
+    expect(r.status).toBe(200);
+    expect(r.body.status).toBe('invited');
+    // invited_by can no longer be supplied by the caller at all — the RPC
+    // stamps auth.uid() internally.
+    expect(r.body.invited_by).toBe(userId('USER_A_SUPER_ADMIN'));
   });
 
   it('RLS-AAL-01: aal2 + WRONG FIRM is denied (MFA never substitutes for tenancy)', async () => {
-    // Even WITH a foreign selector and aal2, firm B administration is denied.
-    const r = await api(aal2Token, 'POST', 'firm_memberships', {
+    const r = await api(aal2Token, 'POST', 'rpc/invite_member', {
       headers: H(FIRM_B),
-      body: { firm_id: FIRM_B, user_id: inviteeId, role: 'senior', status: 'invited', invited_by: userId('USER_A_SUPER_ADMIN') },
+      body: { p_firm_id: FIRM_B, p_user_id: inviteeId, p_role: 'senior' },
     });
     expect(r.status).toBe(403);
   });
 
-  it('RLS-AAL-01: aal2 + WRONG ROLE (partner) is denied (MFA never substitutes for role)', async () => {
+  it('RLS-AAL-01: role change via RPC — aal2 super_admin allowed, partner denied, wrong firm denied', async () => {
     try {
-      // aal2 + correct role + correct firm + selected context succeeds.
-      const ok = await api(aal2Token, 'PATCH', `firm_memberships?id=eq.${M.seniorA}`, {
+      const ok = await api(aal2Token, 'POST', 'rpc/change_membership_role', {
         headers: H(FIRM_A),
-        body: { role: 'partner' },
+        body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_SENIOR'), p_role: 'partner' },
       });
       expect(ok.status).toBe(200);
-      expect(ok.body).toHaveLength(1);
+      expect(ok.body.role).toBe('partner');
       expect(psql(`select role from public.firm_memberships where id = '${M.seniorA}'`).trim()).toBe('partner');
-      // a PARTNER (wrong role) is denied the same class of change — the row
-      // is visible in the selected-firm roster, but the UPDATE policy rejects.
-      const partnerDenied = await api(partnerA.token, 'PATCH', `firm_memberships?id=eq.${M.articleA}`, {
+      // a PARTNER (wrong role) is denied the same class of change.
+      const partnerDenied = await api(partnerA.token, 'POST', 'rpc/change_membership_role', {
         headers: H(FIRM_A),
-        body: { role: 'manager' },
+        body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_ARTICLE'), p_role: 'manager' },
       });
-      expect(partnerDenied.body).toEqual([]);
+      expect(partnerDenied.status).toBe(403);
       expect(psql(`select role from public.firm_memberships where id = '${M.articleA}'`).trim()).toBe('article_executive');
-      // aal2 + wrong firm: the aal2 super_admin-of-A token cannot touch firm
-      // B rows, even when selecting firm B as context.
-      const wrongFirm = await api(aal2Token, 'PATCH', `firm_memberships?id=eq.${M.partnerB}`, {
+      // aal2 + wrong firm: the aal2 super_admin-of-A token cannot touch firm B.
+      const wrongFirm = await api(aal2Token, 'POST', 'rpc/change_membership_role', {
         headers: H(FIRM_B),
-        body: { role: 'manager' },
+        body: { p_firm_id: FIRM_B, p_user_id: userId('USER_B_PARTNER'), p_role: 'manager' },
       });
-      expect(wrongFirm.body).toEqual([]);
+      expect(wrongFirm.status).toBe(403);
       expect(psql(`select role from public.firm_memberships where id = '${M.partnerB}'`).trim()).toBe('partner');
     } finally {
       psql(`update public.firm_memberships set role = 'senior' where id = '${M.seniorA}'`);
     }
   });
 
-  it('self-elevation is impossible: senior cannot edit own role/status', async () => {
-    const r = await api(seniorA.token, 'PATCH', `firm_memberships?id=eq.${M.seniorA}`, { body: { role: 'super_admin' } });
-    expect(r.body).toEqual([]);
+  it('self-elevation is impossible: senior cannot raise own role via the RPC', async () => {
+    const r = await api(seniorA.token, 'POST', 'rpc/change_membership_role', {
+      body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_SENIOR'), p_role: 'super_admin' },
+    });
+    expect(r.status).toBe(403);
     expect(psql(`select role from public.firm_memberships where id = '${M.seniorA}'`).trim()).toBe('senior');
   });
 
-  it('identity columns are not writable (no grant): user_id/firm_id edits rejected', async () => {
-    const r = await api(aal2Token, 'PATCH', `firm_memberships?id=eq.${M.seniorA}`, {
-      headers: H(FIRM_A),
-      body: { user_id: userId('USER_A_PARTNER') },
+  it('suspend + remove via RPC, and removed rows are immutable (API-OQ-04 OPEN)', async () => {
+    const inv = await api(aal2Token, 'POST', 'rpc/invite_member', {
+      body: { p_firm_id: FIRM_A, p_user_id: inviteeId, p_role: 'billing' },
     });
-    expect(r.status).toBeGreaterThanOrEqual(400);
-    expect(psql(`select user_id from public.firm_memberships where id = '${M.seniorA}'`).trim()).toBe(
-      userId('USER_A_SENIOR'),
-    );
+    // invitee already invited by the earlier success case -> 409 unique
+    // conflict; suspend/remove operate on the seeded rows instead.
+    expect([200, 409]).toContain(inv.status);
+    try {
+      const suspended = await api(aal2Token, 'POST', 'rpc/suspend_membership', {
+        body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_SENIOR') },
+      });
+      expect(suspended.status).toBe(200);
+      expect(suspended.body.status).toBe('suspended');
+      const removed = await api(aal2Token, 'POST', 'rpc/remove_membership', {
+        body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_SENIOR') },
+      });
+      expect(removed.status).toBe(200);
+      expect(removed.body.status).toBe('removed');
+      // Removed rows are terminal history: role change on them is rejected.
+      const roleOnRemoved = await api(aal2Token, 'POST', 'rpc/change_membership_role', {
+        body: { p_firm_id: FIRM_A, p_user_id: userId('USER_A_SENIOR'), p_role: 'manager' },
+      });
+      expect(roleOnRemoved.status).toBe(403);
+    } finally {
+      // Restore fixture state for the following suites.
+      psql(`update public.firm_memberships set status = 'active', role = 'senior' where id = '${M.seniorA}'`);
+    }
   });
 
   it('DELETE is not granted even to an aal2 super_admin (never hard-deleted)', async () => {
@@ -440,12 +488,16 @@ describe('TEST-RLS-MEM — membership administration (RLS-MEM-01 + RLS-AAL-01)',
     expect(psql(`select count(*) from public.firm_memberships where id = '${M.seniorA}'`).trim()).toBe('1');
   });
 
-  it('inviter identity is server-derived: stamping another user as invited_by is rejected', async () => {
-    const r = await api(aal2Token, 'POST', 'firm_memberships', {
-      headers: H(FIRM_A),
-      body: { firm_id: FIRM_A, user_id: inviteeId, role: 'billing', status: 'invited', invited_by: userId('USER_A_PARTNER') },
-    });
-    expect(r.status).toBe(403);
+  it('live freshness on the RPC path: suspension of the caller denies the very next call (same token)', async () => {
+    try {
+      psql(`update public.firm_memberships set status = 'suspended' where id = '${M.superAdminA}'`);
+      const r = await api(aal2Token, 'POST', 'rpc/invite_member', {
+        body: { p_firm_id: FIRM_A, p_user_id: inviteeId, p_role: 'senior' },
+      });
+      expect(r.status).toBe(403);
+    } finally {
+      psql(`update public.firm_memberships set status = 'active' where id = '${M.superAdminA}'`);
+    }
   });
 });
 
