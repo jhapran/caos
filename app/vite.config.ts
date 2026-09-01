@@ -15,12 +15,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // IMP-001 harness: unit/component tests live in tests/ (jsdom, no network).
-  // E2E lives in e2e/ via Playwright (playwright.config.ts).
+  // IMP-001 harness: unit/component tests live in tests/{unit,components}
+  // (jsdom, no network). Integration tests live in tests/integration/ and run
+  // via vitest.integration.config.ts (node, local Supabase). E2E lives in
+  // e2e/ via Playwright (playwright.config.ts).
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.{ts,tsx}'],
+    include: ['tests/{unit,components}/**/*.test.{ts,tsx}'],
     css: false,
   },
 });

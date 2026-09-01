@@ -68,9 +68,15 @@ npm run build      # tsc -b (type check) + vite build → dist/
 npm run preview    # serve the production build locally
 npm run lint       # ESLint over the repo
 npm run test       # Vitest in watch mode (unit/component tests in tests/)
-npm run test:unit  # Vitest, non-interactive single run
+npm run test:unit  # Vitest, non-interactive single run (tests/unit, tests/components)
+npm run test:integration # Vitest node integration tests (tests/integration; needs local Supabase + db:reset:harness)
+npm run test:auth  # Auth integration tests only (GoTrue, deterministic harness users)
+npm run test:rls   # RLS integration tests only (hgate_* harness tables; live-lookup mechanism)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
-npm run verify     # CI-equivalent for the current stage: lint + unit tests + build
+npm run verify     # fast CI-equivalent: lint + unit tests + build
+npm run verify:harness # FULL Harness Gate: preflight → stack → reset+seed → lint →
+                       # unit → auth → RLS → build → Playwright smoke → network/MCP/
+                       # cleanliness/secret checks (see docs/harness/harness-gate.md)
 npm run db:start   # start the local Supabase dev stack (Docker; first run pulls images)
 npm run db:stop    # stop the local stack
 npm run db:status  # show local stack service URLs/health
@@ -147,15 +153,23 @@ forbidden**. Do not paste tokens into any committed file.
 files. Never commit database passwords, JWT/signing keys, service-role
 keys, or tokens (OPS-ENV-05).
 
-**Verification — current vs target.** Since IMP-001, the frontend harness
-exists: Vitest + React Testing Library (`tests/`, jsdom, `@/` alias via
-`vite.config.ts`), Playwright foundation (`e2e/`, `playwright.config.ts` —
-browser binaries are a separate explicit install), and `npm run verify` as
-the CI-equivalent command. The approved full harness
-(`docs/spec/11-testing-harness.md`) will additionally require
-Supabase/RLS integration tests and auth tests (IMP-002+), the DEC-J and
-audit-context spikes, and the business-flow Playwright suite
-(TEST-E2E-01…12) — at which point `verify` expands to include them.
+**Verification — current vs target.** The frontend harness exists: Vitest +
+React Testing Library (`tests/{unit,components}`, jsdom, `@/` alias via
+`vite.config.ts`), Playwright (`e2e/`, `playwright.config.ts` — Chromium
+installed, smoke executed), and `npm run verify` as the fast CI-equivalent
+(lint + unit + build). The **Harness Gate candidate** additionally exists:
+Auth integration tests (`tests/integration/auth`), RLS integration tests
+(`tests/integration/rls` — temporary `hgate_*` harness objects implementing
+the resolved DEC-J live-membership-lookup mechanism, applied/dropped per
+run; NOT R0 schema), both Vitest node-environment via
+`vitest.integration.config.ts`, and `npm run verify:harness` as the full
+gate command (evidence: `docs/harness/harness-gate.md`). DEC-J and
+audit-context spikes are complete with decision records
+(`docs/harness/dec-j-spike.md`, `docs/harness/audit-context-spike.md`).
+**The Harness Gate must be green before IMP-010+ / any R0 schema work.**
+Remaining target-state gaps: business-flow Playwright suite
+(TEST-E2E-01…12) and production RLS/auth/audit tests land with their owning
+IMP packages.
 
 ## Deployment
 
