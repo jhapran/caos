@@ -197,9 +197,9 @@ auth.users
 | AUTH-OQ-02 | Explicit session policy? | — | **Resolved as targets:** AUTH-08 (1 h access, rotating refresh, 12 h inactivity, 7 d absolute); exact Supabase configuration values remain **open for verification during implementation** (recorded in `13`) — not claimed as supported behaviour |
 | AUTH-OQ-03 | MFA device-loss recovery? | — | **Resolved:** admin-assisted recovery with identity verification, audit logging, factor revocation before re-enrolment (AUTH-11); recovery codes deferred for later secure evaluation |
 
-**Intentionally unresolved (owned elsewhere):** final JWT-claims vs
-membership-lookup authorization mechanism (DEC-J spike, `05`); exact audit
+**Intentionally unresolved (owned elsewhere):** exact audit
 context propagation mechanism (`08`); production-region approval (DEC-P).
+(DEC-J was resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.)
 
 ## Acceptance Criteria
 

@@ -1,7 +1,7 @@
 # 07 — API Contract (Application Data Access)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-01…04; DEC-J and Harness Gate spike outcomes stay open.
+- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-01…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.)
 
 ## Purpose
 
@@ -283,8 +283,9 @@ authorization/not-found semantics and API-SEC-* function security.
 - **API-R0-AUTH — session-facing data.** RPC/view: current identity
   (profile), list of the caller's firm memberships (for firm switching,
   RLS-CTX-02), active context descriptor, MFA/AAL status surface for step-up
-  UX (RLS-AAL-01). Depends on `04`; the DEC-J mechanism decides whether
-  context comes from claims or lookup (spike, RLS-MECH-02).
+  UX (RLS-AAL-01). Depends on `04`; per the resolved DEC-J mechanism,
+  context is resolved from the **live** membership relationship
+  (RLS-MECH-01), not from JWT claims.
 - **API-R0-FRM — firms & memberships.** Firm read (RLS-FRM-01). Membership
   administration is **three distinct operations, never one ambiguous
   "invite"**: (a) **invite new person** — creates a new membership/

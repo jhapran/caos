@@ -148,6 +148,13 @@ prevention only; full design lands with each feature's release spec.
 - **Unique:** `(firm_id, user_id)` (one role per user per firm, DM-03) **and `(firm_id, id)`** (composite-FK target for responsibility references, SCH-RESP-03).
 - **Invariants:** role changes audited; `removed` handling per SCH-OQ-03.
 - **Indexes:** `(user_id)` and `(firm_id, status)` — both are hot RLS paths.
+  The DEC-J live-lookup authorization path (equality on `user_id` + selected
+  `firm_id`, checking `status`/`role` — RLS-MECH-01) is served by the
+  `(firm_id, user_id)` unique index above; the IMP-004 spike (100,013
+  membership rows) verified this lookup shape remains index-only at scale —
+  no tiny-table scan assumption. If production query plans demand it, a
+  covering `(user_id, firm_id) INCLUDE (status, role)` index may be added as
+  an index-only change, not a design change.
 - **Lifecycle:** status column; never hard-deleted (historical attribution).
 - **Audit sensitivity:** HIGH — membership/role/status changes audited (AUD-*); membership create/remove and role change are AAL2 step-up operations (RLS-AAL-01).
 - **RLS:** RLS-MEM-*. **Tests:** TEST-RLS-MEM-*, TEST-AUD-02.

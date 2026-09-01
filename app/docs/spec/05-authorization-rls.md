@@ -1,7 +1,7 @@
 # 05 — Authorization & RLS
 
 - **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit RLS-CRV-* family for `compliance_rule_versions`, SCH-32)
-- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). Note: DEC-J mechanism remains provisional pending the harness-gate spike (RLS-MECH-02); spike outcome amends this document before backend migration.
+- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). **DEC-J RESOLVED (2026-09-01)** by the IMP-004 Harness Gate spike + human-reviewed amendment — the Release-0 authorization mechanism is **live membership lookup** (Candidate B, RLS-MECH-01); evidence `docs/harness/dec-j-spike.md` + `docs/harness/dec-j-results.json`.
 
 ## Purpose
 
@@ -22,8 +22,8 @@ Authentication ("who are you?") is owned by `04-authentication.md`.
 
 ## Non-goals
 
-- No authentication flows (`04`). No physical schema (`06`). No final
-  JWT-vs-lookup mechanism selection (DEC-J: spike at harness gate). No
+- No authentication flows (`04`). No physical schema (`06`). DEC-J is
+  **resolved** (live membership lookup — see the DEC-J section below). No
   implementation or SQL policies in Phase 2.
 
 ## 1. Authorization principles
@@ -35,8 +35,10 @@ Authentication ("who are you?") is owned by `04-authentication.md`.
 - **RLS-PRIN-03:** Authorization is evaluated against the **active context**
   (staff-of-firm-X vs client-of-org-Y), never against identity alone
   (DM-X-05).
-- **RLS-PRIN-04:** Privilege checks use server-side data (membership table or
-  verified JWT claims per DEC-J spike outcome), never client-supplied values.
+- **RLS-PRIN-04:** Privilege checks use server-side data — the **live
+  membership table** (DEC-J resolved, RLS-MECH-01: the JWT supplies
+  authenticated identity only; membership status and role are read live
+  from the database) — never client-supplied values.
 
 ## 2. Tenant-isolation model
 
@@ -55,8 +57,10 @@ Authentication ("who are you?") is owned by `04-authentication.md`.
 - **RLS-CTX-01:** A request carries exactly one active context:
   `staff(firm_id, role)` or `client(contact_id, client_id)` — never both.
 - **RLS-CTX-02:** A user with memberships in multiple firms selects an active
-  firm; switching firms establishes a new context (token refresh per the
-  DEC-J mechanism). There is no "all firms" staff view.
+  firm; the selector is **untrusted context** — RLS performs a live
+  membership check for the selected firm on every request (DEC-J resolved,
+  RLS-MECH-01: no token refresh or claim reissue is required to propagate
+  FirmMembership authorization changes). There is no "all firms" staff view.
 - **RLS-CTX-03:** A person holding both staff and client relationships (AUTH-01)
   acts in one context at a time; client context can never produce staff data
   and vice versa (TEST-RLS-*-09/10).
@@ -297,12 +301,75 @@ audit trail and expires).
 Plus **TEST-RLS-CRV-11:** statutory activation without
 `domain_approval_status='approved'` fails (RLS-CRV-03, SCH-32 gate).
 
-## DEC-J: JWT claims vs membership lookup — comparison and spike design
+## DEC-J: JWT claims vs membership lookup — RESOLVED (live membership lookup)
 
-**Status: PROVISIONAL recommendation; not technically validated. The spike is
-executed at the harness gate (Phase 2 prohibits provisioning/connection);
-substantial backend migration is blocked until the result is recorded and
-this design confirmed.**
+**Status: RESOLVED (2026-09-01).** The RLS-MECH-02 spike was executed as
+IMP-004 (Harness Gate) on 2026-08-31, including a reviewer-mandated scale follow-up at
+100,013 membership rows; human/security review selected **Candidate B —
+live membership lookup** as the Release-0 mechanism. Evidence:
+`docs/harness/dec-j-spike.md` and `docs/harness/dec-j-results.json`
+(machine-readable, no secrets). The pre-spike comparison table and the
+superseded provisional recommendation are preserved below as the
+historical record — they no longer represent the selected mechanism.
+
+- **RLS-MECH-01 (RESOLVED — Release-0 mechanism: live membership lookup):**
+  - **Authentication vs authorization boundary.** Supabase Auth / JWT
+    proves **who the user is** (authentication, owned by `04`).
+    PostgreSQL RLS validates **current application relationships**
+    (authorization, owned by this document). Firm membership and role are
+    **not** carried in JWT claims as an authoritative Release-0
+    authorization source; standard JWT identity claims remain normal
+    authentication inputs.
+  - **Live reads.** Authorization reads the membership table **live** on
+    every request: membership status is live, role is live.
+  - **Change semantics (normative).** Suspension takes effect on the next
+    authorization check. Removal takes effect on the next authorization
+    check. Role downgrade removes the old privilege on the next
+    authorization check. A trusted role upgrade may grant the new
+    privilege on the next authorization check after the membership change
+    commits. **No JWT refresh is required solely to propagate
+    FirmMembership authorization changes.**
+  - **Active-firm context.** A request may select an active firm through
+    the approved application context mechanism; that selector is
+    **untrusted context**. Supplying `firm_id = X` never grants access by
+    itself: RLS verifies the authenticated user holds a **current active
+    membership** for X with the required current role. A forged or
+    foreign selector yields no access.
+  - **Multi-firm users.** One auth identity may hold multiple
+    FirmMemberships. Switching Firm A → Firm B → Firm A uses the same
+    authenticated identity; RLS performs the corresponding live
+    membership check per switch. No role or membership authority is
+    reissued into the JWT, and no authorization state bleeds between
+    firms.
+  - **Staff + client overlap (DM-X-05).** The selected context is
+    validated against the corresponding **live** relationship. Staff
+    context never inherits client-only permissions; client context never
+    inherits staff-only permissions; the context selector itself is not
+    proof of authorization (RLS-CTX-03).
+  - **Candidate A (JWT claims only) — REJECTED.** The spike demonstrated
+    stale (unexpired) tokens retaining post-suspension, post-removal, and
+    post-downgrade privileges for the life of the access token.
+  - **Candidate C (hybrid claim snapshot + live verification) — viable
+    alternative, not selected.** C passed every security test at both
+    scales but demonstrated no sufficient advantage over B to justify the
+    custom authorization claim hook, the `authz_version` lifecycle, the
+    stale-token refresh protocol, larger JWTs, and the additional
+    operational/debugging complexity.
+  - **Helper-function rules (unchanged).** Where helper functions are
+    used they must preserve RLS enforcement and never become convenience
+    bypasses; SECURITY DEFINER remains exceptional with pinned
+    `search_path`; service-role browser use remains forbidden (RLS-SVC-*).
+- **RLS-MECH-02 (spike — executed 2026-08-31; decision recorded and approved 2026-09-01, IMP-004):** all twelve
+  acceptance criteria below were tested and recorded (TEST-SPIKE-J-01/02),
+  plus the reviewer-mandated membership-scale follow-up: 100,000 resource
+  rows per candidate table and 100,013 membership rows; 77 original + 22
+  follow-up assertions, zero unexpected outcomes; no cross-tenant success
+  under any candidate; B's membership lookup remained an index-only point
+  lookup at 100k memberships (p50 4.20 ms / p95 5.25 ms, far inside the
+  provisional p95 < 100 ms budget). The written decision record
+  (TEST-SPIKE-J-03) is `docs/harness/dec-j-spike.md`, resolution approved
+  by human/security review. **Backend migration is unblocked with respect
+  to DEC-J.**
 
 | Criterion | A. JWT custom claims (access-token hook) | B. Security-definer membership lookup | C. Hybrid (provisional choice) |
 |---|---|---|---|
@@ -318,17 +385,15 @@ this design confirmed.**
 | Token staleness | Real risk, bounded by TTL + revocation | None | Bounded, with revocation |
 | Testability | Needs token-minting in tests | Plain fixtures | Both, harness covers |
 
-- **RLS-MECH-01 (provisional):** Hybrid (C) — custom access-token hook
-  injects `{ context: staff|client, firm_id, role, contact_id?, client_id? }`;
-  policies read claims for the hot path; membership *status* (suspended/
-  removed) and four-eyes checks use live security-definer lookups.
-  **Not finalized and not technically validated — the final choice
-  (claims-only, lookup-only, or hybrid) is made only after the RLS-MECH-02
-  spike is executed and its outcome recorded here.**
-- **RLS-MECH-02 (spike design, executed at the harness gate):** build the
-  hook + both policy styles on three representative tables
-  (firm_memberships, compliance_instances, audit_log) against the local
-  stack. **Spike acceptance criteria — must test and record:**
+- **RLS-MECH-01-HIST (superseded — preserved for history):** the pre-spike
+  provisional recommendation was Hybrid (C) — custom access-token hook
+  injecting `{ context: staff|client, firm_id, role, contact_id?, client_id? }`,
+  policies reading claims for the hot path with live lookups where
+  freshness was critical. Superseded by the resolved RLS-MECH-01 above
+  (live membership lookup) on spike evidence; do not implement the hybrid
+  as the Release-0 mechanism.
+
+  Original RLS-MECH-02 spike acceptance criteria (as executed and recorded):
   1. same-tenant access succeeds;
   2. cross-tenant denial (read/insert/update/delete);
   3. role-change freshness (time until a role change takes effect);
@@ -346,14 +411,19 @@ this design confirmed.**
       dataset (policy latency per style);
   12. policy testability and debugging complexity (how policies are
       unit-tested and diagnosed per style).
-  Record the outcome in this document; on failure of the hybrid approach,
-  fall back to option B (lookup) and amend this spec before any backend
-  migration proceeds (harness gate).
+  Outcome recorded above and in `docs/harness/dec-j-spike.md`: the hybrid
+  did not fail its criteria, but demonstrated no sufficient advantage over
+  option B — human/security review therefore selected **option B (live
+  membership lookup)** and amended this spec accordingly (2026-09-01),
+  before backend migration.
 
 ## Assumptions
 
-- RLS-A-01: The custom access-token hook capability is available on the
-  target Supabase version — spike verifies; fallback is option B.
+- RLS-A-01: ~~The custom access-token hook capability is required~~
+  **Superseded by the DEC-J resolution:** no custom authorization claim
+  hook is required for Release-0 authorization (live membership lookup,
+  RLS-MECH-01). The hook capability was spike-verified as available and
+  remains an option only for future non-authorization claims.
 - RLS-A-02: R0 "portfolio" scoping for managers uses
   `clients.manager_membership_id` (designated manager is a FirmMembership);
   a team model, if added, extends rather than replaces this (RLS-OQ-02).
@@ -370,7 +440,7 @@ this design confirmed.**
 
 | ID | Question | Owner | Status |
 |---|---|---|---|
-| DEC-J | Claims vs lookup mechanism | harness-gate spike (RLS-MECH-02) | **Open — provisional hybrid (C)** |
+| DEC-J | Claims vs lookup mechanism | harness-gate spike (RLS-MECH-02) | **Resolved (2026-09-01):** live membership lookup (Candidate B) — IMP-004 spike + human/security review; evidence `docs/harness/dec-j-spike.md` + `dec-j-results.json` |
 | RLS-OQ-01 | Which actions require AAL2 step-up? | — | **Resolved directionally:** RLS-AAL-01/02/03 (step-up for membership/role/MFA-recovery/break-glass/export/destructive/security-config — incl. rule-version administration; not for routine operational updates; freshness window implementation-validated) |
 | RLS-OQ-02 | Manager "portfolio" scope in R0? | — | **Resolved:** portfolio = designated-manager clients + related operational records + directly assigned tasks (RLS-STF-03); team-based inherited access deferred |
 | RLS-OQ-03 | May partners manage alert rules? | — | **Resolved:** super_admin + partner read/write; manager read-only; others none; all changes audited (RLS-ARL-01) |
@@ -386,7 +456,8 @@ this design confirmed.**
   internal notes, risk scores, audit log, and portal data.
 - RLS-ACC-04: DEC-J comparison covers all eleven mandated criteria and ends
   in a provisional recommendation plus a concrete spike design executed at
-  the harness gate.
+  the harness gate. **Satisfied:** spike executed (TEST-SPIKE-J-01…03,
+  IMP-004) and decision recorded — live membership lookup (2026-09-01).
 - RLS-ACC-05: All ten verification cases are specified per tenant table via
   TEST-RLS-* forward references.
 - RLS-ACC-06 (Batch 4 security closure): compliance_rule_versions has an
@@ -397,9 +468,11 @@ this design confirmed.**
 ## Consequence of Change
 
 Changing the matrix or the context model invalidates `06` references, `07`
-enforcement points, and the `11` test matrix. A DEC-J spike result
-contradicting RLS-MECH-01 amends this document before any backend migration
-proceeds (harness gate). Weakening the rule-version family (RLS-CRV-*) —
+enforcement points, and the `11` test matrix. DEC-J was resolved by the
+IMP-004 spike amendment (live membership lookup, 2026-09-01); changing the
+selected mechanism requires the same evidence-based amendment process —
+spike, human/security review, recorded decision — before any dependent
+implementation changes. Weakening the rule-version family (RLS-CRV-*) —
 including the statutory activation gate (RLS-CRV-03) or immutability support
 (RLS-CRV-04) — is a compliance/security-posture change requiring requester
 sign-off.

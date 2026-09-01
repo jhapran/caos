@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). All open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (DEC-J, AUD-OQ-01/02, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04, Harness Gate spike outcomes). This document resolves none of them.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01/02, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** The Harness Gate itself remains incomplete: IMP-005 (audit-context spike) and the remaining gate requirements are still open.
 
 ## Purpose
 
@@ -14,8 +14,9 @@ Definition of Done.
 This document **sequences** approved architecture; it does not redesign it.
 Where an approved spec leaves an item OPEN or PROVISIONAL, this plan
 preserves that status and attaches it to the gate at which it must be
-resolved. Nothing here silently resolves DEC-J, AUD-OQ-02, AUTO-OQ-01/02,
-DEC-P, or any other recorded open question.
+resolved. Nothing here silently resolves AUD-OQ-02, AUTO-OQ-01/02,
+DEC-P, or any other recorded open question. (DEC-J was resolved by the
+approved IMP-004 spike amendment, 2026-09-01 — live membership lookup.)
 
 ## Scope
 
@@ -41,8 +42,9 @@ DEC-P, or any other recorded open question.
   assistant, a dedicated MVP Reporting module (PRD §87), and a dedicated
   Client Dependency dashboard/view (PRD §14). No new R0 work packages are
   created for these deferred views.
-- No execution of the DEC-J or audit-context spikes — they are scheduled
-  here as work packages, not performed.
+- No execution of the audit-context spike — it is scheduled
+  here as a work package, not performed. (The DEC-J spike has since been
+  executed as IMP-004, 2026-08-31.)
 
 ## Requirement IDs
 
@@ -92,8 +94,8 @@ This spec owns the `REL-*` namespace:
   before any substantial feature implementation begins.
 - **REL-PRIN-02:** Dependency order over convenience. A package starts
   only when its declared dependencies are complete and green.
-- **REL-PRIN-03:** Open stays open. A provisional mechanism (DEC-J,
-  AUD-OQ-02, AUTO-OQ-01/02) is implemented only after its gate produces a
+- **REL-PRIN-03:** Open stays open. A provisional mechanism (AUD-OQ-02,
+  AUTO-OQ-01/02) is implemented only after its gate produces a
   written decision record; interim work uses the documented provisional
   default and is marked accordingly.
 - **REL-PRIN-04:** One bounded package at a time; no silent scope
@@ -123,9 +125,11 @@ Sequencing rules:
 - **REL-SEQ-02:** Within a phase, packages run in numeric order unless
   their dependency fields say otherwise; across phases, a phase starts
   only when the previous phase's exit gate is green.
-- **REL-SEQ-03:** IMP-004 (DEC-J spike) must complete before IMP-012
-  (foundational RLS). IMP-005 (audit-context spike) must complete before
-  the audit-context propagation portion of IMP-013. Both spikes are inside
+- **REL-SEQ-03:** IMP-004 (DEC-J spike) is **COMPLETE (2026-09-01)** —
+  the live-membership-lookup decision record (`05` RLS-MECH-01) is the
+  approved input to IMP-012 (foundational RLS). IMP-005 (audit-context
+  spike) must complete before the audit-context propagation portion of
+  IMP-013. Both spikes are inside
   R0-A precisely so tenant-domain implementation never proceeds on an
   unvalidated authorization or audit mechanism.
 - **REL-SEQ-04:** IMP-014 (data-source adapter skeleton) precedes all
@@ -141,7 +145,8 @@ Sequencing rules:
   recorded human approval. It implements the checklist in `11` (Harness
   Gate section): test runner, Vitest, React Testing Library, local
   Supabase stack, deterministic seed, TypeScript/build verification, lint,
-  RLS integration harness, auth integration harness, DEC-J spike,
+  RLS integration harness, auth integration harness, DEC-J spike
+  (COMPLETE — IMP-004, 2026-09-01),
   audit-context spike, minimal Playwright smoke suite, CI-equivalent
   verification command, clean baseline.
 - **REL-HG-02:** Allowed before the gate: IMP-000…IMP-005 only, plus
@@ -153,7 +158,8 @@ Sequencing rules:
   integration tests → Playwright smoke → down, with a clean working tree.
 - **REL-HG-04:** Spike decision records (DEC-J, AUD-OQ-02) are written
   into `05` / `08` respectively as amendments before the gate is approved;
-  the approved specs are updated, not bypassed.
+  the approved specs are updated, not bypassed. (DEC-J recorded
+  2026-09-01 — live membership lookup; AUD-OQ-02 remains pending IMP-005.)
 - **REL-HG-05:** No major feature work begins until the gate passes. A
   failed gate blocks R0-B entirely; partial credit is not permitted.
 - **REL-HG-06:** Gate evidence (command output, spike measurements,
@@ -162,15 +168,16 @@ Sequencing rules:
 
 ## Decision gates inside the plan
 
-### DEC-J gate (authorization mechanism)
+### DEC-J gate (authorization mechanism) — SATISFIED (2026-09-01)
 
-DEC-J remains provisional (JWT claims vs live membership lookup vs hybrid,
-RLS-MECH-01/02). IMP-004 executes TEST-SPIKE-J-01…03 against all twelve
-spike criteria in `11`, including ~100k-row representative latency
-(provisional p95 < 100 ms hot-path budget, TEST-OQ-01). The spike decision
-record is completed and `05` amended **before** broad RLS policy
-implementation (IMP-012 and every later RLS-bearing package). This plan
-does not choose a mechanism.
+DEC-J is **resolved**: IMP-004 executed TEST-SPIKE-J-01…03 against all
+twelve spike criteria in `11` (plus the reviewer-mandated 100,013-row
+membership scale follow-up; ~100k-row resource latency far inside the
+provisional p95 < 100 ms budget, TEST-OQ-01 evidence recorded). The
+decision record is written (`docs/harness/dec-j-spike.md`) and `05` is
+amended (RLS-MECH-01: **live membership lookup**). IMP-012 and every
+later RLS-bearing package implement that resolved mechanism; the
+mechanism is not re-adjudicated.
 
 ### Audit-context gate (AUD-OQ-02)
 
@@ -327,8 +334,12 @@ Format and discipline:
 
 ---
 
-**IMP-004 — DEC-J authorization spike**
+**IMP-004 — DEC-J authorization spike** — **COMPLETE (2026-09-01)**
 
+- **Outcome:** decision recorded in `05` (RLS-MECH-01/02) — **live
+  membership lookup** selected; evidence `docs/harness/dec-j-spike.md` +
+  `docs/harness/dec-j-results.json`; human/security approval recorded.
+  The package definition below is preserved as executed.
 - **Purpose:** Decide the RLS mechanism (JWT claims / membership lookup /
   hybrid) on evidence. Security-critical.
 - **Requirement IDs:** DEC-J; RLS-MECH-01/02; RLS-PRIN-01…04.
@@ -353,7 +364,8 @@ Format and discipline:
 - **Git checkpoint:** `spike: DEC-J decision record` (after approval).
 - **Rollback concern:** spike artefacts removed or quarantined; no
   production impact.
-- **Open/provisional dependency:** DEC-J (resolved here); TEST-OQ-01.
+- **Open/provisional dependency:** ~~DEC-J~~ (RESOLVED 2026-09-01 — live
+  membership lookup); TEST-OQ-01 (evidence recorded; budget unchanged).
 
 ---
 
@@ -456,7 +468,8 @@ committed. Exit: recorded approval. No R0-B work before this.
   RLS-AAL-01…03; RLS-A-02 (`manager_membership_id` portfolio model).
 - **TEST-* IDs:** TEST-RLS-GEN-01…04, TEST-RLS-MAT-01…03,
   TEST-RLS-SUP-01 (break-glass shape), TEST-SEC-*.
-- **Dependencies:** IMP-010, IMP-011, **IMP-004 decision record**.
+- **Dependencies:** IMP-010, IMP-011, **IMP-004 decision record**
+  (COMPLETE — live membership lookup, `05` RLS-MECH-01).
 - **Allowed scope:** policies/functions for SCH-01…03 (+ the mechanism
   helpers reused later); no domain tables yet.
 - **Non-goals:** per-domain policies (later packages); DEC-J mechanism
@@ -472,7 +485,8 @@ committed. Exit: recorded approval. No R0-B work before this.
 - **Git checkpoint:** `feat: foundational RLS`.
 - **Rollback concern:** policy rollback = redeploy previous migration
   state on staging; never partial-policy deploys.
-- **Open/provisional dependency:** DEC-J (must be resolved upstream).
+- **Open/provisional dependency:** none — DEC-J resolved upstream
+  (IMP-004, live membership lookup).
 
 ---
 
@@ -1101,7 +1115,7 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 
 | Item | Owner spec | Status | Blocking? | What it blocks | Latest safe decision point |
 |---|---|---|---|---|---|
-| DEC-J | `05` | Open — spike scheduled | **Yes** | IMP-012 and all broad RLS policy implementation | IMP-004 (Harness Gate) |
+| DEC-J | `05` | **Resolved 2026-09-01 — live membership lookup (IMP-004 spike + human review)** | No (resolved) | — (IMP-012 proceeds on the resolved mechanism) | Resolved at IMP-004 (Harness Gate) |
 | AUD-OQ-01 | `08` | Open — retention values are engineering placeholders | No (build); **Yes** (production retention config) | Production retention/archive configuration | IMP-072 (policy/legal confirmation) |
 | AUD-OQ-02 | `08` | Open — spike scheduled | **Yes** (audit propagation) | Final audit-context propagation in IMP-013 | IMP-005 (Harness Gate) |
 | RLS-OQ-04 | `05` | Open — deferred | No | Release 1 client-visible document flagging only | Release 1 specs |
@@ -1184,7 +1198,8 @@ Every TEST-* family defined in `11` is owned by at least one work package:
   real requirement/TEST references to approved specs.
 - **REL-ACC-03:** DEC-J and AUD-OQ-02 are gated (spike → decision record →
   spec amendment) before dependent implementation; neither is silently
-  resolved here.
+  resolved here. DEC-J: **satisfied** (IMP-004, 2026-09-01). AUD-OQ-02:
+  pending IMP-005.
 - **REL-ACC-04:** Every open/provisional item from the approved specs
   appears in the dependency matrix with a blocking assessment and latest
   safe decision point.

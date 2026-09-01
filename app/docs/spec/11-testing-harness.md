@@ -1,7 +1,7 @@
 # 11 — Testing & Verification Harness
 
 - **Status:** Approved (Batch 5)
-- **Approval status:** Approved (Batch 5). Open/provisional items remain as recorded: TEST-OQ-01…04; DEC-J and AUD-OQ-02 spike outcomes stay open until the Harness Gate spikes are executed and recorded.
+- **Approval status:** Approved (Batch 5). Open/provisional items remain as recorded: TEST-OQ-01…04; the DEC-J spike is **COMPLETE** (TEST-SPIKE-J-01…03, IMP-004 — executed 2026-08-31, decision approved 2026-09-01 — selected mechanism: live membership lookup, `05` RLS-MECH-01); AUD-OQ-02 stays open until its Harness Gate spike (IMP-005) is executed and recorded.
 
 ## Purpose
 
@@ -121,7 +121,22 @@ roles.
   partner/super_admin (RLS-AUD-01); support-access history visibility per
   AUD-SUP-03.
 
-## DEC-J technical spike (Harness Gate — design; do not execute in Phase 2)
+## DEC-J technical spike (Harness Gate — COMPLETE: executed 2026-08-31; decision approved 2026-09-01, IMP-004)
+
+**Completion record.** TEST-SPIKE-J-01 (setup: custom access-token hook +
+claims-based, live-lookup, and hybrid policy styles on representative
+tenant tables against the local stack), TEST-SPIKE-J-02 (all twelve
+measurable criteria, including a reviewer-mandated follow-up at 100,013
+membership rows), and TEST-SPIKE-J-03 (written decision record,
+human-reviewed) are **complete**. **Selected Release-0 mechanism: live
+membership lookup (Candidate B)** — recorded in `05` RLS-MECH-01/02.
+Evidence: `docs/harness/dec-j-spike.md`, `docs/harness/dec-j-results.json`.
+The spike remains a **regression requirement**: production RLS
+implementation (IMP-012+) must re-verify the same cases — same tenant,
+cross-tenant denial, suspension, removal, role changes, multi-firm
+switching, staff/client overlap, known foreign IDs — through the
+TEST-RLS-* families below. The original spike design follows for the
+record:
 
 - **TEST-SPIKE-J-01 — Setup.** Implement the custom access-token hook and
   both policy styles (claims-based, security-definer lookup) plus the
@@ -361,8 +376,9 @@ begins (DEC-S; `10` Phase A gate):
       (TEST-STACK-04)
 - [ ] RLS integration tests run and pass for the foundation tables
 - [ ] Auth integration tests pass (TEST-AUTH-01…15 core)
-- [ ] DEC-J spike executed and decision record appended to `05`
-      (TEST-SPIKE-J-*)
+- [x] DEC-J spike executed and decision record appended to `05`
+      (TEST-SPIKE-J-*) — **COMPLETE — executed 2026-08-31; decision approved 2026-09-01 (IMP-004; live membership
+      lookup selected)**
 - [ ] Audit-context spike executed and outcome recorded in `08`
       (TEST-SPIKE-CTX-*)
 - [ ] Minimal Playwright smoke passes (TEST-E2E-01/02/12 at gate; full

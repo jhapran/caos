@@ -49,7 +49,7 @@ documents move through review.
 | 02 | `02-domain-model.md` | Domain Model | 2 | yes | Approved (Batch 2; Batch 3 targeted amendments approved) |
 | 03 | `03-tenancy-environments.md` | Tenancy & Environments | 2 | yes | Approved (Batch 2) |
 | 04 | `04-authentication.md` | Authentication | 2 | yes | Approved (Batch 2) |
-| 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
+| 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved; **DEC-J resolved 2026-09-01 — live membership lookup, IMP-004**) |
 | 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Approved (architecture; Batch 4 closure + security closure amendments approved) |
 | 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Approved (Batch 4) |
 | 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |

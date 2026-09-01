@@ -119,13 +119,24 @@ approved. `tasks.compliance_instance_id` is nullable.
 - Staff SSO (Entra ID / Google) and SCIM are enterprise-phase items, out of
   R0 scope.
 
-### DEC-J — Authorization: RLS is the enforcement boundary; mechanism via spike
+### DEC-J — Authorization: RLS is the enforcement boundary; mechanism RESOLVED (live membership lookup)
 
-RLS is the enforcement boundary. **Neither JWT-claims-only nor
-membership-lookup-only is permanently selected.** `05-authorization-rls.md`
-must design both approaches and include a small technical spike to validate
-the final choice; the spike outcome is recorded in that spec before Batch 3
-is considered complete.
+RLS is the enforcement boundary. **Resolved (2026-09-01): live membership
+lookup (Candidate B)** — selected through the IMP-004 Harness Gate spike
+(TEST-SPIKE-J-01…03) plus a reviewer-mandated 100,013-membership scale
+follow-up, and approved by human/security review. The JWT proves
+authenticated identity; authorization reads membership status and role
+**live** from the database, so suspension, removal, and role downgrades
+take effect on the next authorization check with no token refresh, and
+trusted role upgrades may take effect just as promptly. Candidate A
+(claims-only) is rejected: the spike showed stale tokens retaining
+privileges. Candidate C (hybrid claim snapshot + live verification)
+passed all security tests but demonstrated no sufficient advantage to
+justify its custom claim hook, `authz_version` lifecycle, stale-token
+refresh protocol, larger JWTs, and operational complexity; it remains a
+documented viable alternative, not the R0 mechanism. Normative mechanism
+and semantics: `05-authorization-rls.md` RLS-MECH-01. Evidence:
+`docs/harness/dec-j-spike.md`, `docs/harness/dec-j-results.json`.
 
 - **Consequence of change:** Medium — policy bodies change, schema does not.
 

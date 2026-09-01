@@ -1,7 +1,7 @@
 # 09 — Automation & Events (Design)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. Open/provisional items remain as recorded: AUTO-OQ-01…04; DEC-J and Harness Gate spike outcomes stay open.
+- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. Open/provisional items remain as recorded: AUTO-OQ-01…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.)
 
 ## Purpose
 
