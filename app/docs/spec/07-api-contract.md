@@ -66,7 +66,11 @@ REPLACE / DEMO-ONLY (API-INV-01).
   profile approval (RLS-CCP-01), membership/role administration (RLS-MEM-01,
   RLS-AAL-01), alert-rule administration (RLS-ARL-01), and alert
   acknowledge/snooze/resolve (RLS-ALR-01). Security constraints on such
-  functions: API-SEC-*.
+  functions: API-SEC-*. Audit-context routing follows AUD-CTX-01 (resolved
+  2026-09-01, `08`): these invariant/privileged commands are the Layer B
+  RPC boundary; ordinary audited mutations may write directly under RLS
+  with the Layer A trigger baseline — RPCs are not imposed solely for
+  audit.
 - **API-ARCH-05 — Derived data is server-derived.** Aggregates, deadline
   boards, dependency views, and risk scores are computed server-side (views
   or RPCs over live tables), never shipped as precomputed client fixtures

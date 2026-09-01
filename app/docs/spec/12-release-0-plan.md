@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01/02, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** The Harness Gate itself remains incomplete: IMP-005 (audit-context spike) and the remaining gate requirements are still open.
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** The Harness Gate itself remains incomplete: the remaining gate requirements (RLS/auth integration harness, Playwright smoke, CI-equivalent gate run) are still open.
 
 ## Purpose
 
@@ -44,7 +44,8 @@ approved IMP-004 spike amendment, 2026-09-01 — live membership lookup.)
   created for these deferred views.
 - No execution of the audit-context spike — it is scheduled
   here as a work package, not performed. (The DEC-J spike has since been
-  executed as IMP-004, 2026-08-31.)
+  executed as IMP-004, 2026-08-31; the audit-context spike as IMP-005,
+  decision approved 2026-09-01.)
 
 ## Requirement IDs
 
@@ -94,8 +95,9 @@ This spec owns the `REL-*` namespace:
   before any substantial feature implementation begins.
 - **REL-PRIN-02:** Dependency order over convenience. A package starts
   only when its declared dependencies are complete and green.
-- **REL-PRIN-03:** Open stays open. A provisional mechanism (AUD-OQ-02,
-  AUTO-OQ-01/02) is implemented only after its gate produces a
+- **REL-PRIN-03:** Open stays open. A provisional mechanism (AUTO-OQ-01/02;
+  historically DEC-J and AUD-OQ-02 — both resolved 2026-09-01 through this
+  rule) is implemented only after its gate produces a
   written decision record; interim work uses the documented provisional
   default and is marked accordingly.
 - **REL-PRIN-04:** One bounded package at a time; no silent scope
@@ -128,8 +130,9 @@ Sequencing rules:
 - **REL-SEQ-03:** IMP-004 (DEC-J spike) is **COMPLETE (2026-09-01)** —
   the live-membership-lookup decision record (`05` RLS-MECH-01) is the
   approved input to IMP-012 (foundational RLS). IMP-005 (audit-context
-  spike) must complete before the audit-context propagation portion of
-  IMP-013. Both spikes are inside
+  spike) is **COMPLETE (2026-09-01)** — the layered A+B+C decision record
+  (`08` AUD-CTX-01) is the approved input to the audit-context
+  propagation portion of IMP-013. Both spikes are inside
   R0-A precisely so tenant-domain implementation never proceeds on an
   unvalidated authorization or audit mechanism.
 - **REL-SEQ-04:** IMP-014 (data-source adapter skeleton) precedes all
@@ -147,8 +150,8 @@ Sequencing rules:
   Supabase stack, deterministic seed, TypeScript/build verification, lint,
   RLS integration harness, auth integration harness, DEC-J spike
   (COMPLETE — IMP-004, 2026-09-01),
-  audit-context spike, minimal Playwright smoke suite, CI-equivalent
-  verification command, clean baseline.
+  audit-context spike (COMPLETE — IMP-005, 2026-09-01), minimal Playwright
+  smoke suite, CI-equivalent verification command, clean baseline.
 - **REL-HG-02:** Allowed before the gate: IMP-000…IMP-005 only, plus
   specification/documentation work. Everything else — including any
   production schema migration beyond spike scaffolding — is blocked.
@@ -159,7 +162,8 @@ Sequencing rules:
 - **REL-HG-04:** Spike decision records (DEC-J, AUD-OQ-02) are written
   into `05` / `08` respectively as amendments before the gate is approved;
   the approved specs are updated, not bypassed. (DEC-J recorded
-  2026-09-01 — live membership lookup; AUD-OQ-02 remains pending IMP-005.)
+  2026-09-01 — live membership lookup; AUD-OQ-02 recorded 2026-09-01 —
+  layered A+B+C propagation.)
 - **REL-HG-05:** No major feature work begins until the gate passes. A
   failed gate blocks R0-B entirely; partial credit is not permitted.
 - **REL-HG-06:** Gate evidence (command output, spike measurements,
@@ -179,15 +183,18 @@ amended (RLS-MECH-01: **live membership lookup**). IMP-012 and every
 later RLS-bearing package implement that resolved mechanism; the
 mechanism is not re-adjudicated.
 
-### Audit-context gate (AUD-OQ-02)
+### Audit-context gate (AUD-OQ-02) — SATISFIED (2026-09-01)
 
-AUD-OQ-02 remains provisional. IMP-005 executes TEST-SPIKE-CTX-01/02
+AUD-OQ-02 is **resolved**: IMP-005 executed TEST-SPIKE-CTX-01/02
 (trustworthy actor, firm context, IP, user-agent, correlation ID,
-PostgREST vs RPC behavior, actor-type distinction, spoofing resistance).
-The decision record amends `08` before the final audit propagation
-implementation in IMP-013. Unrelated foundational work (IMP-010, IMP-011)
-is not blocked by this spike; audit-sensitive tasks are marked in their
-package blocks.
+PostgREST vs RPC behavior, actor-type distinction, spoofing resistance,
+pooling/context-leakage safety, audit-failure atomicity — 31/31 checks).
+The decision record is written (`docs/harness/audit-context-spike.md`)
+and `08` is amended (AUD-CTX-01: **layered A+B+C propagation** — trigger
+baseline for ordinary human mutations, explicit RPC boundary for
+sensitive/privileged commands, controlled server boundary for
+system/service/support). IMP-013 and every later audit-bearing package
+implement that resolved mechanism; the mechanism is not re-adjudicated.
 
 ### Statutory-rule activation gate (standing)
 
@@ -369,7 +376,7 @@ Format and discipline:
 
 ---
 
-**IMP-005 — Audit-context spike**
+**IMP-005 — Audit-context spike** — **COMPLETE (2026-09-01)**
 
 - **Purpose:** Decide the audit-context propagation mechanism
   (request-scoped GUC / explicit RPC context / Edge Function wrapper) on
@@ -391,7 +398,8 @@ Format and discipline:
 - **Human approval:** **yes** (audit/security mechanism decision).
 - **Git checkpoint:** `spike: audit-context decision record`.
 - **Rollback concern:** none beyond spike artefacts.
-- **Open/provisional dependency:** AUD-OQ-02 (resolved here).
+- **Open/provisional dependency:** ~~AUD-OQ-02~~ (RESOLVED 2026-09-01 —
+  layered A+B+C, `08` AUD-CTX-01).
 
 ---
 
@@ -1117,7 +1125,7 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 |---|---|---|---|---|---|
 | DEC-J | `05` | **Resolved 2026-09-01 — live membership lookup (IMP-004 spike + human review)** | No (resolved) | — (IMP-012 proceeds on the resolved mechanism) | Resolved at IMP-004 (Harness Gate) |
 | AUD-OQ-01 | `08` | Open — retention values are engineering placeholders | No (build); **Yes** (production retention config) | Production retention/archive configuration | IMP-072 (policy/legal confirmation) |
-| AUD-OQ-02 | `08` | Open — spike scheduled | **Yes** (audit propagation) | Final audit-context propagation in IMP-013 | IMP-005 (Harness Gate) |
+| AUD-OQ-02 | `08` | **Resolved 2026-09-01 — layered A+B+C audit-context propagation (IMP-005 spike + human review)** | No (resolved) | — (IMP-013 proceeds on the resolved mechanism) | Resolved at IMP-005 (Harness Gate) |
 | RLS-OQ-04 | `05` | Open — deferred | No | Release 1 client-visible document flagging only | Release 1 specs |
 | API-OQ-01 (= SCH-OQ-02) | `07` | Open | **Yes** (one schema) | `review_items.type` production vocabulary | IMP-041 schema finalization (requester input) |
 | API-OQ-02 | `07` | Open — convention fixed | No | Per-surface pagination values only | During each surface's package |
@@ -1199,7 +1207,7 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 - **REL-ACC-03:** DEC-J and AUD-OQ-02 are gated (spike → decision record →
   spec amendment) before dependent implementation; neither is silently
   resolved here. DEC-J: **satisfied** (IMP-004, 2026-09-01). AUD-OQ-02:
-  pending IMP-005.
+  **satisfied** (IMP-005, 2026-09-01).
 - **REL-ACC-04:** Every open/provisional item from the approved specs
   appears in the dependency matrix with a blocking assessment and latest
   safe decision point.

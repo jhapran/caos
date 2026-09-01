@@ -1,7 +1,7 @@
 # 11 — Testing & Verification Harness
 
 - **Status:** Approved (Batch 5)
-- **Approval status:** Approved (Batch 5). Open/provisional items remain as recorded: TEST-OQ-01…04; the DEC-J spike is **COMPLETE** (TEST-SPIKE-J-01…03, IMP-004 — executed 2026-08-31, decision approved 2026-09-01 — selected mechanism: live membership lookup, `05` RLS-MECH-01); AUD-OQ-02 stays open until its Harness Gate spike (IMP-005) is executed and recorded.
+- **Approval status:** Approved (Batch 5). Open/provisional items remain as recorded: TEST-OQ-01…04; the DEC-J spike is **COMPLETE** (TEST-SPIKE-J-01…03, IMP-004 — executed 2026-08-31, decision approved 2026-09-01 — selected mechanism: live membership lookup, `05` RLS-MECH-01); the audit-context spike is **COMPLETE** (TEST-SPIKE-CTX-01/02, IMP-005 — executed and decision approved 2026-09-01 — selected mechanism: layered A+B+C audit-context propagation, `08` AUD-CTX-01); AUD-OQ-01 stays open.
 
 ## Purpose
 
@@ -170,12 +170,12 @@ record:
   migration remains blocked until it exists. If the hybrid fails its
   criteria, the fallback is option B (lookup) and `05` is amended.
 
-## Audit-context technical spike (AUD-OQ-02 / AUD-CTX — design only)
+## Audit-context technical spike (AUD-OQ-02 / AUD-CTX — COMPLETE: executed and decision approved 2026-09-01, IMP-005)
 
 - **TEST-SPIKE-CTX-01 — Candidates.** Evaluate the AUD-CTX options:
   request-header GUC in triggers (B), explicit RPC context (A), and the
   security-definer event-function wrapper (C) — and the provisional B+C
-  combination.
+  combination. **COMPLETE (2026-09-01).**
 - **TEST-SPIKE-CTX-02 — Acceptance criteria:** trustworthy actor identity
   (never client-spoofable); firm context correct under both PostgREST
   table writes and RPC calls; IP availability and trust level measured
@@ -183,8 +183,21 @@ record:
   correlation id end-to-end (request → mutations → audit rows, AUD-INV-06);
   service/system actor distinction preserved (AUD-ACT-05); spoofing
   resistance demonstrated (client-supplied context headers cannot
-  overwrite server-trusted values). The mechanism is **not** finalized
-  without this evidence; failure of B falls back to A (AUD-CTX-01).
+  overwrite server-trusted values). **COMPLETE (2026-09-01) — all
+  criteria met (31/31 checks).**
+- **Outcome (2026-09-01):** executed as IMP-005 — evidence:
+  `docs/harness/audit-context-spike.md`,
+  `docs/harness/audit-context-results.json`. Implementer recommendation
+  was B+C with A optional; human/security review resolved AUD-OQ-02 as
+  the **layered A+B+C** model (`08` AUD-CTX-01: trigger baseline for
+  ordinary human mutations; explicit RPC boundary for
+  sensitive/privileged commands; controlled server boundary for
+  system/service/support). The spike matrix becomes standing regression
+  requirements for IMP-013 and later audit-bearing packages: actor
+  spoofing, firm spoofing, sequential context leakage, concurrent
+  context leakage, trigger-path audit failure, RPC-path audit failure,
+  human/system/service/support distinction, metadata trust
+  classification.
 
 ## Authentication verification (TEST-AUTH-*)
 
@@ -379,8 +392,9 @@ begins (DEC-S; `10` Phase A gate):
 - [x] DEC-J spike executed and decision record appended to `05`
       (TEST-SPIKE-J-*) — **COMPLETE — executed 2026-08-31; decision approved 2026-09-01 (IMP-004; live membership
       lookup selected)**
-- [ ] Audit-context spike executed and outcome recorded in `08`
-      (TEST-SPIKE-CTX-*)
+- [x] Audit-context spike executed and outcome recorded in `08`
+      (TEST-SPIKE-CTX-01/02) — **COMPLETE (IMP-005; decision approved
+      2026-09-01 — layered A+B+C, `08` AUD-CTX-01)**
 - [ ] Minimal Playwright smoke passes (TEST-E2E-01/02/12 at gate; full
       set before Phase C exit)
 - [ ] Single CI-equivalent command runs the gate locally and in CI

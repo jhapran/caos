@@ -1,7 +1,7 @@
 # 08 — Audit & Security Architecture
 
 - **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit audit classification for `compliance_rule_versions`, SCH-32)
-- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). Note: AUD-OQ-01 (retention values) and AUD-OQ-02 (context propagation mechanism) remain open/provisional as recorded.
+- **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). Note: AUD-OQ-01 (retention values) remains open/provisional as recorded. **AUD-OQ-02 is RESOLVED (2026-09-01): layered A+B+C audit-context propagation (IMP-005 harness-gate spike; §11 AUD-CTX-01).**
 
 ## Purpose
 
@@ -180,10 +180,17 @@ actor model distinguishes four actor classes (SCH-20 columns):
   `actor_type='human'` must have `actor_user_id`. Enforced by CHECK and by
   the write paths; verified by TEST-AUD-09.
 
-### 11. IP / user-agent / correlation context
+### 11. Audit-context propagation (AUD-OQ-02 — RESOLVED 2026-09-01)
 
 **PostgreSQL does not automatically know a trustworthy client IP or
-user-agent; this is designed, not assumed.** Options compared:
+user-agent; this is designed, not assumed.** The candidate families below
+were evaluated empirically by the IMP-005 harness-gate spike (31/31 checks;
+`docs/harness/audit-context-spike.md`,
+`docs/harness/audit-context-results.json`). Lettering: the resolved layers
+are **Layer A = database-trigger baseline**, **Layer B = explicit RPC
+boundary**, **Layer C = controlled server boundary**; the historical option
+letters in this table map Layer A → option B, Layer B → option A,
+Layer C → option C.
 
 | Option | Mechanism | Strengths | Weaknesses |
 |---|---|---|---|
@@ -191,16 +198,84 @@ user-agent; this is designed, not assumed.** Options compared:
 | B. Request-header GUC in triggers | Triggers read Supabase-provided request headers (`request.headers` setting) for IP/UA | Covers plain PostgREST table writes with zero app discipline | Header trust depends on proxy chain (IP is best-effort, `x-forwarded-for` spoofable); availability must be verified |
 | C. Edge Function / server wrapper | Server boundary computes context and calls a security-definer `write_audit_event()` | Full control; required anyway for system/security events | Doesn't cover direct table writes by itself |
 
-- **AUD-CTX-01 (provisional recommendation):** **B + C**: triggers read
-  request-header context when present (browser writes); a security-definer
-  audit function with explicit parameters serves Edge Functions, jobs, and
-  security events. Option A remains the fallback if B's header availability
-  fails verification.
-- **AUD-CTX-02:** IP is recorded as **best-effort evidence, never sole
-  identity proof**; actor identity is always per the §10 actor model.
-- **AUD-CTX-03:** Verification of header availability/trust and the GUC
-  mechanism is part of the harness-gate spike (together with RLS-MECH-02);
-  not claimed as validated here.
+- **AUD-CTX-01 (RESOLVED 2026-09-01) — layered propagation A+B+C.**
+  Release 0 uses three non-overlapping layers:
+  - **Layer A — database-trigger baseline.** Ordinary authenticated
+    **human** mutations permitted through normal table/PostgREST paths are
+    captured by database audit triggers. The trusted actor is derived from
+    `auth.uid()` — never from caller-provided `actor_user_id`,
+    `actor_type`, `user_id`, or equivalent identity headers.
+    `actor_type='human'` derives from the authenticated request context;
+    firm/object context derives from the validated operation/row, not from
+    browser claims.
+  - **Layer B — explicit RPC boundary.** Security-sensitive / privileged
+    commands (AUD-CTX-04) execute through explicit RPCs that derive the
+    actor from `auth.uid()`, validate the selected firm against the
+    **live** FirmMembership relationship (DEC-J, `05` RLS-MECH-01), reject
+    foreign/suspended/removed relationships, never accept caller-supplied
+    authoritative actor identity, and perform the required mutation and
+    audit write atomically. SECURITY INVOKER is preferred; SECURITY
+    DEFINER remains exceptional and requires explicit authorization, a
+    pinned safe `search_path`, minimal privileges, and security review.
+    No generic RLS-bypass RPCs.
+  - **Layer C — controlled server boundary.** System / service / support
+    operations execute only through a controlled server-side boundary
+    (Supabase Edge Function, controlled application server, or approved
+    backend worker — the architecture is not bound to one runtime).
+    Server-only privileged credentials (service role) never reach the
+    browser. Non-human operations carry explicit `actor_type`
+    (`system` / `service` / `support`) with `service_name` /
+    `support_session_id` per the §10 actor model; a
+    system/service/support actor never masquerades as a human
+    `auth.users` identity (AUD-ACT-05).
+  - **Decision history:** the IMP-005 implementer recommendation was B+C
+    with A as optional defense-in-depth; human/security review selected
+    the **layered A+B+C** model so audit coverage of ordinary direct
+    authenticated mutations does not depend on forcing every write
+    through an RPC.
+- **AUD-CTX-02 (amended 2026-09-01):** IP is recorded as **best-effort
+  evidence, never sole identity proof**; actor identity is always per the
+  §10 actor model. Request metadata — `correlation_id`, `request_id`,
+  user-agent, IP-related headers, X-Forwarded-For — is **metadata** unless
+  produced/normalized by a trusted server/proxy boundary (Layer C). It must
+  never establish actor identity, actor type, firm authorization, or
+  privileges. The spike demonstrated that caller-controlled XFF arrives
+  with gateway-appended peer hops: the client portion is spoofable; only
+  gateway/server-asserted hops carry (limited) trust. XFF is never
+  authoritative client identity; metadata is recorded honestly according
+  to its provenance.
+- **AUD-CTX-03 (closed 2026-09-01):** Header availability/trust and the
+  GUC mechanism were verified by the IMP-005 spike (TEST-SPIKE-CTX-01/02):
+  `request.headers` is visible to SQL on both PostgREST table writes and
+  RPC calls; transaction-local context is pooling-safe (zero cross-request
+  leakage, sequential and concurrent); session-level GUC state is
+  pooling-unsafe and is prohibited for audit context. Recorded
+  production-design note: under RLS, `INSERT … RETURNING` applies
+  SELECT-visibility to returned rows — audit-write paths must not rely on
+  RETURNING against tables the caller cannot read.
+- **AUD-CTX-04 (new) — sensitive-operation routing.** Layer B candidates
+  include at minimum: firm membership / role changes; MFA recovery
+  administration; break-glass/support administration; statutory rule
+  activation / administration; destructive security-sensitive operations;
+  privileged exports where applicable; and operations already classified
+  AAL2/security-sensitive (RLS-AAL-01). Routine CRUD is **not** forced
+  through RPCs solely for audit: a direct PostgREST/table mutation is
+  allowed where normal RLS authorization suffices, Layer A provides the
+  required audit coverage, and the operation is not classified as
+  requiring an explicit privileged command boundary (API-ARCH-03/04
+  remain the routing contract).
+- **AUD-CTX-05 (new) — fail-closed auditing.** For
+  security/compliance-sensitive mutations, the mutation and its required
+  audit record succeed or fail together (AUD-PRIN-03, AUD-INV-05): if the
+  required audit write fails, the sensitive mutation fails / rolls back.
+  The IMP-005 spike demonstrated transactional fail-closed behavior on
+  both the trigger path and the RPC path; best-effort audit is not
+  acceptable for security-sensitive state changes.
+- **AUD-CTX-06 (new) — DEC-J consistency.** Firm authorization on every
+  audit path remains `auth.uid()` + selected firm/context → live
+  FirmMembership validation → current status/role (`05` RLS-MECH-01). No
+  audit mechanism may reintroduce JWT role/membership claims as an
+  authoritative authorization source.
 
 ### 12. Authentication / login history
 
@@ -325,7 +400,7 @@ user-agent; this is designed, not assumed.** Options compared:
 | ID | Question | Owner | Status |
 |---|---|---|---|
 | AUD-OQ-01 | Retention values | requester + legal/CA-domain | **OPEN — AUD-RET-01 values are engineering placeholders requiring policy/legal/domain confirmation before production retention configuration is approved** |
-| AUD-OQ-02 | Final context-propagation mechanism (AUD-CTX-01 provisional B+C) | harness-gate spike | **Open — provisional** |
+| AUD-OQ-02 | Final context-propagation mechanism | harness-gate spike | **RESOLVED 2026-09-01 — layered A+B+C propagation (AUD-CTX-01): Layer A trigger baseline for ordinary human mutations, Layer B explicit RPC boundary for sensitive/privileged commands, Layer C controlled server boundary for system/service/support. Evidence: IMP-005 (`docs/harness/audit-context-spike.md`, `docs/harness/audit-context-results.json`)** |
 | AUD-OQ-03 | Firms' visibility of their own support-access history? | — | **Resolved:** visible read-only to firm Super Admin and Partner; history remains immutable/audited (AUD-SUP-03) |
 | AUD-OQ-04 | Which denials are audit-worthy? | — | **Resolved directionally:** security-significant denials only (cross-tenant attempts, privileged/break-glass/security-endpoint denials incl. denied rule-version activation, suspicious repetition); no routine-denial persistence (AUD-FAIL-01) |
 

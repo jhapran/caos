@@ -52,7 +52,7 @@ documents move through review.
 | 05 | `05-authorization-rls.md` | Authorization & RLS (authoritative for authz) | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved; **DEC-J resolved 2026-09-01 — live membership lookup, IMP-004**) |
 | 06 | `06-database-schema.md` | Database Schema (design; no SQL) | 3 | yes | Approved (architecture; Batch 4 closure + security closure amendments approved) |
 | 07 | `07-api-contract.md` | API Contract (`@/data` mapping) | 4 | yes | Approved (Batch 4) |
-| 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved) |
+| 08 | `08-audit-security.md` | Audit & Security | 3 | yes | Approved (architecture; Batch 4 security closure amendment approved; **AUD-OQ-02 resolved 2026-09-01 — layered A+B+C audit-context propagation, IMP-005**) |
 | 09 | `09-automation-events.md` | Automation & Events | 4 | recurrence section only | Approved (Batch 4) |
 | 10 | `10-migration-seed.md` | Fixture Migration & Seeding | 4 | yes | Approved (Batch 4) |
 | 11 | `11-testing-harness.md` | Testing & Verification Harness | 5 | yes | Approved (Batch 5) |
