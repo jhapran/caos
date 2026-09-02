@@ -17,6 +17,12 @@
  * trigger functions (responsibility validation / entity_type
  * immutability).
  *
+ * IMP-021 changes reflected here: engagements (SCH-09) exists with RLS
+ * enabled AND forced, three active-firm-scoped policies (partner+ write,
+ * manager portfolio read), column-pinned write grants, the billing-role
+ * list_engagement_letter_statuses() projection RPC, and two guard trigger
+ * functions (responsibility validation / DM-SM-03 status transitions).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -26,7 +32,7 @@ import { FIRM_A, psql, userId } from '../helpers.mjs';
 
 const rows = (sql) => psql(sql).trim().split('\n').filter(Boolean).sort();
 
-describe('IMP-012/013/020 catalog — RLS state (RLS-PRIN-02)', () => {
+describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
   it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy tables', () => {
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -36,6 +42,7 @@ describe('IMP-012/013/020 catalog — RLS state (RLS-PRIN-02)', () => {
       'client_relationships',
       'clients',
       'contacts',
+      'engagements',
       'firm_memberships',
       'firms',
       'legal_entities',
@@ -62,6 +69,7 @@ describe('IMP-012/013/020 catalog — RLS state (RLS-PRIN-02)', () => {
       'client_relationships',
       'clients',
       'contacts',
+      'engagements',
       'legal_entities',
       'registrations',
     ]);
@@ -87,6 +95,9 @@ describe('IMP-012/013/020 catalog — RLS state (RLS-PRIN-02)', () => {
         'contacts:contacts_insert_manager_plus:INSERT',
         'contacts:contacts_select_scoped:SELECT',
         'contacts:contacts_update_manager_plus:UPDATE',
+        'engagements:engagements_insert_partner_plus:INSERT',
+        'engagements:engagements_select_scoped:SELECT',
+        'engagements:engagements_update_partner_plus:UPDATE',
         'firm_memberships:memberships_select_own_or_active_firm:SELECT',
         'firms:firms_select_member:SELECT',
         'firms:firms_update_super_admin:UPDATE',
@@ -115,6 +126,8 @@ const AUTHENTICATED_RPCS = [
   // IMP-020: billing identity projection — browser-facing, authenticated
   // only; service_role needs no projection RPC (it reads tables directly).
   'list_client_identities(uuid)',
+  // IMP-021: billing letter-status projection (RLS-ENG-01), same pattern.
+  'list_engagement_letter_statuses(uuid)',
 ];
 const SERVICE_ONLY_FNS = [
   'write_audit_event_server(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text)',
@@ -127,8 +140,14 @@ const OWNER_ONLY_FNS = [
 // IMP-020 function inventory (client-hierarchy helpers + guard triggers).
 const IMP020_HELPERS = ['active_membership_id(uuid)'];
 const IMP020_TRIGGER_FNS = ['clients_validate_responsibility()', 'legal_entities_guard_entity_type()'];
+// IMP-021 function inventory (engagement guard triggers; the projection RPC
+// joins AUTHENTICATED_RPCS above).
+const IMP021_TRIGGER_FNS = [
+  'engagements_validate_responsibility()',
+  'engagements_guard_status_transition()',
+];
 
-describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
+describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
     expect(
       psql(`select count(*) from information_schema.role_table_grants
@@ -141,6 +160,7 @@ describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AU
       ...OWNER_ONLY_FNS,
       ...IMP020_HELPERS,
       ...IMP020_TRIGGER_FNS,
+      ...IMP021_TRIGGER_FNS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
@@ -167,6 +187,7 @@ describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AU
       'client_relationships:SELECT',
       'clients:SELECT',
       'contacts:SELECT',
+      'engagements:SELECT',
       'firm_memberships:SELECT',
       'firms:SELECT',
       'legal_entities:SELECT',
@@ -277,6 +298,40 @@ describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AU
         'contacts:UPDATE:phone',
         'contacts:UPDATE:role_title',
         'contacts:UPDATE:status',
+        // IMP-021 engagements — SELECT covers readable columns; INSERT is
+        // column-pinned (no id), UPDATE excludes firm_id/client_id
+        // (parentage never changes).
+        'engagements:INSERT:client_id',
+        'engagements:INSERT:firm_id',
+        'engagements:INSERT:letter_status',
+        'engagements:INSERT:period_label',
+        'engagements:INSERT:proposed_at',
+        'engagements:INSERT:responsible_partner_membership_id',
+        'engagements:INSERT:service_lines',
+        'engagements:INSERT:signed_at',
+        'engagements:INSERT:status',
+        'engagements:INSERT:termination_reason',
+        'engagements:SELECT:client_id',
+        'engagements:SELECT:created_at',
+        'engagements:SELECT:firm_id',
+        'engagements:SELECT:id',
+        'engagements:SELECT:letter_status',
+        'engagements:SELECT:period_label',
+        'engagements:SELECT:proposed_at',
+        'engagements:SELECT:responsible_partner_membership_id',
+        'engagements:SELECT:service_lines',
+        'engagements:SELECT:signed_at',
+        'engagements:SELECT:status',
+        'engagements:SELECT:termination_reason',
+        'engagements:SELECT:updated_at',
+        'engagements:UPDATE:letter_status',
+        'engagements:UPDATE:period_label',
+        'engagements:UPDATE:proposed_at',
+        'engagements:UPDATE:responsible_partner_membership_id',
+        'engagements:UPDATE:service_lines',
+        'engagements:UPDATE:signed_at',
+        'engagements:UPDATE:status',
+        'engagements:UPDATE:termination_reason',
         'firm_memberships:SELECT:created_at',
         'firm_memberships:SELECT:firm_id',
         'firm_memberships:SELECT:id',
@@ -359,13 +414,13 @@ describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AU
     for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -380,20 +435,22 @@ describe('IMP-012/013/020 catalog — least-privilege grants (RLS-SVC-03, RLS-AU
       ...OWNER_ONLY_FNS,
       ...IMP020_HELPERS,
       ...IMP020_TRIGGER_FNS,
+      ...IMP021_TRIGGER_FNS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
   });
 });
 
-describe('IMP-012/013/020 catalog — helper-function security properties', () => {
+describe('IMP-012/013/020/021 catalog — helper-function security properties', () => {
   // All public-schema application functions (trigger + definer paths).
   const ALL_FNS =
     "'active_membership_role', 'req_active_firm', 'shares_active_firm_with', 'set_updated_at', " +
     "'audit_write', 'audit_trg_row', 'write_audit_event', 'write_audit_event_server', 'mirror_login_history', " +
     "'invite_member', 'change_membership_role', 'suspend_membership', 'remove_membership', 'accept_invitation', " +
     "'active_membership_id', 'list_client_identities', " +
-    "'clients_validate_responsibility', 'legal_entities_guard_entity_type'";
+    "'clients_validate_responsibility', 'legal_entities_guard_entity_type', " +
+    "'engagements_validate_responsibility', 'engagements_guard_status_transition', 'list_engagement_letter_statuses'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -403,8 +460,9 @@ describe('IMP-012/013/020 catalog — helper-function security properties', () =
     // (both must read firm_memberships under FORCE-free recursion safety
     // and, for the RPC, rows the caller cannot SELECT directly).
     // NOT definer: req_active_firm (pure header read), set_updated_at
-    // (pure timestamp maintenance) and legal_entities_guard_entity_type
-    // (pure OLD/NEW comparison) — INVOKER.
+    // (pure timestamp maintenance), legal_entities_guard_entity_type and
+    // engagements_guard_status_transition (pure OLD/NEW comparisons) —
+    // INVOKER.
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
@@ -415,8 +473,10 @@ describe('IMP-012/013/020 catalog — helper-function security properties', () =
       'audit_write',
       'change_membership_role',
       'clients_validate_responsibility',
+      'engagements_validate_responsibility',
       'invite_member',
       'list_client_identities',
+      'list_engagement_letter_statuses',
       'mirror_login_history',
       'remove_membership',
       'shares_active_firm_with',

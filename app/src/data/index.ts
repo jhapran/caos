@@ -47,6 +47,18 @@ export type {
   UpdateLegalEntityInput,
   UpdateRegistrationInput,
 } from './clientHierarchy';
+// --- IMP-021: engagements ----------------------------------------------------
+export { engagementService } from './engagements';
+export type {
+  CreateEngagementInput,
+  EngagementListFilter,
+  EngagementRecord,
+  EngagementLetterStatus,
+  EngagementService,
+  EngagementStatus,
+  LetterStatus,
+  UpdateEngagementInput,
+} from './engagements';
 export { tenancyService } from './tenancy';
 export type {
   FirmMembershipView,

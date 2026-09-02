@@ -239,3 +239,10 @@ preserved unchanged):
   exact policies). New suites: client-hierarchy schema tests, production
   client-hierarchy RLS tests, client-hierarchy audit tests, and the
   `clients` adapter-contract phase input (`tests/integration/clients/`).
+- **IMP-021** extended `db-cleanliness` to include `engagements` (RLS
+  enabled AND forced; policy inventory now 24 exact policies) and added
+  the `engagements-integration` phase (`npm run test:engagements`,
+  `tests/integration/engagements/` — engagement adapter contract +
+  billing letter-status projection; engagement schema/RLS/audit coverage
+  runs in the existing `schema-integration` / `rls-integration` /
+  `audit-integration` phases). Gate is now 18 phases.

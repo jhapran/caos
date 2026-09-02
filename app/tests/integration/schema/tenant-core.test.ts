@@ -74,14 +74,15 @@ describe('structure — tables, columns, PKs', () => {
     // gate cleanliness phase; they may coexist during a combined run.
     // IMP-013 added audit_log (SCH-20); IMP-020 added the client hierarchy
     // (SCH-04…08: clients, legal_entities, registrations, contacts,
-    // client_relationships). No other tables may appear.
+    // client_relationships); IMP-021 added engagements (SCH-09). No other
+    // tables may appear.
     const tables = psql(
       `select string_agg(table_name, ',' order by table_name) from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
          and table_name not like 'hgate%' and table_name not like 'decj%' and table_name not like 'audctx%'`,
     ).trim();
     expect(tables).toBe(
-      'audit_log,client_relationships,clients,contacts,firm_memberships,firms,legal_entities,profiles,registrations',
+      'audit_log,client_relationships,clients,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations',
     );
   });
 

@@ -64,7 +64,25 @@ Layer-A audit triggers on all five tables, and the provider-neutral
 `clientHierarchyService` behind `@/data` (fixture adapter derives from the
 demo fixtures; Supabase adapter is plain PostgREST under RLS). The
 browser client now injects the untrusted `x-active-firm` selector header
-from `src/data/context.ts` on every request.
+from `src/data/context.ts` on every request. IMP-021 (engagements) is
+IMPLEMENTED and awaiting human approval: the `engagements` table
+(SCH-09) — client-level professional-service relationships with
+`responsible_partner_membership_id` (validated ACTIVE same-firm
+membership via trigger; no role predicate, mirroring the DM-04
+precedent), `service_lines`, `letter_status`, `period_label`, and a
+guarded status lifecycle (draft → proposed → active → completed,
+active → terminated; terminals final, DM-SM-03 — invalid transitions
+raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`
+which the API layer maps to `conflict`; plain CHECK violations stay
+`validation`). RLS enabled and forced: super_admin/partner full firm
+scope, manager portfolio-scoped READ-ONLY via the owning client's
+designated manager (RLS-ENG-01), senior/article nothing in R0, billing
+letter-status-only via the `list_engagement_letter_statuses()` definer
+RPC (active-firm pinned, like `list_client_identities()`). Layer-A
+audit trigger via the extended `audit_trg_row()`; the provider-neutral
+`engagementService` sits behind `@/data` (fixture adapter derives one
+engagement per demo client; Supabase adapter is plain PostgREST under
+RLS plus the billing projection RPC).
 
 Authoritative sources:
 

@@ -56,7 +56,10 @@ const FIXTURE_MODULES = new Set([
 // demo track, and which may therefore read fixture modules. Everything else
 // on the production path must not. Bundle-level fixture exclusion from the
 // production build stays deferred per MIG-DS-06a / MIG-VFY-E (Phase E).
-const FIXTURE_BRIDGES = new Set([join(SRC, 'data', 'clientHierarchy', 'fixture.ts')]);
+const FIXTURE_BRIDGES = new Set([
+  join(SRC, 'data', 'clientHierarchy', 'fixture.ts'),
+  join(SRC, 'data', 'engagements', 'fixture.ts'),
+]);
 
 describe('import boundary — UI layer (API-ARCH-01/02)', () => {
   const uiFiles = [
@@ -103,11 +106,18 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'auth')),
     ...tsFiles(join(SRC, 'data', 'tenancy')),
     ...tsFiles(join(SRC, 'data', 'clientHierarchy')),
+    ...tsFiles(join(SRC, 'data', 'engagements')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
     join(SRC, 'data', 'context.ts'),
     ...tsFiles(join(SRC, 'lib')),
   ];
+
+  it('scans the engagement adapter modules (IMP-021)', () => {
+    // Guards against the scan passing vacuously if the folder moves.
+    expect(productionFiles).toContain(join(SRC, 'data', 'engagements', 'supabase.ts'));
+    expect(productionFiles).toContain(join(SRC, 'data', 'engagements', 'fixture.ts'));
+  });
 
   it('scans the client-hierarchy adapter modules (IMP-020)', () => {
     // Guards against the scan passing vacuously if the folder moves.

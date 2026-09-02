@@ -17,6 +17,7 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 import { authService } from '@/data/auth/authService';
+import { engagementService } from '@/data/engagements/engagementService';
 import { tenancyService } from '@/data/tenancy/tenancyService';
 
 describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
@@ -32,6 +33,7 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
 
     expect(authService.mode).toBe('fixture');
     expect(tenancyService.mode).toBe('fixture');
+    expect(engagementService.mode).toBe('fixture');
 
     await authService.restore();
     await authService.signInPassword('a@b.c', 'x');
@@ -39,6 +41,10 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
     await tenancyService.listMyMemberships();
     await tenancyService.getMyProfile();
     await tenancyService.getProfile('demo-fixture-user');
+    // IMP-021: the engagement fixture adapter is on the same guarantee.
+    await engagementService.listEngagements();
+    await engagementService.getEngagement('c-abc-engagement');
+    await engagementService.listEngagementLetterStatuses();
 
     expect(createClientSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();

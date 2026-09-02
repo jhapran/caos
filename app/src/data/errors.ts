@@ -70,12 +70,14 @@ function classify(
   if (code === '42501') return 'unauthorized';
   if (code === '23505' || code === '23503' || code === 'PGRST109') return 'conflict';
   // check_violation (23514) splits by DISCRIMINATOR, never by loose message
-  // matching (IMP-020 closure decision): the one approved conflict case is
-  // the entity_type immutability invariant (API-R0-ENT), marked with a
-  // stable DETAIL token by the database guard trigger. Every other CHECK
-  // violation is rejected input → validation (API-ERR-01).
+  // matching (IMP-020 closure decision): the approved conflict cases are
+  // database-guard violations carrying a stable DETAIL token — the
+  // entity_type immutability invariant (API-R0-ENT, IMMUTABLE_FIELD:) and
+  // lifecycle transition guards (API-ERR-01 "transition violation",
+  // INVALID_TRANSITION: — introduced by IMP-021 for DM-SM-03). Every other
+  // CHECK violation is rejected input → validation (API-ERR-01).
   if (code === '23514') {
-    return details?.includes('IMMUTABLE_FIELD:legal_entities.entity_type')
+    return details?.includes('IMMUTABLE_FIELD:') || details?.includes('INVALID_TRANSITION:')
       ? 'conflict'
       : 'validation';
   }

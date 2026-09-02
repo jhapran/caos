@@ -17,6 +17,7 @@
     "test:audit": "vitest run -c vitest.integration.config.ts tests/integration/audit",
     "test:tenancy": "vitest run -c vitest.integration.config.ts tests/integration/tenancy",
     "test:clients": "vitest run -c vitest.integration.config.ts tests/integration/clients",
+    "test:engagements": "vitest run -c vitest.integration.config.ts tests/integration/engagements",
     "test:e2e": "playwright test",
     "verify": "npm run lint && npm run test:unit && npm run build",
     "verify:harness": "node scripts/harness/gate.mjs",
