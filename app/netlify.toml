@@ -1,3 +1,16 @@
+# Netlify deploy configuration (demo/sales track site).
+#
+# DATA_SOURCE is deliberately NOT set here (MIG-DS-01/05, OPS-ENV-06):
+# [build.environment] would apply to EVERY site built from this repo —
+# including any future staging/production site — and would force fixture
+# mode onto production-capable deployments. Instead each Netlify site sets
+# VITE_DATA_SOURCE explicitly in its own site environment settings:
+#   demo/sales site  -> VITE_DATA_SOURCE=fixture
+#   staging site     -> VITE_DATA_SOURCE=supabase (+ client-safe URL/key)
+#   production site  -> VITE_DATA_SOURCE=supabase (+ client-safe URL/key)
+# A build whose environment does not provide the value fails closed with
+# the visible configuration-error screen — never a silent fixture boot.
+
 [build]
   command = "npm run build"
   publish = "dist"

@@ -67,7 +67,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run dev',
+      // IMP-014: no default mode exists (MIG-DS-05) — the fixture demo
+      // track must be selected explicitly.
+      command: 'VITE_DATA_SOURCE=fixture npm run dev',
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

@@ -1,34 +1,71 @@
 /**
- * IMP-011 — Client-safe environment configuration (OPS-ENV-02).
+ * IMP-011/IMP-014 — Client-safe environment configuration (OPS-ENV-02).
  *
  * Only browser-safe values are read here: the publishable anon key and the
  * public project URL. Service-role credentials, database URLs, and any
  * other secret are server-only and must never be referenced from src/.
  *
- * DATA_SOURCE selection (MIG-DS-01/02): 'fixture' keeps the demo track;
- * 'supabase' selects the production architecture. Unset currently means
- * 'fixture' so the demo deployment keeps working; strict fail-closed
- * startup validation for unknown/unset values (MIG-DS-05, TEST-MIG-08)
- * lands with the IMP-014 adapter skeleton. In 'supabase' mode, missing
- * URL/anon key IS a hard startup error (MIG-DS-03) — no fallback.
+ * This module is the LOW-LEVEL raw reader: it never throws at import time
+ * and never decides policy. The single authoritative selection boundary is
+ * `@/data/source` (MIG-DS-02): it parses, validates fail-closed
+ * (MIG-DS-05), and caches the mode exactly once at startup.
+ *
+ * Reads are lazy (inside functions) so test harnesses can stub
+ * import.meta.env before the first call.
  */
 
 export type DataSource = 'fixture' | 'supabase';
 
-const raw = import.meta.env.VITE_DATA_SOURCE;
+/** Raw, unvalidated VITE_DATA_SOURCE value (undefined when unset). */
+export function readDataSourceRaw(): string | undefined {
+  return import.meta.env.VITE_DATA_SOURCE as string | undefined;
+}
 
-export const DATA_SOURCE: DataSource = raw === 'supabase' ? 'supabase' : 'fixture';
+/**
+ * Parse a raw DATA_SOURCE value. Whitespace-padded values are tolerated
+ * (trimmed); anything other than the two exact approved mode names is
+ * rejected (returns null) — the caller turns that into a hard startup
+ * error (MIG-DS-05). Matching is case-sensitive on purpose: 'FIXTURE' is
+ * an unrecognized value, not a mode.
+ */
+export function parseDataSource(raw: string | undefined): DataSource | null {
+  if (raw === undefined) return null;
+  const value = raw.trim();
+  if (value === 'fixture' || value === 'supabase') return value;
+  return null;
+}
 
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+export function readSupabaseUrl(): string | undefined {
+  return import.meta.env.VITE_SUPABASE_URL as string | undefined;
+}
 
-/** Hard startup error in supabase mode when client-safe config is missing. */
+export function readSupabaseAnonKey(): string | undefined {
+  return import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+}
+
+/**
+ * Client-safe Supabase config, or null when incomplete. Policy (when
+ * missing config is a hard error) lives in `@/data/source` — MIG-DS-03.
+ */
+export function getSupabaseConfig(): { url: string; anonKey: string } | null {
+  const url = readSupabaseUrl();
+  const anonKey = readSupabaseAnonKey();
+  if (!url || !anonKey) return null;
+  return { url, anonKey };
+}
+
+/**
+ * Hard error when client-safe Supabase config is missing. Used by the
+ * supabase-mode startup validation (MIG-DS-03) and the browser client
+ * singleton as defense in depth. Never a fallback (MIG-PRIN-03).
+ */
 export function assertSupabaseConfig(): { url: string; anonKey: string } {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  const config = getSupabaseConfig();
+  if (!config) {
     throw new Error(
       'DATA_SOURCE=supabase requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (MIG-DS-03). ' +
         'No fallback is permitted.',
     );
   }
-  return { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY };
+  return config;
 }

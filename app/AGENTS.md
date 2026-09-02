@@ -42,10 +42,13 @@ on the three tenant-core tables, Layer-B membership-administration RPCs
 `remove_membership` / `accept_invitation` — raw PostgREST writes to
 `firm_memberships` are closed; super_admin + AAL2 + live membership, atomic
 mutation+audit), and the Layer-C server-writer contract plus
-`mirror_login_history()` (service_role only). The React app remains
-fixture-backed by default (`VITE_DATA_SOURCE` unset = fixture demo track;
-`supabase` mode needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see
-`.env.example`); the Supabase data-source adapter lands with IMP-014.
+`mirror_login_history()` (service_role only). IMP-014 added the permanent
+data-source boundary: `VITE_DATA_SOURCE` is REQUIRED and fail-closed
+(unset/invalid = hard startup error with a visible screen — no default
+mode, no fixture fallback, MIG-DS-05); `fixture` = demo track (no backend),
+`supabase` = production track (needs `VITE_SUPABASE_URL` +
+`VITE_SUPABASE_ANON_KEY`, see `.env.example`). Selection happens once,
+through `src/data/source.ts` only.
 
 Authoritative sources:
 
@@ -88,6 +91,8 @@ single-page React application built with Vite.
 ```bash
 npm install        # install dependencies
 npm run dev        # Vite dev server on http://localhost:3000 (port set in vite.config.ts)
+                   # REQUIRES VITE_DATA_SOURCE (fixture|supabase) — no default mode
+                   # (MIG-DS-05); copy .env.example to .env.local
 npm run build      # tsc -b (type check) + vite build → dist/
 npm run preview    # serve the production build locally
 npm run lint       # ESLint over the repo
@@ -98,6 +103,7 @@ npm run test:auth  # Auth integration tests only (GoTrue, deterministic harness 
 npm run test:rls   # RLS integration tests only (hgate_* mechanism harness + production tenant-core RLS)
 npm run test:schema # Schema integration tests only (tenant core + catalog posture; TEST-SCH-02/03)
 npm run test:audit # Audit integration tests only (IMP-013 audit foundation; TEST-AUD-*)
+npm run test:tenancy # Tenancy adapter integration tests only (IMP-014; TEST-API-01…03 skeleton)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # fast CI-equivalent: lint + unit tests + build
 npm run verify:harness # FULL Harness Gate: preflight → stack → reset+seed → lint →
@@ -204,10 +210,14 @@ IMP packages.
 ## Deployment
 
 **Current:** static SPA deployed to **Netlify**: `netlify.toml` runs
-`npm run build` and publishes `dist/`. SPA fallback is configured twice —
-keep both in sync if changed: `netlify.toml` redirects and
-`public/_redirects` (`/* → /index.html`). This deployment is the fixture
-demo track.
+`npm run build` and publishes `dist/`. `VITE_DATA_SOURCE` is deliberately
+NOT set in `netlify.toml` (a repo-level value would force fixture mode
+onto every site built from this repo, including future staging/production
+— MIG-DS-01/05); each Netlify site sets it in its own site environment
+settings (`fixture` for the demo/sales site, `supabase` elsewhere). SPA
+fallback is configured twice — keep both in sync if changed:
+`netlify.toml` redirects and `public/_redirects` (`/* → /index.html`).
+This deployment is the fixture demo track.
 
 **Target (per `docs/spec/03`, `10`, `13`):** environment-isolated topology
 — local Supabase CLI for development, separate staging and production
@@ -226,7 +236,8 @@ back to it; invalid or missing `DATA_SOURCE` fails closed
 
 ```
 src/
-  main.tsx            Entry: <BrowserRouter><DemoStoreProvider><App/></...>
+  main.tsx            Entry: validates startup config (fail-closed, visible
+                      ConfigErrorScreen on error), then mounts the app tree.
   App.tsx             Route table. "/" is the landing page (no shell); all app
                       pages nest under <Layout/> via <Outlet/>.
   index.css           Global styles + shadcn CSS variables (@layer base).
@@ -285,6 +296,27 @@ Current fixture modules:
   `resetDemo()`). Derived live counts via `useLiveAggregates()`.
 - `index.ts` — barrel re-exporting everything. **Always import data from
   `@/data`, never from the individual fixture modules.**
+
+Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton):
+
+- `source.ts` — THE single data-source selection boundary: `getDataSource()`
+  (cached, fail-closed) and `validateStartupConfig()` (called once by
+  `src/main.tsx` bootstrap). No other module may switch on
+  `VITE_DATA_SOURCE` (MIG-DS-02/05).
+- `errors.ts` — provider-neutral error contract: `ConfigurationError`
+  (fatal startup) and `ApiError`/`toApiError()` implementing the
+  API-ERR-01 taxonomy (`unauthenticated`, `unauthorized`, `validation`,
+  `not_found`, `conflict`, `internal`). Supabase SDK error types must not
+  leak past adapters.
+- `auth/` — `AuthService` contract with fixture/supabase implementations
+  (IMP-011).
+- `tenancy/` — `TenancyService` contract (API-R0-AUTH/FRM skeleton):
+  `listMyMemberships()`, `getMyProfile()`, `getProfile(userId)`; plain
+  PostgREST reads under RLS in supabase mode (API-ARCH-03), synthetic
+  demo data in fixture mode.
+- `../lib/supabaseClient.ts` — the ONLY browser Supabase client (lazy
+  singleton; throws in fixture mode). Pages/components must never import
+  it — enforced by `tests/unit/import-boundary.test.ts`.
 
 **Fixture clock.** The pinned demo clock (`DEMO_TODAY`, fixture-relative
 dates, no `new Date()` for domain dates) applies to **fixture/demo mode

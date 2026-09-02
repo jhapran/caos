@@ -6,7 +6,9 @@
  * with the resolved DEC-J live FirmMembership lookup (IMP-012).
  */
 
-export type DataSource = 'fixture' | 'supabase';
+// Canonical definition lives in @/data/source (IMP-014 single selection
+// boundary); re-exported here so auth consumers keep one import site.
+export type { DataSource } from '../source';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 

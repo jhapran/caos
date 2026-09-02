@@ -3,10 +3,14 @@
 // involved: unit/component tests never touch the @/data async fetchers.
 // IMP-011: explicit RTL cleanup between tests — Vitest runs with globals
 // disabled, so @testing-library/react's auto-cleanup hook never installs.
+// IMP-014: unit/component tests run on the fixture demo track by default
+// (MIG-DS-05 — there is no default mode, so the track must be explicit).
 import '@testing-library/jest-dom/vitest';
 
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+vi.stubEnv('VITE_DATA_SOURCE', 'fixture');
 
 afterEach(() => {
   cleanup();

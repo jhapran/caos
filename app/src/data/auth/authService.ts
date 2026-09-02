@@ -11,7 +11,7 @@
  * No firm membership or role is read, asserted, or stored here (DEC-J:
  * authorization is the live FirmMembership lookup, IMP-012).
  */
-import { DATA_SOURCE } from '@/lib/env';
+import { getDataSource } from '@/data/source';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 
 import type {
@@ -153,4 +153,5 @@ const supabaseService: AuthService = {
   },
 };
 
-export const authService: AuthService = DATA_SOURCE === 'supabase' ? supabaseService : fixtureService;
+export const authService: AuthService =
+  getDataSource() === 'supabase' ? supabaseService : fixtureService;

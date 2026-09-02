@@ -15,6 +15,9 @@ export default defineConfig({
     name: 'integration',
     environment: 'node',
     include: ['tests/integration/**/*.test.ts'],
+    // IMP-014: pins VITE_DATA_SOURCE=supabase + local-stack client-safe
+    // config for adapter modules imported from src/.
+    setupFiles: ['tests/integration/setup-env.ts'],
     testTimeout: 30_000,
     hookTimeout: 180_000,
     // Integration tests share local Supabase state — files must run
