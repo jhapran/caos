@@ -1,24 +1,24 @@
 {
   "gate": "CAOS Harness Gate (verify:harness)",
-  "startedAt": "2026-09-02T03:29:01.878Z",
+  "startedAt": "2026-09-02T16:49:05.092Z",
   "phases": [
     {
       "name": "preflight",
       "ok": true,
       "detail": "node v24.18.0, docker ok, supabase CLI ok, decision evidence present",
-      "durationMs": 1122
+      "durationMs": 2717
     },
     {
       "name": "stack-lifecycle",
       "ok": true,
       "detail": "stack already running — will be left running afterwards",
-      "durationMs": 2464
+      "durationMs": 1749
     },
     {
       "name": "db-reset-seed",
       "ok": true,
       "detail": "  \"errors\": [], |   \"warnings\": [] | }",
-      "durationMs": 30879
+      "durationMs": 29998
     },
     {
       "name": "decision-evidence",
@@ -30,49 +30,55 @@
       "name": "lint",
       "ok": true,
       "detail": "> my-app@0.0.0 lint | > eslint .",
-      "durationMs": 3804
+      "durationMs": 3934
     },
     {
       "name": "unit-tests",
       "ok": true,
-      "detail": "      Tests  66 passed (66) |    Start at  08:59:40 |    Duration  1.07s (transform 1.14s, setup 1.22s, import 1.12s, tests 675ms, environment 4.16s)",
-      "durationMs": 1356
+      "detail": "      Tests  85 passed (85) |    Start at  22:19:43 |    Duration  1.07s (transform 1.37s, setup 1.05s, import 1.85s, tests 594ms, environment 4.58s)",
+      "durationMs": 1388
     },
     {
       "name": "auth-integration",
       "ok": true,
-      "detail": "      Tests  31 passed (31) |    Start at  08:59:41 |    Duration  38.27s (transform 62ms, setup 11.10s, import 59ms, tests 26.63s, environment 0ms)",
-      "durationMs": 38478
+      "detail": "      Tests  31 passed (31) |    Start at  22:19:45 |    Duration  34.43s (transform 57ms, setup 7.17s, import 53ms, tests 26.73s, environment 0ms)",
+      "durationMs": 34662
     },
     {
       "name": "rls-integration",
       "ok": true,
-      "detail": "      Tests  52 passed (52) |    Start at  09:00:20 |    Duration  6.48s (transform 63ms, setup 2.02s, import 47ms, tests 4.25s, environment 0ms)",
-      "durationMs": 6743
+      "detail": "      Tests  80 passed (80) |    Start at  22:20:19 |    Duration  10.35s (transform 68ms, setup 3.55s, import 64ms, tests 6.49s, environment 0ms)",
+      "durationMs": 10562
     },
     {
       "name": "schema-integration",
       "ok": true,
-      "detail": "      Tests  30 passed (30) |    Start at  09:00:26 |    Duration  7.47s (transform 43ms, setup 1.84s, import 23ms, tests 5.43s, environment 0ms)",
-      "durationMs": 7684
+      "detail": "      Tests  45 passed (45) |    Start at  22:20:30 |    Duration  13.33s (transform 59ms, setup 4.77s, import 39ms, tests 8.32s, environment 0ms)",
+      "durationMs": 13592
     },
     {
       "name": "audit-integration",
       "ok": true,
-      "detail": "      Tests  31 passed (31) |    Start at  09:00:34 |    Duration  6.02s (transform 48ms, setup 970ms, import 33ms, tests 4.92s, environment 0ms)",
-      "durationMs": 6247
+      "detail": "      Tests  39 passed (39) |    Start at  22:20:43 |    Duration  9.00s (transform 59ms, setup 2.22s, import 45ms, tests 6.56s, environment 0ms)",
+      "durationMs": 9245
+    },
+    {
+      "name": "clients-integration",
+      "ok": true,
+      "detail": "      Tests  12 passed (12) |    Start at  22:20:53 |    Duration  3.37s (transform 97ms, setup 2.25s, import 110ms, tests 924ms, environment 0ms)",
+      "durationMs": 3593
     },
     {
       "name": "build",
       "ok": true,
-      "detail": "dist/assets/useAuth-DNT45Dup.js  220.99 kB │ gzip:  58.51 kB | dist/assets/App-BFXsn4uU.js      712.02 kB │ gzip: 205.75 kB | ✓ built in 2.90s",
-      "durationMs": 6293
+      "detail": "dist/assets/useAuth-dx-gnRIM.js  221.02 kB │ gzip:  58.52 kB | dist/assets/App-DSumtBYz.js      712.04 kB │ gzip: 205.76 kB | ✓ built in 2.97s",
+      "durationMs": 6566
     },
     {
       "name": "playwright-smoke",
       "ok": true,
-      "detail": "[3/4] [staff-auth] › e2e/staff-auth.spec.ts:36:1 › invalid password is rejected with an error | [4/4] [staff-auth] › e2e/staff-auth.spec.ts:45:1 › valid staff login lands on the mandatory MFA enrolment gate |   4 passed (5.5s)",
-      "durationMs": 6813
+      "detail": "[3/4] [staff-auth] › e2e/staff-auth.spec.ts:36:1 › invalid password is rejected with an error | [4/4] [staff-auth] › e2e/staff-auth.spec.ts:45:1 › valid staff login lands on the mandatory MFA enrolment gate |   4 passed (9.8s)",
+      "durationMs": 11194
     },
     {
       "name": "network-binding",
@@ -84,21 +90,21 @@
       "name": "mcp-regression",
       "ok": true,
       "detail": "local MCP initialize HTTP 200 (loopback)",
-      "durationMs": 1147
+      "durationMs": 1032
     },
     {
       "name": "db-cleanliness",
       "ok": true,
-      "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log (committed IMP-010/013 migrations); RLS posture verified (RLS on all 4, FORCE on audit_log, 6 expected policies); 16 deterministic identities verified",
-      "durationMs": 2372
+      "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy (committed IMP-010/013/020 migrations); RLS posture verified (RLS on all 9, FORCE on the 6 tenant-owned content tables, 21 expected policies); 16 deterministic identities verified",
+      "durationMs": 1411
     },
     {
       "name": "secret-scan",
       "ok": true,
       "detail": "no service-role key or JWT secret in tracked files or dist/ (TEST-SEC-01 harness level)",
-      "durationMs": 23
+      "durationMs": 25
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-09-02T03:30:57.340Z"
+  "finishedAt": "2026-09-02T16:51:16.796Z"
 }

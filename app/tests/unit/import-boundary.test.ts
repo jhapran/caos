@@ -52,6 +52,12 @@ const FIXTURE_MODULES = new Set([
   'types',
 ]);
 
+// Declared fixture bridges: adapter files whose entire job is serving the
+// demo track, and which may therefore read fixture modules. Everything else
+// on the production path must not. Bundle-level fixture exclusion from the
+// production build stays deferred per MIG-DS-06a / MIG-VFY-E (Phase E).
+const FIXTURE_BRIDGES = new Set([join(SRC, 'data', 'clientHierarchy', 'fixture.ts')]);
+
 describe('import boundary — UI layer (API-ARCH-01/02)', () => {
   const uiFiles = [
     ...tsFiles(join(SRC, 'pages')),
@@ -96,14 +102,36 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
   const productionFiles = [
     ...tsFiles(join(SRC, 'data', 'auth')),
     ...tsFiles(join(SRC, 'data', 'tenancy')),
+    ...tsFiles(join(SRC, 'data', 'clientHierarchy')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
+    join(SRC, 'data', 'context.ts'),
     ...tsFiles(join(SRC, 'lib')),
   ];
+
+  it('scans the client-hierarchy adapter modules (IMP-020)', () => {
+    // Guards against the scan passing vacuously if the folder moves.
+    expect(productionFiles).toContain(
+      join(SRC, 'data', 'clientHierarchy', 'supabase.ts'),
+    );
+    expect(productionFiles).toContain(
+      join(SRC, 'data', 'clientHierarchy', 'fixture.ts'),
+    );
+  });
+
+  it('the fixture bridge imports fixtures but nothing else on the path does', () => {
+    // The bridge exists so demo data has exactly one importer on the
+    // adapter path; pin that property explicitly.
+    const bridgeSpecs = specifiersOf(
+      join(SRC, 'data', 'clientHierarchy', 'fixture.ts'),
+    );
+    expect(bridgeSpecs).toContain('@/data/clients');
+  });
 
   it('no production adapter module imports fixture/demo modules', () => {
     const violations: string[] = [];
     for (const file of productionFiles) {
+      if (FIXTURE_BRIDGES.has(file)) continue;
       for (const spec of specifiersOf(file)) {
         // A fixture reference is one that resolves to src/data/<mod> itself
         // — not a same-name module inside a production subfolder (e.g.

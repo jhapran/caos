@@ -427,6 +427,17 @@ historical record — they no longer represent the selected mechanism.
 - RLS-A-02: R0 "portfolio" scoping for managers uses
   `clients.manager_membership_id` (designated manager is a FirmMembership);
   a team model, if added, extends rather than replaces this (RLS-OQ-02).
+- RLS-A-03: **Resolved R0 interpretation (2026-09-02, IMP-020 closure
+  decision A):** manager access to `client_relationships` requires BOTH
+  endpoint clients to be inside the manager's current portfolio — for READ
+  and for WRITE. Either-endpoint visibility was rejected: it would leak the
+  identity/relationship of an out-of-portfolio client.
+- RLS-A-04: **Resolved R0 interpretation (2026-09-02, IMP-020 closure
+  decision B):** `list_client_identities(p_firm_id)` enforces the same
+  single-active-firm model as table RLS — the caller needs a live active
+  billing membership in `p_firm_id` AND `p_firm_id` must equal
+  `req_active_firm()` (the request's active-firm selector). Membership in
+  another firm alone grants nothing.
 
 ## Dependencies
 

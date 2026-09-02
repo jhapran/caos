@@ -45,6 +45,25 @@ describe('toApiError — API-ERR-01 taxonomy translation', () => {
     expect(toApiError({ code: '23503', message: 'fk violation' }).kind).toBe('conflict');
   });
 
+  it('maps generic CHECK violations (23514) to validation — not conflict', () => {
+    // IMP-020 closure decision: 23514 is rejected input unless the database
+    // carries the approved immutable-field discriminator in DETAIL.
+    expect(toApiError({ code: '23514', message: 'check violation' }).kind).toBe('validation');
+    expect(
+      toApiError({ code: '23514', message: 'violates check constraint "clients_status_check"' }).kind,
+    ).toBe('validation');
+  });
+
+  it('maps the marked entity_type immutability invariant to conflict (API-R0-ENT)', () => {
+    expect(
+      toApiError({
+        code: '23514',
+        message: 'legal_entities.entity_type is immutable after creation (DM-05)',
+        details: 'IMMUTABLE_FIELD:legal_entities.entity_type',
+      }).kind,
+    ).toBe('conflict');
+  });
+
   it('maps anything unrecognized to internal and preserves the message', () => {
     const err = toApiError({ message: 'socket hangup' });
     expect(err.kind).toBe('internal');

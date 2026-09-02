@@ -15,6 +15,38 @@ export { getDataSource, validateStartupConfig } from './source';
 export type { DataSource } from './source';
 export { ApiError, ConfigurationError, toApiError } from './errors';
 export type { ApiErrorKind } from './errors';
+// --- IMP-020: active-firm selector context + client hierarchy --------------
+export { clearActiveFirm, getActiveFirm, setActiveFirm } from './context';
+export { clientHierarchyService } from './clientHierarchy';
+export type {
+  ClientHierarchyService,
+  ClientIdentity,
+  ClientListFilter,
+  ClientRecord,
+  ClientRelationshipRecord,
+  ClientRiskRating,
+  ClientStatus,
+  ContactRecord,
+  ContactStatus,
+  CreateClientInput,
+  CreateClientRelationshipInput,
+  CreateContactInput,
+  CreateLegalEntityInput,
+  CreateRegistrationInput,
+  LegalEntityRecord,
+  LegalEntityStatus,
+  LegalEntityType,
+  RegistrationRecord,
+  RegistrationStatus,
+  RegistrationType,
+  RelationType,
+  RelationshipStatus,
+  UpdateClientInput,
+  UpdateClientRelationshipInput,
+  UpdateContactInput,
+  UpdateLegalEntityInput,
+  UpdateRegistrationInput,
+} from './clientHierarchy';
 export { tenancyService } from './tenancy';
 export type {
   FirmMembershipView,

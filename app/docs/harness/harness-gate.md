@@ -230,3 +230,12 @@ preserved unchanged):
 - Integration file execution is strictly sequential
   (`fileParallelism: false` in `vitest.integration.config.ts`) because
   fixtures create/delete the same deterministic rows across files.
+- **IMP-013** extended `db-cleanliness` to include `audit_log` (RLS enabled
+  AND forced, SELECT-only grants, `audit_select_partner_admin` policy) and
+  added the `audit-integration` phase (`tests/integration/audit/`).
+- **IMP-020** extended `db-cleanliness` to the client hierarchy
+  (`clients`, `legal_entities`, `client_relationships`, `registrations`,
+  `contacts` — RLS enabled AND forced on all five; policy inventory now 21
+  exact policies). New suites: client-hierarchy schema tests, production
+  client-hierarchy RLS tests, client-hierarchy audit tests, and the
+  `clients` adapter-contract phase input (`tests/integration/clients/`).

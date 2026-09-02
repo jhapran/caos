@@ -42,13 +42,29 @@ on the three tenant-core tables, Layer-B membership-administration RPCs
 `remove_membership` / `accept_invitation` — raw PostgREST writes to
 `firm_memberships` are closed; super_admin + AAL2 + live membership, atomic
 mutation+audit), and the Layer-C server-writer contract plus
-`mirror_login_history()` (service_role only). IMP-014 added the permanent
-data-source boundary: `VITE_DATA_SOURCE` is REQUIRED and fail-closed
-(unset/invalid = hard startup error with a visible screen — no default
-mode, no fixture fallback, MIG-DS-05); `fixture` = demo track (no backend),
-`supabase` = production track (needs `VITE_SUPABASE_URL` +
-`VITE_SUPABASE_ANON_KEY`, see `.env.example`). Selection happens once,
-through `src/data/source.ts` only.
+`mirror_login_history()` (service_role only). IMP-014 (data adapter
+boundary) is COMPLETE (checkpoint `3fed76a`): `VITE_DATA_SOURCE` is
+REQUIRED and fail-closed (unset/invalid = hard startup error with a
+visible screen — no default mode, no fixture fallback, MIG-DS-05);
+`fixture` = demo track (no backend), `supabase` = production track (needs
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see `.env.example`).
+Selection happens once, through `src/data/source.ts` only. IMP-020
+(client hierarchy) is IMPLEMENTED and awaiting human approval: the first
+business-domain migration (`clients` / `legal_entities` /
+`client_relationships` / `registrations` / `contacts`, SCH-04…08) with
+composite same-firm FKs, RLS enabled AND forced (active-firm selector +
+live role; manager portfolio = own designated-manager clients per
+RLS-STF-03 — for `client_relationships` a manager reads/writes an edge
+only when BOTH endpoint clients are in portfolio, RLS-A-03; billing has
+no table access — identity-only via the reviewed
+`list_client_identities()` definer RPC, which additionally requires
+`p_firm_id =` the active-firm selector, RLS-A-04; senior/article see
+nothing in R0),
+Layer-A audit triggers on all five tables, and the provider-neutral
+`clientHierarchyService` behind `@/data` (fixture adapter derives from the
+demo fixtures; Supabase adapter is plain PostgREST under RLS). The
+browser client now injects the untrusted `x-active-firm` selector header
+from `src/data/context.ts` on every request.
 
 Authoritative sources:
 
@@ -104,6 +120,7 @@ npm run test:rls   # RLS integration tests only (hgate_* mechanism harness + pro
 npm run test:schema # Schema integration tests only (tenant core + catalog posture; TEST-SCH-02/03)
 npm run test:audit # Audit integration tests only (IMP-013 audit foundation; TEST-AUD-*)
 npm run test:tenancy # Tenancy adapter integration tests only (IMP-014; TEST-API-01…03 skeleton)
+npm run test:clients # Client-hierarchy adapter contract tests only (IMP-020; TEST-API-01…03)
 npm run test:e2e   # Playwright (e2e/) — requires `npx playwright install chromium` first
 npm run verify     # fast CI-equivalent: lint + unit tests + build
 npm run verify:harness # FULL Harness Gate: preflight → stack → reset+seed → lint →
@@ -297,7 +314,8 @@ Current fixture modules:
 - `index.ts` — barrel re-exporting everything. **Always import data from
   `@/data`, never from the individual fixture modules.**
 
-Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton):
+Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton;
+IMP-020 client hierarchy):
 
 - `source.ts` — THE single data-source selection boundary: `getDataSource()`
   (cached, fail-closed) and `validateStartupConfig()` (called once by
@@ -306,17 +324,32 @@ Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton):
 - `errors.ts` — provider-neutral error contract: `ConfigurationError`
   (fatal startup) and `ApiError`/`toApiError()` implementing the
   API-ERR-01 taxonomy (`unauthenticated`, `unauthorized`, `validation`,
-  `not_found`, `conflict`, `internal`). Supabase SDK error types must not
-  leak past adapters.
+  `not_found`, `conflict`, `internal`; SQLSTATE 23514 check violations →
+  `validation`, EXCEPT the one marked immutable-field violation
+  (`IMMUTABLE_FIELD:legal_entities.entity_type` detail) → `conflict`,
+  API-R0-ENT). Supabase SDK error types must not leak past adapters.
+- `context.ts` — the active-firm SELECTOR holder (RLS-CTX-01/02):
+  `setActiveFirm()` / `getActiveFirm()` / `clearActiveFirm()`. Untrusted
+  context only — the database re-validates it against live membership on
+  every statement; never use it client-side as an authorization decision.
 - `auth/` — `AuthService` contract with fixture/supabase implementations
   (IMP-011).
 - `tenancy/` — `TenancyService` contract (API-R0-AUTH/FRM skeleton):
   `listMyMemberships()`, `getMyProfile()`, `getProfile(userId)`; plain
   PostgREST reads under RLS in supabase mode (API-ARCH-03), synthetic
   demo data in fixture mode.
+- `clientHierarchy/` — `ClientHierarchyService` contract (IMP-020,
+  API-R0-CLI/ENT/REG/CON): clients, legal entities, registrations,
+  contacts, client relationships + the billing identity projection.
+  `fixture.ts` is the declared demo bridge (the only adapter-path file
+  allowed to import fixture modules); `supabase.ts` is plain PostgREST
+  under RLS + the `list_client_identities()` RPC; the selector in
+  `clientHierarchyService.ts` picks once via `getDataSource()`.
 - `../lib/supabaseClient.ts` — the ONLY browser Supabase client (lazy
-  singleton; throws in fixture mode). Pages/components must never import
-  it — enforced by `tests/unit/import-boundary.test.ts`.
+  singleton; throws in fixture mode). Injects the untrusted
+  `x-active-firm` selector header from `context.ts` on every request.
+  Pages/components must never import it — enforced by
+  `tests/unit/import-boundary.test.ts`.
 
 **Fixture clock.** The pinned demo clock (`DEMO_TODAY`, fixture-relative
 dates, no `new Date()` for domain dates) applies to **fixture/demo mode

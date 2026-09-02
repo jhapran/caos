@@ -135,6 +135,13 @@ REPLACE / DEMO-ONLY (API-INV-01).
   `not_found` (unknown or inaccessible id in the active context),
   `conflict` (unique/check/transition violation or stale-state conflict),
   `internal` (retryable unless marked permanent).
+  **Resolved R0 interpretation (2026-09-02, IMP-020 closure decision C):**
+  SQLSTATE 23514 (check_violation) is NOT globally `conflict` — a generic
+  CHECK rejection is rejected input → `validation`. The single exception is
+  the SCH-05 `entity_type` immutability guard (API-R0-ENT), which the
+  database marks with the deterministic detail string
+  `IMMUTABLE_FIELD:legal_entities.entity_type`; only marked violations map
+  to `conflict`. Adapters must never classify 23514 by loose message text.
 - **API-ERR-02 — Authorization vs not-found, by query kind.** Deliberately
   distinct semantics so the UI can never act as an existence oracle:
   - **Collection queries:** unauthorized rows simply do not appear. An

@@ -53,9 +53,14 @@ interface ProviderErrorLike {
   message?: string;
   code?: string;
   status?: number;
+  details?: string;
 }
 
-function classify(status: number | undefined, code: string | undefined): ApiErrorKind {
+function classify(
+  status: number | undefined,
+  code: string | undefined,
+  details: string | undefined,
+): ApiErrorKind {
   // PostgREST "results contain 0 rows" (single-resource read miss) and any
   // HTTP 404 normalize to not_found — inaccessible and nonexistent are
   // indistinguishable by design (API-ERR-02).
@@ -64,6 +69,16 @@ function classify(status: number | undefined, code: string | undefined): ApiErro
   // rejections both surface as 42501 (HTTP 403 via PostgREST).
   if (code === '42501') return 'unauthorized';
   if (code === '23505' || code === '23503' || code === 'PGRST109') return 'conflict';
+  // check_violation (23514) splits by DISCRIMINATOR, never by loose message
+  // matching (IMP-020 closure decision): the one approved conflict case is
+  // the entity_type immutability invariant (API-R0-ENT), marked with a
+  // stable DETAIL token by the database guard trigger. Every other CHECK
+  // violation is rejected input → validation (API-ERR-01).
+  if (code === '23514') {
+    return details?.includes('IMMUTABLE_FIELD:legal_entities.entity_type')
+      ? 'conflict'
+      : 'validation';
+  }
   switch (status) {
     case 400:
       return 'validation';
@@ -90,6 +105,6 @@ function classify(status: number | undefined, code: string | undefined): ApiErro
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   const e = (error ?? {}) as ProviderErrorLike;
-  const kind = classify(e.status, e.code);
+  const kind = classify(e.status, e.code, e.details);
   return new ApiError(kind, e.message ?? 'Unexpected data-access error');
 }

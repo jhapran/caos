@@ -12,6 +12,7 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { getActiveFirm } from '@/data/context';
 import { getDataSource } from '@/data/source';
 import { assertSupabaseConfig } from '@/lib/env';
 
@@ -33,6 +34,20 @@ export function getSupabaseClient(): SupabaseClient {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+      },
+      global: {
+        // Inject the active-firm SELECTOR header (RLS-CTX-01) on every
+        // request — including auth calls, where it is simply ignored. The
+        // header is untrusted context: the database validates it against
+        // the caller's live membership on every statement, so a forged or
+        // stale selection can never widen access (DEC-J).
+        fetch: (input, init) => {
+          const firmId = getActiveFirm();
+          if (!firmId) return fetch(input, init);
+          const headers = new Headers(init?.headers);
+          headers.set('x-active-firm', firmId);
+          return fetch(input, { ...init, headers });
+        },
       },
     });
   }
