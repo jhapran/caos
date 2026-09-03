@@ -1,11 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-
   CalendarClock,
   FileText,
   FileBarChart2,
   Gauge,
   Link2,
+  LogOut,
   RotateCcw,
   Sparkles,
   Sunrise,
@@ -15,6 +15,14 @@ import {
 } from 'lucide-react';
 import Badge from './Badge';
 import Avatar from './Avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { useDemoStore } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { useShellIdentity } from '@/hooks/useShellIdentity';
@@ -67,6 +75,15 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
 
   const userName = fixture ? FIRM.team[0].name : (identity?.fullName ?? '');
   const userRole = fixture ? FIRM.team[0].role : (identity?.role ? ROLE_LABELS[identity.role] : '');
+
+  // Sign out uses the ONE existing auth facade operation (AUTH-05):
+  // supabase mode revokes the session's refresh token; RequireAuth clears
+  // the active-firm context when the snapshot flips to unauthenticated.
+  // Fixture mode has no real session, so no sign-out action is offered.
+  async function onSignOut() {
+    await service.signOut();
+    navigate('/auth/sign-in');
+  }
 
   const nav = (isMobile: boolean) => (
     <div className="flex h-full w-60 flex-col bg-brand-deep text-paper">
@@ -150,13 +167,39 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2.5">
-          <Avatar name={userName || '—'} size="sm" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-medium">{userName}</div>
-            <div className="text-[10px] text-paper/50">{userRole}</div>
+        {fixture ? (
+          <div className="flex items-center gap-2.5">
+            <Avatar name={userName || '—'} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-medium">{userName}</div>
+              <div className="text-[10px] text-paper/50">{userRole}</div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-paper/10"
+                aria-label={`${userName} — account menu`}
+              >
+                <Avatar name={userName || '—'} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[12px] font-medium">{userName}</div>
+                  <div className="text-[10px] text-paper/50">{userRole}</div>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-52">
+              <DropdownMenuLabel className="truncate">{userName}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void onSignOut()}>
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {fixture && (
           <div className="flex items-center justify-between">
             <span className="rounded-full border border-paper/15 px-2 py-px font-mono text-[9.5px] tracking-wide text-paper/45 uppercase">
@@ -184,7 +227,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
     <>
       {/* Desktop: fixed icon rail < xl, full sidebar ≥ xl */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:block xl:hidden" aria-label="Primary">
-        <IconRail items={items} userName={userName} />
+        <IconRail items={items} userName={userName} onSignOut={fixture ? undefined : () => void onSignOut()} />
       </aside>
       <aside className="fixed inset-y-0 left-0 z-40 hidden xl:block" aria-label="Primary">
         {nav(false)}
@@ -201,7 +244,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
 }
 
 /** Collapsed icon rail (< 1280px). */
-function IconRail({ items, userName }: { items: NavItem[]; userName: string }) {
+function IconRail({ items, userName, onSignOut }: { items: NavItem[]; userName: string; onSignOut?: () => void }) {
   const navigate = useNavigate();
   return (
     <div className="flex h-full w-16 flex-col bg-brand-deep text-paper">
@@ -232,8 +275,19 @@ function IconRail({ items, userName }: { items: NavItem[]; userName: string }) {
           </NavLink>
         ))}
       </nav>
-      <div className="flex justify-center px-2 py-4">
+      <div className="flex flex-col items-center gap-2 px-2 py-4">
         <Avatar name={userName || '—'} size="sm" />
+        {onSignOut && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            aria-label="Sign out"
+            title="Sign out"
+            className="rounded-md p-1.5 text-paper/60 transition-colors hover:bg-paper/10 hover:text-paper"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
