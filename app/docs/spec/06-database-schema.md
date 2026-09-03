@@ -55,8 +55,14 @@ prevention only; full design lands with each feature's release spec.
 - Every table has `id uuid` PK (gen_random_uuid) unless stated; every
   tenant-owned table has `firm_id uuid NOT NULL → firms.id` (TEN-02/03).
 - Standard columns on all non-audit tables: `created_at timestamptz NOT NULL
-  DEFAULT now()`, `updated_at timestamptz` (trigger-maintained). `audit_log`
-  is the exception (append-only, no `updated_at`).
+  DEFAULT now()`, `updated_at timestamptz` (trigger-maintained). Exceptions:
+  `audit_log` (append-only, no `updated_at`); `compliance_rule_versions`
+  (SCH-32) has `created_at` but deliberately NO `updated_at` — versions are
+  historical/versioned records, active or referenced versions are immutable,
+  rule changes create new versions, and `created_at` + `audit_log` carry
+  change provenance; `updated_at` would imply a misleading mutability
+  lifecycle. Draft edits are audited without requiring the column (R0
+  closure 2026-09-03). No other table is excepted.
 - "Soft-delete policy" below means lifecycle status columns; hard deletes are
   prohibited on audit-sensitive tables (AUD-* in `08`).
 - RLS references are family IDs from `05-authorization-rls.md`; verification
@@ -220,8 +226,8 @@ prevention only; full design lands with each feature's release spec.
 
 ### SCH-10 — compliance_types
 - **Purpose:** Rule objects (DM-10; PRD §26/§124). **R0.** Hybrid ownership: NULL `firm_id` = system default; else firm-owned (TEN-06…09).
-- **Columns:** `firm_id uuid` (NULL = system default); `type_key text NOT NULL`; `name text NOT NULL`; `category text NOT NULL`; `authority text`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `applicability jsonb`; `required_documents jsonb`; `checklist_template jsonb`; `workflow_template jsonb NOT NULL`; `client_approval_required bool NOT NULL DEFAULT false`; `filing_confirmation_required bool NOT NULL DEFAULT true`; `acknowledgement_required bool NOT NULL DEFAULT true`; `four_eyes_required bool NOT NULL DEFAULT true`; **`scope_kind text NOT NULL DEFAULT 'configurable'` CHECK in (`entity`,`registration`,`configurable`)** — the complete compliance-subject vocabulary (engagement is NOT a subject kind); **`registration_class text`** — the required registration type when `scope_kind='registration'`; `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`deprecated`).
-- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; `scope_kind`/`registration_class` for seeded system types follow the architecture-validated Registration Scope Matrix (DM-27) — **statutory rules are not activated in production until external CA/domain sign-off** (DM-OQ-01 status). Payroll is excluded from the statutory catalogue for R0 (SCH-OQ-06 resolution). **Versioning (Batch 4 closure amendment):** the `frequency`/`due_rule` columns describe the type's default template; the *authoritative, applied* recurrence/due-rule content for any generated instance lives in `compliance_rule_versions` (SCH-32). Changing rule behaviour creates a new version — it never retroactively alters existing instances (AUTO-REC-07).
+- **Columns:** `firm_id uuid` (NULL = system default); `type_key text NOT NULL`; `name text NOT NULL`; `category text NOT NULL`; `authority text`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `applicability jsonb`; `required_documents jsonb`; `checklist_template jsonb`; `workflow_template jsonb NOT NULL`; `client_approval_required bool NOT NULL DEFAULT false`; `filing_confirmation_required bool NOT NULL DEFAULT true`; `acknowledgement_required bool NOT NULL DEFAULT true`; `four_eyes_required bool NOT NULL DEFAULT true`; **`scope_kind text NOT NULL DEFAULT 'configurable'` CHECK in (`entity`,`registration`,`configurable`)** — the complete compliance-subject vocabulary (engagement is NOT a subject kind); **`registration_class text`** — the required registration type when `scope_kind='registration'`; **`governance_class text NOT NULL` CHECK in (`statutory`,`non_statutory`)** — deliberately NO default: every type is explicitly classified at insert (fail-closed). This is the single authoritative server-controlled statutory classification used by the SCH-32 activation gate; it is never inferred from `category` free text, caller input, browser flags, or `domain_approval_status` (R0 closure 2026-09-03); `status text NOT NULL DEFAULT 'active'` CHECK in (`active`,`deprecated`).
+- **Invariants:** workflow_template validated against DM-SM-04; system rows writable only by deployment/seed (TEN-08); `registration_class` required when `scope_kind='registration'`; `scope_kind`/`registration_class` for seeded system types follow the architecture-validated Registration Scope Matrix (DM-27) — **statutory rules are not activated in production until external CA/domain sign-off** (DM-OQ-01 status). Payroll is excluded from the statutory catalogue for R0 (SCH-OQ-06 resolution). **Governance inheritance (R0 closure 2026-09-03):** a firm override whose `type_key` matches a system-default type inherits that system default's `governance_class` — a firm can NEVER turn a statutory type non-statutory to bypass the approval gate (write-path enforced); only a genuinely custom firm type (no matching system `type_key`) may be classified `non_statutory` by the firm. **Versioning (Batch 4 closure amendment):** the `frequency`/`due_rule` columns describe the type's default template; the *authoritative, applied* recurrence/due-rule content for any generated instance lives in `compliance_rule_versions` (SCH-32). Changing rule behaviour creates a new version — it never retroactively alters existing instances (AUTO-REC-07).
 - **Unique:** `(type_key, firm_id)` NULLS NOT DISTINCT (one default + one override per firm per key).
 - **Indexes:** `(type_key)`; `(firm_id)`.
 - **Audit sensitivity:** HIGH (rule changes alter obligations; changes are security-configuration events, RLS-AAL-01/AUD-CAT-01).
@@ -326,26 +332,88 @@ prevention only; full design lands with each feature's release spec.
   Hybrid ownership mirroring compliance_types: NULL `firm_id` =
   system-default version; else firm-owned (TEN-06 exception family,
   SCH-FK-03).
-- **Columns:** `firm_id uuid` (NULL = system default); `compliance_type_id uuid NOT NULL`; `version int NOT NULL`; `effective_from date NOT NULL`; `effective_to date`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `status text NOT NULL DEFAULT 'draft'` CHECK in (`draft`,`active`,`superseded`,`deprecated`); `domain_approval_status text NOT NULL DEFAULT 'not_required'` CHECK in (`not_required`,`pending`,`approved`); `created_by uuid`; `created_at`.
+- **Columns:** `firm_id uuid` (NULL = system default); `compliance_type_id uuid NOT NULL`; `version int NOT NULL`; `effective_from date NOT NULL`; `effective_to date`; `frequency text NOT NULL` CHECK in (`monthly`,`quarterly`,`annual`,`event`,`custom`); `due_rule jsonb NOT NULL`; `status text NOT NULL DEFAULT 'draft'` CHECK in (`draft`,`active`,`superseded`,`deprecated`); `domain_approval_status text NOT NULL DEFAULT 'not_required'` CHECK in (`not_required`,`pending`,`approved`); `created_by uuid`; `created_at`. Deliberately NO `updated_at` — see the Conventions exception (R0 closure 2026-09-03).
 - **PK:** id. **FKs:** `compliance_type_id` → compliance_types (firm scope inherited from the type row — a firm-override type yields firm-owned versions; SCH-FK-03 reference-data family); `created_by` → auth.users (actor identity, SCH-RESP-02).
 - **Unique:** `(compliance_type_id, version)`.
 - **Checks/invariants:**
-  - **Immutability:** a version that has been `active` (or is referenced by
-    any compliance instance) is never updated; rule changes create a new
-    version (update guard). Historical interpretation is permanent.
-  - **Effective windows:** `effective_from`/`effective_to` windows for one
-    compliance type do not overlap; the generator uses exactly the version
-    `active` for the target period (SCH-11 resolution rule).
-  - **Statutory activation gate:** a version of a statutory compliance
-    type must not reach `status='active'` in production while
-    `domain_approval_status <> 'approved'` (DM-OQ-01). Architecture
-    approval of the Registration Scope Matrix is **not** professional
-    statutory-rule approval; the gate is an explicit lifecycle invariant,
-    not a convention.
+  - **Column classes (R0 closure 2026-09-03 — reconciles immutability with
+    supersession):**
+    - **A. Rule-content fields** — `firm_id`, `compliance_type_id`,
+      `version`, `effective_from`, `frequency`, `due_rule`: frozen once the
+      version leaves `draft` (activated) OR is referenced by any compliance
+      instance; no update path exists for them on such rows — not via
+      ordinary UPDATE and not via the lifecycle command. Rule changes
+      create a new version (update guard). Historical interpretation is
+      permanent.
+    - **B. Lifecycle-metadata fields** — `status`, `effective_to`:
+      changeable ONLY through the controlled Layer-B lifecycle command
+      (API-R0-CRV activate; RLS-CRV-04), and only along the approved
+      transitions below. Ordinary UPDATE can never perform a lifecycle
+      transition.
+    - **C. Creation/provenance fields** — `id`, `created_by`, `created_at`:
+      insert-only; never changed by any path.
+    - **D. Governance-state field** — `domain_approval_status`: set at
+      creation (`not_required` for legitimately non-statutory versions;
+      `pending` for statutory seeds); changeable only via the deferred
+      controlled approval path (no browser-facing R0 command, OPS-OQ-04);
+      never by ordinary UPDATE; never by the activation command.
+  - **Effective windows (normative semantics, R0 closure 2026-09-03):**
+    windows are half-open — `effective_from` INCLUSIVE, `effective_to`
+    EXCLUSIVE; NULL `effective_to` = open-ended. `effective_to` must be
+    strictly greater than `effective_from` (zero-length windows invalid).
+    For one `compliance_type_id`, the windows of versions in
+    `status='active'` must NOT overlap (touching boundaries are legal:
+    `[Jan 1, Apr 1)` and `[Apr 1, ∞)` do not overlap). Multiple
+    `status='active'` versions per type ARE permitted when their windows
+    are disjoint — including future-effective activated versions; this is
+    how historical truth is preserved.
+  - **Active-as-of-date predicate (OPS-ACT-02, exact):** the rule version
+    applicable to compliance type X on date D is the unique version v with
+    `v.compliance_type_id = X` AND `v.status = 'active'` AND
+    `v.effective_from <= D` AND (`v.effective_to IS NULL` OR
+    `D < v.effective_to`). Uniqueness follows from the non-overlap
+    invariant; the answer derives from stored data alone.
+  - **Succession model (R0 closure 2026-09-03):** activating V2 with
+    `effective_from = F` closes the predecessor's window, never its
+    status: if an active V1 has `effective_to IS NULL` or
+    `effective_to > F`, the command sets `V1.effective_to = F`
+    (class-B metadata via the controlled command); if V1's window already
+    ends at or before F, V1 is untouched. **V1.status is NOT changed** —
+    V1 remains `active` and remains the applicable version for its
+    historical window forever; instances referencing V1 remain valid
+    forever (SCH-12 provenance). `superseded`/`deprecated` are terminal
+    states reserved for versions that never governed a period
+    (`draft → deprecated` withdrawal; future-effective `active →
+    superseded` withdrawal before effectiveness, via the command); a
+    version that has governed a period must never transition to
+    `superseded`/`deprecated`. Any residual window overlap after the
+    approved closure fails the activation (`conflict`).
+  - **Statutory activation gate:** a version whose parent type is
+    `governance_class='statutory'` (SCH-10 — the single authoritative,
+    server-controlled classification) must not reach `status='active'` in
+    production while `domain_approval_status <> 'approved'` (DM-OQ-01).
+    The approval requirement is DERIVED from the trusted parent type row
+    — never from caller input, browser flags, `category` text, or
+    `domain_approval_status` itself. Architecture approval of the
+    Registration Scope Matrix is **not** professional statutory-rule
+    approval; the gate is an explicit lifecycle invariant, not a
+    convention.
+  - **Approval authority (R0 closure 2026-09-03):** no browser-facing
+    application role (including super_admin/partner) may set
+    `domain_approval_status='approved'` on a statutory/system-default
+    version — external approval cannot be manufactured through CRUD. The
+    statutory `pending → approved` transition has no browser-facing R0
+    command until OPS-OQ-04 (external CA/domain evidence format/storage)
+    is resolved; the activation command never mutates approval state.
+    Seeded statutory versions are `status='draft'` +
+    `domain_approval_status='pending'` (MIG-SEED-02). Firm-owned
+    non-statutory/custom versions may legitimately carry
+    `domain_approval_status='not_required'` where no statutory approval
+    applies.
   - No instance may reference a `draft`/`deprecated` version at generation
     time (generator invariant; write-path validated).
 - **Indexes:** `(compliance_type_id, status)`; `(firm_id)`.
-- **Lifecycle:** status column (`draft → active → superseded`/`deprecated`); never hard-deleted — versions are historical records.
+- **Lifecycle:** status column (`draft → active → superseded`/`deprecated`) with the R0 closure succession semantics above: normal succession closes the predecessor's *window*, not its status — a version that has governed a period stays `active` for its historical window permanently; `superseded`/`deprecated` mark only versions withdrawn without having governed. Never hard-deleted — versions are historical records.
 - **Audit sensitivity:** HIGH — version creation/activation changes obligations; activation is a security/compliance-configuration event (RLS-AAL-01) and is audited (AUD-CAT-01).
 - **RLS:** RLS-CRV-* (explicit rule-version family defined in `05` — Batch 4 security closure: read scoping, privileged administration, gated activation, immutability support; no policy text appears here).
 - **Tests:** TEST-RLS-CRV-01…11, TEST-AUD-11, TEST-AUTO-09.

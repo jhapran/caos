@@ -327,6 +327,73 @@ authorization/not-found semantics and API-SEC-* function security.
   super_admin/partner (RLS-CTY-01); changes are security-configuration
   events (RLS-AAL-01, AUD-CAT-01). Statutory system defaults are not
   editable via the app (TEN-08).
+- **API-R0-CRV — compliance rule versions (R0 closure 2026-09-03).**
+  Provider-neutral contract over SCH-32, derived from RLS-CRV-01…05 +
+  AUD-CRV-01…03; one typed interface, fixture and Supabase adapters
+  (API-ARCH-01/02), domain DTOs only — no provider types leak.
+  - **list / get:** merged read (active system-default versions +
+    same-firm versions) per RLS-CRV-01; non-active versions
+    (`draft`/`superseded`/`deprecated`) are returned only to
+    super_admin/partner callers. Single-resource get returns the
+    identical `not_found` (null) for unknown, malformed, and inaccessible
+    ids (API-ERR-02). Pagination/filtering per API-CONV-02/03.
+  - **create:** firm-owned `draft` version only, restricted to
+    super_admin/partner (RLS-CRV-02). The caller NEVER supplies an
+    authoritative `firm_id` — tenant context comes from the active-firm
+    selector validated against the live membership server-side
+    (API-CONV-05, RLS-CTX-02/RLS-MECH-01). `domain_approval_status` is
+    server-controlled: firm-owned non-statutory/custom versions may carry
+    `not_required`; no caller may set `approved`. The statutory
+    classification itself is never caller input: it derives from the
+    parent type's server-controlled `governance_class` (SCH-10), and a
+    firm override of a statutory system type inherits `statutory`
+    (SCH-10 governance inheritance).
+  - **update:** draft-edit of an editable firm-owned version
+    (super_admin/partner, RLS-CRV-02). Once a version is `active` or
+    referenced by any compliance instance, its rule-content fields
+    (SCH-32 class A) have NO update path — attempts surface as `conflict`
+    (RLS-CRV-04, SCH-32 guard); rule changes create a new version
+    instead. Lifecycle metadata (class B) is never mutable through this
+    ordinary update operation — only through the controlled command.
+  - **activate:** NOT an ordinary PostgREST UPDATE. Activation executes
+    only through the controlled Layer-B command (API-ARCH-04,
+    AUD-CTX-04): a privileged RPC that atomically verifies the actor
+    (`auth.uid()`), a live ACTIVE same-firm membership with role
+    super_admin/partner, the active-firm context where applicable, AAL2
+    step-up (RLS-AAL-01/RLS-CRV-03), firm ownership for firm-owned
+    versions (system-default NULL-`firm_id` versions are REJECTED —
+    platform activation is the deferred operator path, RLS-CRV-03),
+    draft/eligible current status, the domain-approval invariant derived
+    from the parent type's `governance_class` (statutory ⇒
+    `domain_approval_status='approved'`; never derivable from caller
+    input), and the effective-window invariants (SCH-32: half-open,
+    non-overlapping among active versions) — then activates the target
+    version, applies the SCH-32 succession model in the same transaction
+    (closes the predecessor's window by setting its `effective_to`;
+    NEVER changes the predecessor's `status` or rule payload; a
+    predecessor that governed a period stays `active` for its historical
+    window forever), and writes the AUD-CRV-01/02 audit event(s), all
+    atomically (AUD-CTX-05). Multiple non-overlapping `active` versions
+    per type are legitimate, including future-effective ones. A denied
+    activation produces AUD-FAIL-01 security-significant denial evidence
+    through the existing audit architecture. The command NEVER mutates
+    `domain_approval_status`; the statutory `pending → approved`
+    transition has no browser-facing R0 command until OPS-OQ-04 is
+    resolved (RLS-CRV-03 approval authority).
+  - **delete:** none — no DELETE exists for rule versions (versions are
+    historical records, SCH-32 lifecycle).
+  - **system-default rows** (NULL `firm_id`): readable per RLS-CRV-01;
+    not mutable by any browser role (TEN-08, RLS-CRV-02); statutory
+    seeded versions remain `draft`/`pending` (MIG-SEED-02).
+  - **Errors:** API-ERR-01 taxonomy — `unauthorized` for role/scope
+    denials (manager/senior/article/billing administration attempts),
+    `validation` for malformed input and generic CHECK violations,
+    `conflict` for immutability/uniqueness/activation-gate violations,
+    `not_found` for inaccessible single resources (API-ERR-02).
+  - **Fixture parity:** the fixture adapter serves the demo catalogue's
+    versions behind the same contract (demo data, no statutory claim —
+    MIG-SEED-05); the Supabase adapter uses plain PostgREST reads under
+    RLS plus the activation RPC, with no fixture fallback (MIG-DS-05).
 - **API-R0-CCP — compliance profiles.** Propose/edit (manager+); approval
   RPC records `approved_by`/`approved_at` (RLS-CCP-01, DM-11); only `active`
   profiles feed recurrence (`09`).

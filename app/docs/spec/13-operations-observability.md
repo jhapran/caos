@@ -161,10 +161,21 @@ observability platform — R0 needs reliable basics, executed well.
   (RLS-AAL-01); `domain_approval_status='approved'`; **recorded external
   practicing-CA / compliance-domain approval evidence** (reference stored
   with the activation decision); a complete audit trail (AUD-CRV-01/02);
-  and a recorded activation timestamp.
+  and a recorded activation timestamp. **System-default authority (R0
+  closure 2026-09-03):** these controls govern the browser-facing
+  firm-owned activation path. Platform/system-default (NULL-`firm_id`)
+  statutory activation is a controlled operator/server path (Layer C),
+  not a firm browser session (TEN-08) — its positive path, including the
+  approval-evidence handling, is deferred until OPS-OQ-04 is resolved;
+  browser AAL2 does not apply to that non-human path (operator
+  authorization and evidence controls apply instead).
 - **OPS-ACT-02 — Active-version identifiability.** At any time, operations
   can answer "which rule version is active for compliance type X as of
-  date D" from data alone (SCH-32 effective windows + status).
+  date D" from data alone (SCH-32 effective windows + status). The exact
+  predicate is normative (R0 closure 2026-09-03): `status='active'` AND
+  `effective_from <= D` AND (`effective_to IS NULL` OR
+  `D < effective_to`) — windows half-open, non-overlapping among active
+  versions (SCH-32).
 - **OPS-ACT-03 — Not certification.** Architecture review and this
   operational control do not constitute professional CA certification;
   the external approval evidence requirement is the gate (DM-OQ-01).

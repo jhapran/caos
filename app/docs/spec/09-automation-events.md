@@ -215,7 +215,9 @@ compliance_instances (provenance: rule_version_id, generation_source,
   activation path in `10`).
 - **AUTO-REC-05 — Due dates.** `due_date` is computed from the active rule
   version's `due_rule` (SCH-32) + the structured period (`period_start`,
-  `period_end`, SCH-12); the computed value is persisted as
+  `period_end`, SCH-12); "the active rule version" is resolved by the
+  SCH-32 active-as-of-date predicate for the target period (R0 closure
+  2026-09-03). The computed value is persisted as
   `calculated_due_date` at generation. Due-rule changes do not retro-move
   materialized instances without an explicit, audited regeneration
   decision (recorded as `compliance_instance.due_date_changed`) — see

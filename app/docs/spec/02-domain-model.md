@@ -128,7 +128,7 @@ now so the schema is forward-compatible, built in a later release.
 - **Ownership:** **Hybrid — system defaults (global reference data) + firm overrides (tenant-owned).** Resolution rules in `03-tenancy-environments.md` (TEN-06…09) and schema in `06`.
 - **Relationships:** 1—N ClientComplianceProfile, ComplianceInstance.
 - **Lifecycle:** `active → deprecated` (deprecated types keep history; instances continue).
-- **Invariants:** Workflow template must be a valid path through the compliance state machine (DM-SM-04). Due-date rules are data, not code (PRD §124). **Registration-scoping behaviour per compliance type is defined by the Registration Scope Matrix (DM-27), not invented ad hoc.**
+- **Invariants:** Workflow template must be a valid path through the compliance state machine (DM-SM-04). Due-date rules are data, not code (PRD §124). **Registration-scoping behaviour per compliance type is defined by the Registration Scope Matrix (DM-27), not invented ad hoc.** **Statutory governance is explicit server-controlled data (SCH-10 `governance_class`), never inferred from category text or caller input; firm overrides of a statutory system type inherit its classification (R0 closure 2026-09-03).**
 - **Tenant boundary:** Global rows have no `firm_id`; firm override rows do.
 - **R0 status:** R0 (seeded rule library; firm editing UI may be minimal). **Deferred:** full template editor UI, per-state due-date matrices beyond seeded rules.
 

@@ -70,7 +70,7 @@ roles.
   | TEST-RLS-STO-* (`05` §13) | Deferred to Release 1 — recorded explanation: storage ships with documents (DEC-R); family reserved |
   | TEST-RLS-4EY-01 (`05` §14) | TEST-RLS-4EY-01 (four-eyes RPC rejects self-approval) |
   | TEST-RLS-SUP-01 (`05` §14) | TEST-RLS-SUP-01 (break-glass audit trail + expiry) |
-  | TEST-RLS-CRV-01…11 (`05` §14) | TEST-RLS-CRV-01…11 (rule versions) |
+  | TEST-RLS-CRV-01…13 (`05` §14) | TEST-RLS-CRV-01…13 (rule versions; 12/13 added by the 2026-09-03 rule-governance closure) |
   | TEST-AUD-01…11 (`08` §20) | Each ID defined by its `08` enumeration and binding here: TEST-AUD-01, TEST-AUD-02, TEST-AUD-03, TEST-AUD-04, TEST-AUD-05, TEST-AUD-06, TEST-AUD-07, TEST-AUD-08, TEST-AUD-09, TEST-AUD-10, TEST-AUD-11 |
   | TEST-AUTO-01…10 (`09`) | Each ID defined below (TEST-AUTO-01…TEST-AUTO-10), extended by TEST-AUTO-11/12 here |
   | TEST-MIG-01…05 (`10` phases) | Each phase-gate check defined by `10` and binding here: TEST-MIG-01, TEST-MIG-02, TEST-MIG-03, TEST-MIG-04, TEST-MIG-05; extended by TEST-MIG-06…15 below |
@@ -243,6 +243,21 @@ record:
   (SCH-12).
 - **TEST-SCH-09:** lifecycle/check constraints — state vocabularies and
   `period_end >= period_start` enforced.
+- **TEST-SCH-10 (R0 closure 2026-09-03):** rule-version effective-window
+  invariants — windows of `active` versions for one `compliance_type_id`
+  cannot overlap (touching half-open boundaries legal); `effective_from`
+  inclusive / `effective_to` exclusive boundary behavior;
+  `effective_to > effective_from` enforced; multiple disjoint `active`
+  versions (incl. future-effective) permitted; the SCH-32
+  active-as-of-date predicate resolves at most one version for any
+  (type, date) pair (OPS-ACT-02).
+- **TEST-SCH-11 (R0 closure 2026-09-03):** governance classification —
+  a version whose parent type is `governance_class='statutory'` cannot
+  reach `active` with `domain_approval_status='pending'` and can never
+  carry `not_required`; a firm override of a statutory system type
+  cannot downgrade the inherited `governance_class`; a genuinely custom
+  firm type may be `non_statutory` and its versions may use
+  `not_required` (SCH-10 governance inheritance, SCH-32 gate).
 
 ## Automation tests (TEST-AUTO-*)
 

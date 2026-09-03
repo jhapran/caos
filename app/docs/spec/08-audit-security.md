@@ -103,10 +103,13 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
   (SCH-32) is **security/compliance-sensitive**: it changes what obligations
   exist and when they are due. Audited events: rule version **created**;
   rule version **changed while mutable/draft**; rule version **activated**;
-  rule version **superseded/deprecated**; **domain-approval status change**;
-  **activation attempt denied** (security-significant denial, AUD-FAIL-01);
-  and any **privileged rule administration** path (including service-role/
-  seed writes, AUD-SVC-01).
+  rule version **superseded/deprecated**; **every controlled lifecycle-
+  command metadata transition** — status changes and `effective_to` window
+  closures on otherwise immutable active/referenced rows (SCH-32 class B,
+  R0 closure 2026-09-03) — with old/new values; **domain-approval status
+  change**; **activation attempt denied** (security-significant denial,
+  AUD-FAIL-01); and any **privileged rule administration** path (including
+  service-role/seed writes, AUD-SVC-01).
 - **AUD-CRV-02 — record content.** Each rule-version audit row captures,
   where applicable: actor (per the §10 actor model); firm context (`firm_id`,
   or the NULL platform marker for system-default versions, AUD-EVT-03);

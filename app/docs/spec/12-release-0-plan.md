@@ -845,9 +845,47 @@ separate explicit implementation instruction.
   AAL2-gated activation). Security/compliance-sensitive.
 - **Requirement IDs:** DM-10, DM-27 (Registration Scope Matrix —
   architecture-approved, external CA gate standing), SCH-10, SCH-32,
-  RLS-CTY-01, RLS-CRV-01…05 + RLS-CRV-11, AUD-CRV-01…03, OPS-ACT-01…03.
-- **TEST-* IDs:** TEST-RLS-CRV-01…11, TEST-SCH-07/08 (immutability,
-  activation gate), TEST-AUD-* (rule-admin events).
+  RLS-CTY-01, RLS-CRV-01…05, AUD-CRV-01…03, OPS-ACT-01…03, API-R0-CTY,
+  API-R0-CRV.
+- **TEST-* IDs:** TEST-RLS-CTY-*, TEST-RLS-CRV-01…13 (incl.
+  TEST-RLS-CRV-11 statutory-activation denial; 12/13 lifecycle-command
+  and succession-history cases), TEST-SCH-06/07 (immutability,
+  activation gate), TEST-SCH-10/11 (effective windows, governance
+  classification), TEST-AUD-01/02/07/09/11 (rule-admin events).
+- **Pre-implementation closure (2026-09-03):** (a) the former
+  "RLS-CRV-11" reference here meant TEST-RLS-CRV-11 — the RLS-CRV
+  requirement family ends at 05; (b) Manager is read-only on compliance
+  types/rule versions — the `05` §11 matrix "propose" cell is corrected
+  (RLS-PRIN-02 default-deny; no proposal object/contract exists);
+  (c) API-R0-CRV is defined in `07` (list/get/create draft/draft-edit/
+  controlled activation command; no DELETE); (d) SCH-32 deliberately has
+  no `updated_at` (`06` Conventions exception); (e) no browser role can
+  set `domain_approval_status='approved'` — the statutory
+  `pending → approved` transition has no browser-facing R0 command until
+  OPS-OQ-04 is resolved, and the activation command never mutates
+  approval state (RLS-CRV-03 approval authority). **Rule-governance
+  closure (2026-09-03):** (f) immutability vs supersession reconciled —
+  SCH-32 columns are classified rule-content (class A, frozen once
+  active/referenced), lifecycle metadata (class B: `status`/
+  `effective_to`, mutable ONLY via the controlled Layer-B lifecycle
+  command), creation/provenance (class C, insert-only), and governance
+  state (`domain_approval_status`, deferred approval path only); ordinary
+  UPDATE never performs lifecycle transitions; (g) effective windows are
+  half-open (`effective_from` inclusive / `effective_to` exclusive,
+  strictly greater), non-overlapping among `active` versions per type —
+  multiple disjoint active versions incl. future-effective are permitted;
+  the active-as-of-date predicate is normative (SCH-32/OPS-ACT-02);
+  (h) succession closes the predecessor's WINDOW, never its status — a
+  version that governed a period stays `active` for its historical
+  window forever and instance references stay valid; `superseded`/
+  `deprecated` are only for versions that never governed; (i) statutory
+  classification is the server-controlled SCH-10 `governance_class`
+  (`statutory`/`non_statutory`, no default) — firm overrides of a
+  statutory system type inherit it and can never downgrade; approval
+  requirement derives from the parent type, never caller input; (j)
+  system-default activation is a deferred controlled operator path
+  (Layer C, OPS-ACT-01) — the browser activation command is firm-owned
+  only and rejects NULL-`firm_id` versions (fail-closed).
 - **Dependencies:** IMP-012, IMP-013.
 - **Allowed scope:** migrations, policies, admin adapter functions,
   activation-flow plumbing (AAL2 check + approval-status invariant).
@@ -1260,9 +1298,9 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | TEST-SPIKE-CTX-01/02 | IMP-005 |
 | TEST-AUTH-01…15 | IMP-011 |
 | TEST-RLS-GEN-01…04, TEST-RLS-MAT-01…03 | IMP-012, then re-run per RLS-bearing package (020/030/031/040/041/042) |
-| TEST-RLS-CRV-01…11 | IMP-030 |
+| TEST-RLS-CRV-01…13 | IMP-030 |
 | TEST-RLS-SUP-01 | IMP-012 (shape), IMP-072 (operations) |
-| TEST-SCH-01…09 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 |
+| TEST-SCH-01…11 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 |
 | TEST-AUD-01…11 | IMP-013, extended per domain package |
 | TEST-API-01…10 | IMP-014, IMP-022, IMP-060, IMP-061, IMP-062 |
 | TEST-AUTO-01…12 | IMP-050, IMP-051 |

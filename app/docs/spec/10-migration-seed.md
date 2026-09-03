@@ -271,11 +271,18 @@ category below says otherwise.
 - **MIG-SEED-02 — Compliance-type reference data:** the statutory
   catalogue as `compliance_types` system defaults **plus their initial
   `compliance_rule_versions`** (SCH-32), with `scope_kind`/
-  `registration_class` per DM-27 and alert-rule templates. **These rows
+  `registration_class` per DM-27 and alert-rule templates. **Seed
+  governance classification (R0 closure 2026-09-03):** GST, TDS, Income
+  Tax/ITR, ROC/MCA, Professional Tax, PF, ESI, and Audit are seeded as
+  `governance_class='statutory'`; Certificates/custom recurring are
+  `non_statutory`; Payroll remains excluded (SCH-OQ-06). **These rows
   define capability, not activated statutory calendars; production
   statutory-rule activation is a separate gated step requiring external
   CA/domain sign-off (DM-OQ-01; AUTO-REC-09) — seeded versions carry
-  `domain_approval_status='pending'` until then (SCH-32).**
+  `domain_approval_status='pending'` until then (SCH-32).** Statutory
+  seeded versions are `status='draft'`; non-statutory/custom test/demo
+  rules may use `domain_approval_status='not_required'` only where the
+  governance classification permits it.
 - **MIG-SEED-03 — Synthetic development tenant:** one demo firm
   ("development" marker), synthetic staff covering every role (for
   TEST-RLS-* execution), synthetic clients/entities/registrations/

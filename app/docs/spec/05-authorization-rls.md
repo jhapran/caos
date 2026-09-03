@@ -182,7 +182,7 @@ Legend: ✔ full · ◐ scoped (see note) · ✖ denied · — n/a
 | Firm settings / memberships | ✔ | read | ✖ | ✖ | ✖ |
 | Clients / entities / registrations / contacts | ✔ | ✔ | ◐ portfolio | ◐ assigned-work clients | ◐ identity + billing fields only |
 | Engagements | ✔ | ✔ | ◐ portfolio | read ◐ | read ◐ |
-| Compliance types & rule versions (firm-owned) | ✔ | ✔ | propose | ✖ | ✖ |
+| Compliance types & rule versions (firm-owned) | ✔ | ✔ | read (RLS-CTY-01/RLS-CRV-01 only — see note) | ✖ | ✖ |
 | Compliance profiles / instances | ✔ | ✔ | ◐ portfolio | ◐ assigned | ✖ |
 | Tasks / checklist / dependencies | ✔ | ✔ | ◐ assign + supervise | ◐ assigned | ✖ |
 | Task comments / internal notes | ✔ | ✔ | ◐ | ◐ assigned work | ✖ |
@@ -195,6 +195,14 @@ Legend: ✔ full · ◐ scoped (see note) · ✖ denied · — n/a
 
 Client User column: see §6 (RLS-POR-02…04). External Consultant: deferred
 (RLS-STF-06). Support: see §7.
+
+Matrix note (R0 closure 2026-09-03): the "Compliance types & rule versions"
+row previously showed Manager = "propose". No proposal object, contract, or
+workflow exists anywhere in the R0 specification, and default-deny
+(RLS-PRIN-02) governs: Manager has read-only access to compliance types and
+rule versions (RLS-CTY-01 / RLS-CRV-01) and may NOT insert, draft-edit,
+change approval state, or activate. The cell is corrected accordingly; no
+proposal workflow is introduced.
 
 ## 12. Table-level RLS intent (family IDs referenced by `06`)
 
@@ -226,17 +234,49 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
   privileged set as compliance-type administration (RLS-CTY-01); all other
   operational roles are denied. System/global default versions (NULL
   firm_id) are writable by nobody via application roles — migrations/seeds
-  only (TEN-08); firm users cannot mutate them.
+  only (TEN-08); firm users cannot mutate them. **Explicit R0 closure
+  (2026-09-03):** manager, senior, article, and billing roles have NO
+  proposal, create, draft-edit, approval-state, or activation capability on
+  rule versions — the §11 matrix's former "propose" cell is superseded; no
+  proposal workflow exists in R0.
 - **RLS-CRV-03 (activation):** version activation is privileged
   (super_admin/partner) and is a security-configuration change requiring
   AAL2 step-up (RLS-AAL-01). A statutory version may be activated only when
   `domain_approval_status='approved'` (SCH-32 lifecycle invariant,
   DM-OQ-01); the gate is enforced by the lifecycle design, not by
-  convention.
+  convention. **Approval authority (R0 closure 2026-09-03):** no
+  application/browser role may transition `domain_approval_status` from
+  `pending` to `approved` — a browser-authenticated super_admin or partner
+  must not be able to manufacture external statutory approval. The
+  statutory `pending → approved` transition has **no browser-facing R0
+  command** until OPS-OQ-04 (external CA/domain approval evidence
+  format/storage) is resolved; the activation command never mutates
+  approval state itself. **Approval derivation (R0 closure 2026-09-03):**
+  whether activation requires `domain_approval_status='approved'` is
+  derived from the trusted parent `compliance_types.governance_class`
+  (SCH-10) — never from caller input, browser flags, `category` text, or
+  `domain_approval_status` itself; a statutory-governed version can never
+  satisfy the gate with `not_required`. **System-default activation
+  authority (R0 closure 2026-09-03):** because TEN-08 forbids application
+  roles from mutating NULL-`firm_id` rows, the browser-facing activation
+  command applies to firm-owned versions ONLY and must reject
+  system-default versions (fail-closed). Platform/system-default
+  statutory activation belongs to a controlled operator/server path
+  (Layer C, AUD-CTX-01) under the OPS-ACT-01 controls including recorded
+  external CA/domain evidence; that positive path is deferred until
+  OPS-OQ-04 is resolved. A partner's AAL2 browser session can never
+  mutate platform reference data.
 - **RLS-CRV-04 (immutability support):** authorization grants **no update
-  path** to a version that is `active` or referenced by any compliance
-  instance; changes create a new version (SCH-32). No policy may undermine
-  this invariant (RLS-X01 applies).
+  path** to the rule-content fields (SCH-32 class A: `firm_id`,
+  `compliance_type_id`, `version`, `effective_from`, `frequency`,
+  `due_rule`) of a version that is `active` or referenced by any
+  compliance instance; changes create a new version (SCH-32). Ordinary
+  UPDATE can never perform a lifecycle transition. The ONLY permitted
+  mutation of an active/referenced row is lifecycle metadata (SCH-32
+  class B: `status`, `effective_to`) through the controlled Layer-B
+  lifecycle command along the SCH-32 succession model — and the command
+  never rewrites rule payload. No policy may undermine this invariant
+  (RLS-X01 applies).
 - **RLS-CRV-05 (service role):** service-role interaction with rule
   versions follows RLS-SVC-01/02 — confined to Edge Functions and
   operator-run scripts, self-auditing; never a casual bypass of
@@ -300,6 +340,20 @@ audit trail and expires).
 
 Plus **TEST-RLS-CRV-11:** statutory activation without
 `domain_approval_status='approved'` fails (RLS-CRV-03, SCH-32 gate).
+
+Plus (R0 closure 2026-09-03):
+
+- **TEST-RLS-CRV-12:** ordinary UPDATE cannot transition lifecycle
+  metadata (`status`, `effective_to`) on an active/referenced version —
+  lifecycle transitions succeed only through the controlled Layer-B
+  command, and the command never rewrites rule payload: an attempted
+  payload change (`frequency`, `due_rule`, `effective_from`, …) on an
+  active or instance-referenced version is rejected by every path
+  (RLS-CRV-04, SCH-32 class-A guard).
+- **TEST-RLS-CRV-13:** after succession, the window-closed predecessor
+  remains `status='active'` for its historical window, remains readable
+  per RLS-CRV-01, and instance provenance references to it stay valid
+  (SCH-32 succession model, SCH-12).
 
 ## DEC-J: JWT claims vs membership lookup — RESOLVED (live membership lookup)
 
@@ -474,7 +528,8 @@ historical record — they no longer represent the selected mechanism.
 - RLS-ACC-06 (Batch 4 security closure): compliance_rule_versions has an
   explicit family (RLS-CRV-01…05) covering read scoping, privileged
   write/administration, gated statutory activation, immutability support,
-  and service-role restriction, with verification cases TEST-RLS-CRV-01…11.
+  and service-role restriction, with verification cases TEST-RLS-CRV-01…13
+  (12/13 added by the 2026-09-03 rule-governance closure).
 
 ## Consequence of Change
 
