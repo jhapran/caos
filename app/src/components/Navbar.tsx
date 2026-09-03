@@ -16,6 +16,8 @@ import {
 import Badge from './Badge';
 import Avatar from './Avatar';
 import { useDemoStore } from '@/data/store';
+import { useAuth } from '@/data/auth';
+import { useShellIdentity } from '@/hooks/useShellIdentity';
 import { DEPENDENCY_TOTALS, FIRM } from '@/data';
 import { cn } from '@/lib/utils';
 
@@ -27,25 +29,44 @@ interface NavItem {
   violet?: boolean;
 }
 
+/** Humanized membership role labels for the Supabase-mode user chip. */
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  partner: 'Partner',
+  manager: 'Manager',
+  senior: 'Senior',
+  article_executive: 'Article Executive',
+  billing: 'Billing',
+  external_consultant: 'External Consultant',
+};
+
 /**
  * Sidebar navigation ("Navbar") — 240px brand-deep, gold active bar,
  * icon rail below xl, overlay drawer on mobile.
  */
 export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; onCloseMobile: () => void }) {
   const { reviewPendingCount, activeAlertCount, resetDemo } = useDemoStore();
+  const { service } = useAuth();
+  const identity = useShellIdentity();
   const navigate = useNavigate();
+  // Supabase mode never renders fixture counts/records as live data; the
+  // demo badges and seeded firm/user card are fixture-mode presentation.
+  const fixture = service.mode === 'fixture';
 
   const items: NavItem[] = [
     { to: '/brief', label: 'Morning Brief', icon: Sunrise },
     { to: '/command', label: 'Command Centre', icon: Gauge },
     { to: '/clients', label: 'Clients', icon: Users },
     { to: '/deadlines', label: 'Deadlines', icon: CalendarClock },
-    { to: '/review', label: 'Review Queue', icon: FileBarChart2, badge: { value: reviewPendingCount, tone: 'gold' } },
-    { to: '/dependency', label: 'Client Dependency', icon: Link2, badge: { value: DEPENDENCY_TOTALS.clients, tone: 'neutral' } },
-    { to: '/alerts', label: 'Risk Alerts', icon: TriangleAlert, badge: { value: activeAlertCount, tone: 'critical' } },
+    { to: '/review', label: 'Review Queue', icon: FileBarChart2, badge: fixture ? { value: reviewPendingCount, tone: 'gold' } : undefined },
+    { to: '/dependency', label: 'Client Dependency', icon: Link2, badge: fixture ? { value: DEPENDENCY_TOTALS.clients, tone: 'neutral' } : undefined },
+    { to: '/alerts', label: 'Risk Alerts', icon: TriangleAlert, badge: fixture ? { value: activeAlertCount, tone: 'critical' } : undefined },
     { to: '/ask', label: 'Ask CAOS', icon: Sparkles, violet: true },
     { to: '/reports', label: 'Reports', icon: FileText },
   ];
+
+  const userName = fixture ? FIRM.team[0].name : (identity?.fullName ?? '');
+  const userRole = fixture ? FIRM.team[0].role : (identity?.role ? ROLE_LABELS[identity.role] : '');
 
   const nav = (isMobile: boolean) => (
     <div className="flex h-full w-60 flex-col bg-brand-deep text-paper">
@@ -104,7 +125,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
         ))}
       </nav>
 
-      {/* Footer: firm card + user chip + demo controls */}
+      {/* Footer: firm card + user chip (+ demo controls in fixture mode) */}
       <div className="space-y-3 border-t border-paper/10 px-4 py-4">
         <div
           className="relative overflow-hidden rounded-lg border border-paper/10 bg-paper/5 px-3 py-2.5"
@@ -114,38 +135,47 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
             style={{ backgroundImage: 'url(/pattern-ledger.svg)', backgroundSize: '160px' }}
             aria-hidden
           />
-          <div className="relative">
-            <div className="text-[12px] leading-4 font-semibold">{FIRM.shortName}</div>
-            <div className="mt-0.5 font-mono text-[10px] text-paper/50">FRN {FIRM.frn} · {FIRM.city}</div>
-            <div className="mt-1.5 inline-flex rounded-full border border-gold/40 bg-gold/15 px-2 py-px font-mono text-[10px] text-gold-soft">
-              {FIRM.fy}
+          {fixture ? (
+            <div className="relative">
+              <div className="text-[12px] leading-4 font-semibold">{FIRM.shortName}</div>
+              <div className="mt-0.5 font-mono text-[10px] text-paper/50">FRN {FIRM.frn} · {FIRM.city}</div>
+              <div className="mt-1.5 inline-flex rounded-full border border-gold/40 bg-gold/15 px-2 py-px font-mono text-[10px] text-gold-soft">
+                {FIRM.fy}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="relative">
+              <div className="text-[12px] leading-4 font-semibold">{identity?.firmName ?? 'Active firm'}</div>
+              <div className="mt-0.5 font-mono text-[10px] text-paper/50">Hosted data · live RLS</div>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2.5">
-          <Avatar name={FIRM.team[0].name} size="sm" />
+          <Avatar name={userName || '—'} size="sm" />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-medium">{FIRM.team[0].name}</div>
-            <div className="text-[10px] text-paper/50">{FIRM.team[0].role}</div>
+            <div className="truncate text-[12px] font-medium">{userName}</div>
+            <div className="text-[10px] text-paper/50">{userRole}</div>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="rounded-full border border-paper/15 px-2 py-px font-mono text-[9.5px] tracking-wide text-paper/45 uppercase">
-            Seeded demo data
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              resetDemo();
-              navigate('/brief');
-            }}
-            className="flex items-center gap-1 text-[10.5px] text-paper/45 transition-colors hover:text-gold-soft"
-            title="Reset demo data"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Reset
-          </button>
-        </div>
+        {fixture && (
+          <div className="flex items-center justify-between">
+            <span className="rounded-full border border-paper/15 px-2 py-px font-mono text-[9.5px] tracking-wide text-paper/45 uppercase">
+              Seeded demo data
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                resetDemo();
+                navigate('/brief');
+              }}
+              className="flex items-center gap-1 text-[10.5px] text-paper/45 transition-colors hover:text-gold-soft"
+              title="Reset demo data"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -154,7 +184,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
     <>
       {/* Desktop: fixed icon rail < xl, full sidebar ≥ xl */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:block xl:hidden" aria-label="Primary">
-        <IconRail items={items} />
+        <IconRail items={items} userName={userName} />
       </aside>
       <aside className="fixed inset-y-0 left-0 z-40 hidden xl:block" aria-label="Primary">
         {nav(false)}
@@ -171,7 +201,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
 }
 
 /** Collapsed icon rail (< 1280px). */
-function IconRail({ items }: { items: NavItem[] }) {
+function IconRail({ items, userName }: { items: NavItem[]; userName: string }) {
   const navigate = useNavigate();
   return (
     <div className="flex h-full w-16 flex-col bg-brand-deep text-paper">
@@ -203,7 +233,7 @@ function IconRail({ items }: { items: NavItem[] }) {
         ))}
       </nav>
       <div className="flex justify-center px-2 py-4">
-        <Avatar name={FIRM.team[0].name} size="sm" />
+        <Avatar name={userName || '—'} size="sm" />
       </div>
     </div>
   );

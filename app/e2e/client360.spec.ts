@@ -109,7 +109,9 @@ test('TEST-E2E-03/04/05 — create + view client, legal entity, registration', a
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { name: CLIENT_NAME })).toBeVisible();
   // Overview resolves the partner DISPLAY NAME — never a membership UUID.
-  await expect(page.getByText('E2E Partner Alpha')).toBeVisible();
+  // Scoped to <main>: the sidebar user chip now also truthfully shows the
+  // signed-in user's real name (staging UI truthfulness closure).
+  await expect(page.getByRole('main').getByText('E2E Partner Alpha')).toBeVisible();
 
   // --- TEST-E2E-04: create + view legal entity --------------------------
   await page.getByRole('tab', { name: /Entities & identifiers/ }).click();

@@ -4,6 +4,7 @@ import { ArrowRight, Building2, FileText, LayoutGrid, Search } from 'lucide-reac
 import { useNavigate } from 'react-router-dom';
 import { searchAll } from '@/data/api';
 import type { SearchHit } from '@/data/api';
+import { useAuth } from '@/data/auth';
 import { cn } from '@/lib/utils';
 
 const KIND_ICONS = {
@@ -11,6 +12,22 @@ const KIND_ICONS = {
   compliance: FileText,
   page: LayoutGrid,
 } as const;
+
+/**
+ * Supabase-mode palette entries: navigation to modules that actually serve
+ * hosted data. Fixture search hits (seeded clients/compliance, fake count
+ * sub-labels) are never offered as if they were live records; full-text
+ * production search arrives with the search release.
+ */
+const SUPABASE_NAV: SearchHit[] = [
+  { kind: 'page', id: 'nav-clients', label: 'Clients', sub: 'Hosted client portfolio', href: '/clients' },
+];
+
+function supabaseNavHits(query: string): SearchHit[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return SUPABASE_NAV;
+  return SUPABASE_NAV.filter((h) => h.label.toLowerCase().includes(q));
+}
 
 /** ⌘K command palette — jump to any client / compliance / page (seeded fuzzy list). */
 export default function CommandPalette({
@@ -24,8 +41,13 @@ export default function CommandPalette({
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { service } = useAuth();
+  const fixture = service.mode === 'fixture';
 
-  const hits: SearchHit[] = useMemo(() => searchAll(query), [query]);
+  const hits: SearchHit[] = useMemo(
+    () => (fixture ? searchAll(query) : supabaseNavHits(query)),
+    [fixture, query],
+  );
 
   // Reset transient state during render when the palette opens or the query
   // changes (docs-sanctioned adjust-during-render pattern); effects below
@@ -98,7 +120,7 @@ export default function CommandPalette({
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Jump to a client, compliance, or page…"
+                placeholder={fixture ? 'Jump to a client, compliance, or page…' : 'Jump to a page…'}
                 className="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3"
               />
               <kbd className="rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px] text-ink-3">ESC</kbd>
@@ -133,7 +155,9 @@ export default function CommandPalette({
                 );
               })}
               {hits.length === 0 && (
-                <li className="px-4 py-8 text-center text-[13px] text-ink-3">No matches for “{query}”</li>
+                <li className="px-4 py-8 text-center text-[13px] text-ink-3">
+                  {fixture ? <>No matches for “{query}”</> : <>Only hosted modules are searchable here. Full search arrives with the production search release.</>}
+                </li>
               )}
             </ul>
           </motion.div>

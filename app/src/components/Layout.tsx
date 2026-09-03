@@ -10,6 +10,8 @@ import Avatar from './Avatar';
 import CommandPalette from './CommandPalette';
 import ToastViewport from './Toast';
 import { useDemoStore } from '@/data/store';
+import { useAuth } from '@/data/auth';
+import { useShellIdentity } from '@/hooks/useShellIdentity';
 import { FIRM } from '@/data';
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -48,6 +50,13 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeAlertCount } = useDemoStore();
+  const { service } = useAuth();
+  const identity = useShellIdentity();
+  // Fixture presentation (demo clock, seeded user, store-derived alert
+  // badge) applies to fixture mode only; Supabase mode shows the real
+  // signed-in identity and the real current date, and never fabricates
+  // operational counts before the owning modules land.
+  const fixture = service.mode === 'fixture';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -117,22 +126,22 @@ export default function Layout() {
             type="button"
             onClick={() => navigate('/alerts')}
             className="relative rounded-lg p-2 text-ink-2 transition-colors hover:bg-paper-deep"
-            aria-label={`${activeAlertCount} active alerts`}
+            aria-label={fixture ? `${activeAlertCount} active alerts` : 'Risk alerts'}
           >
             <Bell className="h-[18px] w-[18px]" />
-            {activeAlertCount > 0 && (
+            {fixture && activeAlertCount > 0 && (
               <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical font-mono text-[9px] font-semibold text-white tnum">
                 {activeAlertCount}
               </span>
             )}
           </button>
 
-          {/* Date chip */}
+          {/* Date chip — demo clock in fixture mode, real date in Supabase mode */}
           <span className="hidden rounded-full border border-line bg-paper px-3 py-1.5 font-mono text-[11px] text-ink-2 lg:inline-flex">
-            {format(DEMO_TODAY, 'EEE, dd MMM yyyy')}
+            {format(fixture ? DEMO_TODAY : new Date(), 'EEE, dd MMM yyyy')}
           </span>
 
-          <Avatar name={FIRM.team[0].name} size="sm" />
+          <Avatar name={fixture ? FIRM.team[0].name : (identity?.fullName ?? '—')} size="sm" />
         </header>
 
         {/* Page content slot — 1440px max, centered */}
