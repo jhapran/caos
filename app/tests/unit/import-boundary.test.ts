@@ -59,6 +59,7 @@ const FIXTURE_MODULES = new Set([
 const FIXTURE_BRIDGES = new Set([
   join(SRC, 'data', 'clientHierarchy', 'fixture.ts'),
   join(SRC, 'data', 'engagements', 'fixture.ts'),
+  join(SRC, 'data', 'client360', 'fixture.ts'),
 ]);
 
 describe('import boundary — UI layer (API-ARCH-01/02)', () => {
@@ -107,11 +108,18 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'tenancy')),
     ...tsFiles(join(SRC, 'data', 'clientHierarchy')),
     ...tsFiles(join(SRC, 'data', 'engagements')),
+    ...tsFiles(join(SRC, 'data', 'client360')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
     join(SRC, 'data', 'context.ts'),
     ...tsFiles(join(SRC, 'lib')),
   ];
+
+  it('scans the Client 360 adapter modules (IMP-022)', () => {
+    // Guards against the scan passing vacuously if the folder moves.
+    expect(productionFiles).toContain(join(SRC, 'data', 'client360', 'supabase.ts'));
+    expect(productionFiles).toContain(join(SRC, 'data', 'client360', 'fixture.ts'));
+  });
 
   it('scans the engagement adapter modules (IMP-021)', () => {
     // Guards against the scan passing vacuously if the folder moves.

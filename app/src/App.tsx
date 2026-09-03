@@ -9,6 +9,8 @@ import DeadlineClients from './pages/DeadlineClients';
 import ComplianceDetail from './pages/ComplianceDetail';
 import AskCaos from './pages/AskCaos';
 import ReviewQueue from './pages/ReviewQueue';
+import ClientsPage from './pages/clients/ClientsPage';
+import Client360Page from './pages/clients/Client360Page';
 import ClientDependency from './pages/ClientDependency';
 import RiskAlerts from './pages/RiskAlerts';
 import Reports from './pages/Reports';
@@ -43,6 +45,8 @@ export default function App() {
       >
         <Route path="/brief" element={<MorningBrief />} />
         <Route path="/command" element={<CommandCentre />} />
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/:clientId" element={<Client360Page />} />
         <Route path="/deadlines" element={<Deadlines />} />
         <Route path="/deadlines/:id/clients" element={<DeadlineClients />} />
         <Route path="/compliance/:id" element={<ComplianceDetail />} />

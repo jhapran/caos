@@ -16,7 +16,7 @@ export type { DataSource } from './source';
 export { ApiError, ConfigurationError, toApiError } from './errors';
 export type { ApiErrorKind } from './errors';
 // --- IMP-020: active-firm selector context + client hierarchy --------------
-export { clearActiveFirm, getActiveFirm, setActiveFirm } from './context';
+export { clearActiveFirm, getActiveFirm, resolveDefaultActiveFirm, setActiveFirm } from './context';
 export { clientHierarchyService } from './clientHierarchy';
 export type {
   ClientHierarchyService,
@@ -59,6 +59,15 @@ export type {
   LetterStatus,
   UpdateEngagementInput,
 } from './engagements';
+// --- IMP-022: Client 360 composite read (API-R0-CLI, DM-X-02) ----------------
+export { client360Service } from './client360';
+export type {
+  Client360Engagement,
+  Client360Relationship,
+  Client360Service,
+  Client360View,
+  StaffRef,
+} from './client360';
 export { tenancyService } from './tenancy';
 export type {
   FirmMembershipView,

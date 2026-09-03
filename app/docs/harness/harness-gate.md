@@ -246,3 +246,11 @@ preserved unchanged):
   billing letter-status projection; engagement schema/RLS/audit coverage
   runs in the existing `schema-integration` / `rls-integration` /
   `audit-integration` phases). Gate is now 18 phases.
+- **IMP-022** added the `client360-integration` phase (`npm run
+  test:client360`, `tests/integration/client360/` — the Client 360
+  composite contract: TEST-API-01…03 at the composition layer plus the
+  partner/manager/billing/senior/suspended no-leak matrix). The
+  Playwright `client360` project runs TEST-E2E-03…05 (create/view
+  client → entity → registration) in supabase mode, and the chromium
+  smoke project covers the fixture-track Client 360. DB inventory
+  unchanged (no migration). Gate is now 19 phases.

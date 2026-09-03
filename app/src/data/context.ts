@@ -35,3 +35,31 @@ export function getActiveFirm(): string | null {
 export function clearActiveFirm(): void {
   activeFirmId = null;
 }
+
+/**
+ * IMP-022 closure — Deterministic default firm selection (RLS-CTX-02).
+ *
+ * TEMPORARY R0 DEFAULT until the firm-switcher package lands: when the
+ * caller has not explicitly chosen a firm, the active context defaults to
+ * their ACTIVE membership with the lexicographically smallest firm id.
+ * The key is stable (UUID), independent of database/PostgREST row order,
+ * and the sort is total — repeated bootstraps always pick the same firm.
+ *
+ * Only rows with status 'active' are eligible: invited, suspended, and
+ * removed memberships can never become the active context. With no active
+ * membership the result is null — the caller renders the authorized-empty
+ * state rather than keeping a stale firm.
+ *
+ * This is context SELECTION, never authorization: the database
+ * re-validates the header against the live membership on every request
+ * (DEC-J / RLS-MECH-01).
+ */
+export function resolveDefaultActiveFirm(
+  memberships: ReadonlyArray<{ firmId: string; status: string }>,
+): string | null {
+  const eligible = memberships
+    .filter((m) => m.status === 'active')
+    .map((m) => m.firmId)
+    .sort();
+  return eligible[0] ?? null;
+}

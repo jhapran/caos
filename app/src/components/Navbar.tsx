@@ -10,6 +10,7 @@ import {
   Sparkles,
   Sunrise,
   TriangleAlert,
+  Users,
   X,
 } from 'lucide-react';
 import Badge from './Badge';
@@ -37,6 +38,7 @@ export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: bool
   const items: NavItem[] = [
     { to: '/brief', label: 'Morning Brief', icon: Sunrise },
     { to: '/command', label: 'Command Centre', icon: Gauge },
+    { to: '/clients', label: 'Clients', icon: Users },
     { to: '/deadlines', label: 'Deadlines', icon: CalendarClock },
     { to: '/review', label: 'Review Queue', icon: FileBarChart2, badge: { value: reviewPendingCount, tone: 'gold' } },
     { to: '/dependency', label: 'Client Dependency', icon: Link2, badge: { value: DEPENDENCY_TOTALS.clients, tone: 'neutral' } },

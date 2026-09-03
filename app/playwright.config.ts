@@ -62,6 +62,12 @@ export default defineConfig({
             testMatch: 'staff-auth.spec.ts',
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },
+          {
+            // IMP-022: TEST-E2E-03…05 (client → entity → registration).
+            name: 'client360',
+            testMatch: 'client360.spec.ts',
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
         ]
       : []),
   ],

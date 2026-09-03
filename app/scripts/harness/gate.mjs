@@ -7,7 +7,8 @@
  *   preflight → stack lifecycle → deterministic reset+seed → decision-evidence
  *   → lint → unit/component tests → Auth integration → RLS integration
  *   → schema integration → audit integration → client-hierarchy adapter contract
- *   → engagement adapter contract → production build → Playwright smoke → network-binding security gate
+ *   → engagement adapter contract → Client 360 composite contract
+ *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
  *
@@ -162,6 +163,12 @@ async function main() {
   // engagement coverage already runs in the phases above — not duplicated).
   currentPhase = 'engagements-integration';
   run('engagements-integration', 'npm run test:engagements');
+
+  // IMP-022: Client 360 composite contract against the real stack
+  // (TEST-API-01…03 at the composition layer + the role/no-leak matrix;
+  // table-level schema/RLS/audit coverage runs in the phases above).
+  currentPhase = 'client360-integration';
+  run('client360-integration', 'npm run test:client360');
 
   currentPhase = 'build';
   run('build', 'npm run build');

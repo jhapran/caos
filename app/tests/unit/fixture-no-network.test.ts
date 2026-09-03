@@ -17,6 +17,7 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 import { authService } from '@/data/auth/authService';
+import { client360Service } from '@/data/client360/client360Service';
 import { engagementService } from '@/data/engagements/engagementService';
 import { tenancyService } from '@/data/tenancy/tenancyService';
 
@@ -45,6 +46,10 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
     await engagementService.listEngagements();
     await engagementService.getEngagement('c-abc-engagement');
     await engagementService.listEngagementLetterStatuses();
+    // IMP-022: the Client 360 fixture adapter composes in-memory only.
+    expect(client360Service.mode).toBe('fixture');
+    await client360Service.getClient360('c-abc');
+    await client360Service.listActiveStaff();
 
     expect(createClientSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();

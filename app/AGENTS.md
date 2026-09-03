@@ -82,7 +82,30 @@ RPC (active-firm pinned, like `list_client_identities()`). Layer-A
 audit trigger via the extended `audit_trg_row()`; the provider-neutral
 `engagementService` sits behind `@/data` (fixture adapter derives one
 engagement per demo client; Supabase adapter is plain PostgREST under
-RLS plus the billing projection RPC).
+RLS plus the billing projection RPC). IMP-022 (Client 360 live wiring)
+is IMPLEMENTED and awaiting human approval: `/clients` +
+`/clients/:clientId` (new routes, sidebar entry) render the composite
+Client 360 read model behind the provider-neutral `client360Service`
+(API-R0-CLI / DM-X-02 — one contract, several plain RLS reads; NO
+aggregate SECURITY DEFINER RPC, so the composition can never widen
+table RLS). Sections live: overview (partner/manager display names via
+firm_memberships ⋈ profiles under RLS-MEM-01/RLS-PRF-01), legal
+entities, registrations-as-identifiers, contacts, relationships
+(both-endpoint portfolio rule preserved — IMP-020 closure A),
+engagements. Deferred tabs (Compliance / Documents / Financials) render
+explicit deferred states; Communications is the spec-approved
+placeholder (DM-15). Unknown, malformed, out-of-portfolio, and
+foreign-firm client ids share ONE identical not-found surface
+(API-ERR-02). Create flows (client → entity → registration,
+TEST-E2E-03…05) reuse the IMP-020 write contracts; RequireAuth now
+bootstraps the single active-firm context from live memberships before
+any page renders (RLS-CTX-01/02 — context selection, never
+authorization). The bootstrap is identity-bound: the context is cleared
+on logout, sign-in as a different user, or session replacement BEFORE
+the new identity's pages render, and the temporary R0 multi-firm
+default is deterministic — the ACTIVE membership with the smallest
+firm id (`resolveDefaultActiveFirm` in `src/data/context.ts`; switcher
+UI is a later package). No migration; DB inventory unchanged.
 
 Authoritative sources:
 

@@ -95,7 +95,10 @@ const supabaseService: TenancyService = {
     const { data, error } = await getSupabaseClient()
       .from('firm_memberships')
       .select('id, role, status, firm_id, firms(name)')
-      .eq('user_id', uid);
+      .eq('user_id', uid)
+      // Stable ordering (RLS-CTX-02): the R0 default-firm rule and any
+      // future switcher must never depend on incidental row order.
+      .order('firm_id');
     if (error) throw toApiError(error);
     return ((data ?? []) as unknown as MembershipRow[]).map((row) => ({
       membershipId: row.id,
