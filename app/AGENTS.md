@@ -7,9 +7,16 @@ Guidance for AI coding agents working in this repository.
 This repository is in transition. Two things are both true and must not be
 conflated:
 
-**CURRENT implementation (this Git baseline):** a front-end-only MVP demo —
-React + TypeScript + Vite, fixture-backed, all data static in-memory via
-`@/data`, no backend, no network calls, no tests installed.
+**CURRENT implementation (this Git baseline):** two tracks now exist and
+are both real. (1) The polished fixture/demo track — React + TypeScript +
+Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
+(2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
+Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
+provider-neutral data adapters behind `@/data` — landed and accepted on
+hosted staging through IMP-031 (see the status block below and
+`docs/harness/current-state.md`). The test/harness stack (Vitest unit,
+auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
+installed and operational.
 
 **APPROVED TARGET architecture (Release 0):** specified and approved in
 `docs/spec/` (Final Spec Gate: PASS, 2026-08-31). Release 0 adds a Supabase
@@ -18,12 +25,13 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Until implementation packages land, the CURRENT description remains the
-accurate picture of the code. Do not pretend Supabase is implemented; do
-not document future behavior as if it exists. When a section below
-describes target state, it says so explicitly.
+Implementation packages have landed through IMP-031; the Supabase track
+is real and accepted on staging. Do not conflate the two tracks: fixture
+mode is demo-only; production behavior is the Supabase track. Do not
+document future behavior as if it exists. When a section below describes
+target state, it says so explicitly.
 
-**Release-0 implementation status (2026-09-02):** the Harness Gate is PASS
+**Release-0 implementation status (2026-09-04):** the Harness Gate is PASS
 (16/16), IMP-010 has landed (`supabase/migrations/` carries the production
 tenant core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and
 IMP-011 (staff authentication) is COMPLETE: a dual-mode auth adapter behind
@@ -34,8 +42,7 @@ false`, TOTP on, session timebox 168h / inactivity 12h). IMP-012
 tables (DEC-J live `firm_memberships` lookup; the untrusted `x-active-firm`
 request header selects firm context but grants nothing by itself;
 least-privilege `authenticated` grants, anon zero; AAL2 enforced at the
-database). IMP-013 (audit foundation) is IMPLEMENTED and awaiting human
-approval: `audit_log` (SCH-20, append-only, RLS enabled + forced, SELECT
+database). IMP-013 (audit foundation) is COMPLETE: `audit_log` (SCH-20, append-only, RLS enabled + forced, SELECT
 for partner/super_admin of the owning firm only), the Layer-A audit trigger
 on the three tenant-core tables, Layer-B membership-administration RPCs
 (`invite_member` / `change_membership_role` / `suspend_membership` /
@@ -49,7 +56,7 @@ visible screen — no default mode, no fixture fallback, MIG-DS-05);
 `fixture` = demo track (no backend), `supabase` = production track (needs
 `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, see `.env.example`).
 Selection happens once, through `src/data/source.ts` only. IMP-020
-(client hierarchy) is IMPLEMENTED and awaiting human approval: the first
+(client hierarchy) is COMPLETE: the first
 business-domain migration (`clients` / `legal_entities` /
 `client_relationships` / `registrations` / `contacts`, SCH-04…08) with
 composite same-firm FKs, RLS enabled AND forced (active-firm selector +
@@ -65,7 +72,7 @@ Layer-A audit triggers on all five tables, and the provider-neutral
 demo fixtures; Supabase adapter is plain PostgREST under RLS). The
 browser client now injects the untrusted `x-active-firm` selector header
 from `src/data/context.ts` on every request. IMP-021 (engagements) is
-IMPLEMENTED and awaiting human approval: the `engagements` table
+COMPLETE: the `engagements` table
 (SCH-09) — client-level professional-service relationships with
 `responsible_partner_membership_id` (validated ACTIVE same-firm
 membership via trigger; no role predicate, mirroring the DM-04
@@ -83,7 +90,7 @@ audit trigger via the extended `audit_trg_row()`; the provider-neutral
 `engagementService` sits behind `@/data` (fixture adapter derives one
 engagement per demo client; Supabase adapter is plain PostgREST under
 RLS plus the billing projection RPC). IMP-022 (Client 360 live wiring)
-is IMPLEMENTED and awaiting human approval: `/clients` +
+is COMPLETE: `/clients` +
 `/clients/:clientId` (new routes, sidebar entry) render the composite
 Client 360 read model behind the provider-neutral `client360Service`
 (API-R0-CLI / DM-X-02 — one contract, several plain RLS reads; NO
@@ -125,7 +132,8 @@ the provider-neutral `complianceRulesService` sits behind `@/data`
 UI screens in this package). Statutory seeds remain draft/pending —
 zero activated statutory rules (OPS-OQ-04 stays a production
 activation blocker). IMP-031 (compliance profiles & instances) is
-IMPLEMENTED and awaiting human approval: `client_compliance_profiles`
+COMPLETE and CLOSED (implementation checkpoint `03e999d`; hosted staging
+promoted and verified; human browser acceptance PASS 2026-09-04): `client_compliance_profiles`
 (SCH-11 — DM-11 applicability records, one profile per
 (entity, type, registration) via `NULLS NOT DISTINCT` uniqueness;
 proposed → active only through the controlled Layer-B approval
@@ -157,6 +165,16 @@ IMP-050 generator (service_role) is the only provenance writer.
 Coverage: 40 schema
 + 39 RLS + 18 audit integration tests and 22 unit tests (21 fixture
 service contract + 1 Supabase-adapter write-payload shape).
+
+Release-0 state through IMP-031 (CLOSED 2026-09-04): 16 / 27 formal R0
+packages complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030,
+IMP-031); migrations run through
+`20260905000000_compliance_profiles_instances.sql`; 14 application public
+tables (RLS enabled on all 14, FORCE RLS on the 11 tenant-owned content
+tables, 37 policies); Harness Gate green (19/19 phases). Next package:
+IMP-040 — Tasks, dependencies, checklists, comments (NOT STARTED —
+begins only with a fresh contract extraction and an explicit
+implementation instruction).
 
 Authoritative sources:
 
@@ -514,9 +532,13 @@ REL-LOOP-*, REL-GIT-*) and `docs/spec/11-testing-harness.md` (TEST-MLH-*).
 
 ## Security Considerations
 
-**Current (fixture baseline):** demo-only app — no authentication, no real
-credentials, no network calls; all "reminders"/"emails" are simulated in
-the store; fixture data is fictional client data.
+**Current:** two tracks. The fixture/demo track remains a demo-only app —
+no real credentials; all "reminders"/"emails" are simulated in the store;
+fixture data is fictional client data. The Supabase Release-0 track is
+live on hosted staging: real Supabase Auth (invitation-only, TOTP MFA),
+RLS as the enforcement boundary, hybrid Layer-A/B/C audit, and isolated
+local/staging environments — the target rules below already bind there.
+Production has NOT been promoted.
 
 **Target (Release 0, binding once implementation begins — per
 `docs/spec/03`, `04`, `05`, `08`, `13`):**

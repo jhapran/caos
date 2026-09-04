@@ -7,9 +7,9 @@
 - **Harness Gate:** PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verification from a fresh detached worktree: 14/14 phases green)
 - **Harness Engineering phase (IMP-000…IMP-005):** COMPLETE
 - **Next phase:** Release-0 implementation (per `12-release-0-plan.md`) — STARTED 2026-09-01
-- **Current package:** IMP-022 Client 360 live wiring (IMPLEMENTED 2026-09-03; acceptance checks green; awaiting human approval and Git checkpoint)
-- **Completed packages:** IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`); IMP-011 staff authentication (COMPLETE — checkpoint `8ea9c4a`); IMP-012 foundational RLS (COMPLETE — checkpoint `7f5c7b6`); IMP-013 audit foundation (COMPLETE — checkpoint `3ee1e6d`); IMP-014 data-source adapter skeleton (COMPLETE — checkpoint `3fed76a`); IMP-020 client hierarchy persistence (COMPLETE — checkpoint `1d7bbb1`); IMP-021 engagements (COMPLETE — checkpoint `c38c758`)
-- **Next package:** IMP-031 — Compliance profiles & instances (IMP-030 compliance types & rule versions landed; blocked until the IMP-030 human approval + checkpoint and a separate explicit implementation instruction)
+- **Current package:** none in flight — IMP-031 Compliance profiles & instances is CLOSED (implementation checkpoint `03e999d`; hosted staging promoted and verified; human staging acceptance PASS 2026-09-04)
+- **Completed packages (16 / 27):** IMP-000…IMP-005 harness engineering (COMPLETE — Harness Gate PASS, commit `305d133`); IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`); IMP-011 staff authentication (COMPLETE — checkpoint `8ea9c4a`); IMP-012 foundational RLS (COMPLETE — checkpoint `7f5c7b6`); IMP-013 audit foundation (COMPLETE — checkpoint `3ee1e6d`); IMP-014 data-source adapter skeleton (COMPLETE — checkpoint `3fed76a`); IMP-020 client hierarchy persistence (COMPLETE — checkpoint `1d7bbb1`); IMP-021 engagements (COMPLETE — checkpoint `c38c758`); IMP-022 Client 360 live wiring (COMPLETE — checkpoint `6b58769`); IMP-030 compliance types & rule versions (COMPLETE — checkpoint `00ad7c2`); IMP-031 compliance profiles & instances (COMPLETE/CLOSED — checkpoint `03e999d`, staging acceptance PASS 2026-09-04)
+- **Next package:** IMP-040 — Tasks, dependencies, checklists, comments (NOT STARTED; begins only with fresh-session contract extraction/reconciliation and a separate explicit implementation instruction)
 
 All existing OPEN / PROVISIONAL items remain governed by their documented
 future gates (see `12` Open / Provisional Dependency Matrix); this gate
@@ -41,7 +41,7 @@ documents move through review.
 | Document | Role |
 |---|---|
 | `docs/input/PRD.txt` | Authoritative product intent (v0.1, read in full) |
-| `AGENTS.md` | Current repository state (front-end-only implementation) |
+| `AGENTS.md` | Current repository state (fixture demo track + Supabase Release-0 track through IMP-031) |
 | Phase 1 analysis (chat, accepted) | Working PRD-to-code analysis and gap list |
 | Phase 1.5 decisions (chat, approved with clarifications) | Architecture decisions A–T |
 
