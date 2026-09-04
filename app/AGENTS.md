@@ -105,8 +105,8 @@ on logout, sign-in as a different user, or session replacement BEFORE
 the new identity's pages render, and the temporary R0 multi-firm
 default is deterministic — the ACTIVE membership with the smallest
 firm id (`resolveDefaultActiveFirm` in `src/data/context.ts`; switcher
-UI is a later package). IMP-030 (compliance types & rule versions) is
-IMPLEMENTED and awaiting human approval: `compliance_types` (SCH-10 —
+UI is a later package). IMP-030 (compliance types & rule versions) has
+landed (checkpoint `00ad7c2`): `compliance_types` (SCH-10 —
 hybrid reference data: `firm_id IS NULL` = system default, browser
 read-only per TEN-08; `governance_class` statutory|non_statutory is
 NOT NULL with no default, and firm overrides of a system `type_key`
@@ -124,7 +124,39 @@ the provider-neutral `complianceRulesService` sits behind `@/data`
 (fixture adapter mirrors the seed catalogue with the SAME UUIDs; no
 UI screens in this package). Statutory seeds remain draft/pending —
 zero activated statutory rules (OPS-OQ-04 stays a production
-activation blocker).
+activation blocker). IMP-031 (compliance profiles & instances) is
+IMPLEMENTED and awaiting human approval: `client_compliance_profiles`
+(SCH-11 — DM-11 applicability records, one profile per
+(entity, type, registration) via `NULLS NOT DISTINCT` uniqueness;
+proposed → active only through the controlled Layer-B approval
+command, which stamps `approved_by`/`approved_at` and creates NO
+instances — materialization is IMP-050) and `compliance_instances`
+(SCH-12 — DM-12 obligation per entity per period, DM-SM-04 10-state
+pipeline), with composite same-firm FKs (SCH-FK-01…03, including the
+new `registrations (firm_id, id)` parent key) and the DM-27
+registration-scope validator (TAN-class TDS PAN substitution is the
+only permitted class exception; instances may carry NULL registration
+only with a recorded `tds_pan_exception` reason). RLS enabled AND
+forced on both tables (RLS-CCP-01/RLS-CIN-01: manager-plus write
+paths; senior/article read only profiles/instances tied to their live
+assignments; the transition authorization matrix and four-eyes rules
+RLS-4EY-01/02 are enforced by the guards, not the caller's grants).
+The two Layer-B definer commands `approve_client_compliance_profile(uuid)`
+and `transition_compliance_instance(uuid,text,text)` are the only
+guarded-column writers (single-writer marker; the transition command
+adds state-based mutation-key idempotency — `already_applied` no-op,
+no double audit); approval is a business approval with no AAL2
+step-up (RLS-AAL-02 precedent). Layer-A audit via the extended
+`audit_trg_row()`; the provider-neutral `complianceInstancesService`
+sits behind `@/data` (fixture adapter + plain-PostgREST-under-RLS
+Supabase adapter; no UI screens in this package). The authenticated
+INSERT grant on `compliance_instances` excludes the four recurrence-
+provenance columns (AUTO-REC-07) — the adapter sends no provenance
+keys; the server defaults `generation_source` to `'manual'` and the
+IMP-050 generator (service_role) is the only provenance writer.
+Coverage: 40 schema
++ 39 RLS + 18 audit integration tests and 22 unit tests (21 fixture
+service contract + 1 Supabase-adapter write-payload shape).
 
 Authoritative sources:
 

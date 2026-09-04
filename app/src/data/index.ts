@@ -80,6 +80,25 @@ export type {
   UpdateComplianceTypeInput,
   UpdateRuleVersionDraftInput,
 } from './complianceRules';
+// --- IMP-031: compliance profiles & instances (API-R0-CCP / API-R0-CIN) ------
+export { complianceInstancesService } from './complianceInstances';
+export type {
+  ComplianceInstanceRecord,
+  ComplianceInstancesService,
+  ComplianceInstanceState,
+  CompliancePayload,
+  ComplianceProfileRecord,
+  ComplianceProfileStatus,
+  CreateInstanceInput,
+  CreateProfileInput,
+  GenerationSource,
+  InstanceListFilter,
+  ProfileListFilter,
+  TransitionInstanceInput,
+  TransitionInstanceResult,
+  UpdateInstanceInput,
+  UpdateProfileInput,
+} from './complianceInstances';
 // --- IMP-022: Client 360 composite read (API-R0-CLI, DM-X-02) ----------------
 export { client360Service } from './client360';
 export type {

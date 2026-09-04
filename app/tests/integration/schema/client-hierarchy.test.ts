@@ -329,13 +329,13 @@ describe('structure — PKs, uniques, indexes', () => {
     );
   });
 
-  it('audit triggers exist on all hierarchy tables + engagements + compliance rules (Layer A, AUD-CAT-01)', () => {
+  it('audit triggers exist on all hierarchy tables + engagements + compliance rules + compliance profiles/instances (Layer A, AUD-CAT-01)', () => {
     const triggers = psql(
       `select string_agg(tgrelid::regclass::text, ',' order by tgrelid::regclass::text)
        from pg_trigger where not tgisinternal and tgname ~ '_audit_row$'`,
     ).trim();
     expect(triggers).toBe(
-      'client_relationships,clients,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations',
+      'client_compliance_profiles,client_relationships,clients,compliance_instances,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations',
     );
   });
 });
