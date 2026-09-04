@@ -108,6 +108,14 @@ Exactly 14 domain events — completed, meaningful business facts:
   IMP-050). IMP-031 manual creation does not publish this event to any
   bus/outbox/webhook. Once IMP-050 establishes the approved mechanism,
   manual creation may be wired to publish under the event contract.
+- **`task.created` / `task.assigned` / `task.completed` publication note
+  (IMP-040 partition, 2026-09-04):** these remain approved event-contract
+  names in the catalogue above, but IMP-040 owns mutation + audit only —
+  it does NOT publish them. Audit capture (Layer A/B) is NOT domain-event
+  publication; no outbox, event bus, webhook publisher, queue, or event
+  trigger may be created for task events in IMP-040. Publication is wired
+  only once the approved AUTO-OQ-02 mechanism exists (IMP-050), under this
+  event contract.
 
 ## Scheduler / internal-signal catalogue (Release 0)
 

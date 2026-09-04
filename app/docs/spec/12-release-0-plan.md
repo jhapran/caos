@@ -968,20 +968,31 @@ separate explicit implementation instruction.
   comments with retraction, explicit next-action fields for My Work.
 - **Requirement IDs:** DM-12…14, DM-SM-* (task lifecycle), SCH-13…16,
   RLS-TSK-01, RLS-TCM-01; DEC-H.
-- **TEST-* IDs:** TEST-SCH-01 (dependency acyclicity, SCH-14),
-  TEST-SCH-02 (composite same-firm FK rejection incl. task_dependencies);
-  note: `11` defines no dedicated dependency-constraint test beyond
-  TEST-SCH-01/02 (gap recorded); TEST-RLS-*, TEST-API-*, TEST-E2E-07.
+- **TEST-* IDs:** TEST-SCH-01 (dependency acyclicity, SCH-14 — IMP-040
+  supplies the implementation coverage), TEST-SCH-02 (shared composite
+  same-firm FK rejection — IMP-040 adds task/task_dependency cases,
+  earlier coverage remains regression); dedicated IMP-040 invariants:
+  TEST-SCH-15 (subject binding), TEST-SCH-16 (mandatory lifecycle
+  fields), TEST-SCH-17 (task four-eyes reviewer authorization),
+  TEST-SCH-18 (self-edge), TEST-SCH-19 (duplicate pair), TEST-SCH-20
+  (cycle race); TEST-RLS-*, TEST-API-* (API-R0-TSK contract).
+  TEST-E2E-07 is owned downstream by IMP-042 (see `11`); IMP-040 carries
+  no UI scope.
 - **Dependencies:** IMP-031 (tasks may link instances), IMP-013.
-- **Allowed scope:** migrations, policies, adapter functions, audit/
-  domain events task.created/assigned/completed.
+- **Allowed scope:** migrations, policies, adapter functions, audit
+  capture for task lifecycle/assignment/completion (mutation + audit
+  only — publication of task.created/assigned/completed is deferred to
+  the AUTO-OQ-02 mechanism, IMP-050; see `09`).
 - **Non-goals:** workload recommendation intelligence (DEC-L deferral);
-  My Work *surface* wiring is IMP-042.
+  My Work *surface* wiring is IMP-042; no domain-event infrastructure
+  (no outbox/bus/webhook/queue); no Task/My Work UI (TEST-E2E-07 lands
+  downstream at IMP-042).
 - **Expected files/areas:** `supabase/migrations/`, `src/data/`.
 - **Entry criteria:** R0-D green.
 - **Acceptance criteria:** circular dependencies rejected; cross-firm task
   access denied; comment immutability enforced.
-- **Verification:** CI-equivalent + TEST-SCH/RLS/API + TEST-E2E-07.
+- **Verification:** CI-equivalent + TEST-SCH/RLS/API (TEST-E2E-07
+  downstream at IMP-042).
 - **Exit criteria:** task subsystem green.
 - **Human approval:** no (RLS pattern established; diff review required).
 - **Git checkpoint:** `feat: tasks and dependencies`.
@@ -1027,7 +1038,9 @@ separate explicit implementation instruction.
 - **Requirement IDs:** DM-16…18, DM-25, SCH-18, SCH-19, RLS-ALR-01,
   RLS-ARL-01 (rule administration roles per RLS-OQ-03 resolution);
   DEC-L.
-- **TEST-* IDs:** TEST-RLS-*, TEST-API-*, TEST-E2E-09.
+- **TEST-* IDs:** TEST-RLS-*, TEST-API-*, TEST-E2E-07 (task assignment +
+  update — downstream UI acceptance; backend behavior delivered by
+  IMP-040), TEST-E2E-09.
 - **Dependencies:** IMP-040, IMP-041; alert *generation* lands in IMP-051
   — this package ships persistence, ack/resolve, and the My Work surface.
 - **Allowed scope:** migrations, policies, adapter, My Work page wiring.
@@ -1317,12 +1330,12 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | TEST-RLS-GEN-01…04, TEST-RLS-MAT-01…03 | IMP-012, then re-run per RLS-bearing package (020/030/031/040/041/042) |
 | TEST-RLS-CRV-01…13 | IMP-030 |
 | TEST-RLS-SUP-01 | IMP-012 (shape), IMP-072 (operations) |
-| TEST-SCH-01…14 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 (TEST-SCH-12/13/14 owned by IMP-031) |
+| TEST-SCH-01…20 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 (TEST-SCH-01 dependency-acyclicity implementation coverage and TEST-SCH-15…20 owned by IMP-040; TEST-SCH-02 shared — earlier package coverage remains regression; TEST-SCH-12/13/14 owned by IMP-031) |
 | TEST-AUD-01…11 | IMP-013, extended per domain package |
-| TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-060, IMP-061, IMP-062 |
+| TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-040 (API-R0-TSK contract tests), IMP-060, IMP-061, IMP-062 |
 | TEST-AUTO-01…12 | IMP-050, IMP-051 |
 | TEST-MIG-01…15 | IMP-003, IMP-014, IMP-070, IMP-071 |
-| TEST-E2E-01…12 | IMP-001 (skeleton), flows land with their packages; full pass at IMP-071 |
+| TEST-E2E-01…12 | IMP-001 (skeleton), flows land with their packages (TEST-E2E-07 owned by IMP-042); full pass at IMP-071 |
 | TEST-SEC-01…05 | IMP-011, IMP-012, IMP-013 |
 | TEST-OPS-01…10 | IMP-071, IMP-072 |
 

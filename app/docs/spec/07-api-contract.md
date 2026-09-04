@@ -415,11 +415,26 @@ authorization/not-found semantics and API-SEC-* function security.
   rank (RLS-4EY-01/02, RLS-CIN-01); regression to `preparation` may be
   initiated by the assigned reviewer or a manager+ actor within scope. All
   rejections are mapped per API-ERR-04 with machine-readable reason codes.
-- **API-R0-TSK — tasks.** CRUD + assignment (RLS-TSK-01); transitions per
-  DM-SM-05 with mandatory-field validation (API-ARCH-04); ad-hoc task
-  creation supported (`compliance_instance_id` nullable, DEC-H); dependency
-  edges via RPC enforcing acyclicity (SCH-14); checklist toggles optimistic
-  (API-MUT-02); comments append-only (RLS-TCM-01).
+- **API-R0-TSK — tasks (IMP-040 closure 2026-09-04).** CRUD + assignment
+  (RLS-TSK-01); lifecycle transitions ONLY via the controlled Layer-B
+  command `transition_task` (API-ARCH-04) — `status` is never directly
+  browser-writable; the command authorizes before exposing existence,
+  status, legality, vocabulary, or mutation/replay information
+  (API-ERR-02: an unauthorized/out-of-scope existing task and a
+  nonexistent task return the identical `not_found`); mandatory-field
+  validation per DM-SM-05 (`waiting` requires `waiting_reason`;
+  `returned` requires a non-empty reviewer comment created atomically as
+  an immutable SCH-16 comment); four-eyes reviewer-only
+  `submitted → approved` / `submitted → returned` per RLS-4EY-03 with no
+  rank bypass. Ad-hoc task creation supported (`compliance_instance_id`
+  nullable, DEC-H) under the RLS-TSK-01 creation scope and the SCH-13
+  subject binding (`client_id` server-derived/validated from a linked
+  instance; ad-hoc requires a same-firm client). Dependency edges ONLY via
+  the controlled commands `add_task_dependency` /
+  `remove_task_dependency` (RLS-TSK-02) — self-edge, duplicate-pair, and
+  cycle rejection with firm-scoped transaction serialization
+  (TEST-SCH-18/19/20). Checklist toggles optimistic (API-MUT-02);
+  comments append-only (RLS-TCM-01).
 - **API-R0-RVW — review queue.** Queue read per role (submitter sees own;
   partner/manager see firm/team queue, RLS-RVW-01); decision RPC
   (API-ARCH-04, idempotent per API-MUT-03); realtime per API-RT-01. Review

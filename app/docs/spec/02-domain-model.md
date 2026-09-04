@@ -155,7 +155,7 @@ now so the schema is forward-compatible, built in a later release.
 - **Ownership:** Tenant-owned; belongs to a Client (always) and optionally a ComplianceInstance (`compliance_instance_id` nullable, DEC-H).
 - **Relationships:** N—1 Client; N—1 ComplianceInstance (nullable); N—1 assignee/reviewer (FirmMembership); 1—N TaskChecklistItem, TaskComment; **N—N task-to-task dependencies (supported in the R0 domain model and schema — DM-OQ-04 resolution).**
 - **Lifecycle:** see DM-SM-05.
-- **Invariants:** Every task has an explicit next-action text (PRD §44). Four-eyes: approver ≠ assignee where required by the compliance type's workflow template (PRD §47) — an independent control, unaffected by engagement-partner differences; enforcement point specified in `05`/`07`. **Deferred (DM-OQ-04 resolution):** advanced dependency visualization, automated critical-path analysis, dependency intelligence — the data model supports dependencies; the intelligence is post-R0.
+- **Invariants:** Every task has an explicit next-action text (PRD §44). Four-eyes: approver ≠ assignee where required by the compliance type's workflow template (PRD §47) — an independent control, unaffected by engagement-partner differences; enforcement point specified in `05`/`07`. **Applicability (IMP-040 closure 2026-09-04):** an instance-linked task inherits the four-eyes requirement from Task → ComplianceInstance → ComplianceType; an ad-hoc task has no ComplianceType and is NOT four-eyes-required by default (RLS-4EY-03). **Status transitions occur only through the controlled transition command (`05` RLS-TSK-01, `07` API-R0-TSK) — never direct browser status writes.** **Subject binding:** a task linked to a ComplianceInstance derives/validates its `client_id` from the instance (no divergence, no independent rewrite); an ad-hoc task requires a same-firm client (SCH-13, TEST-SCH-15). **Deferred (DM-OQ-04 resolution):** advanced dependency visualization, automated critical-path analysis, dependency intelligence — the data model supports dependencies; the intelligence is post-R0.
 - **Tenant boundary:** `firm_id` required.
 - **R0 status:** R0. **Deferred:** time tracking beyond manual minutes, workload-recommendation engine (DEC-L), dependency intelligence.
 
@@ -171,7 +171,7 @@ now so the schema is forward-compatible, built in a later release.
 - **Purpose:** Discussion and review remarks on a task; reviewer comments become part of audit history (PRD §46).
 - **Ownership:** Tenant-owned; belongs to a Task.
 - **Lifecycle:** `posted` (immutable after posting; corrections are new comments).
-- **Invariants:** Author and timestamp are system-set. Deletion is prohibited; retraction is a marked new state, not removal (audit).
+- **Invariants:** Author and timestamp are system-set. Deletion is prohibited; retraction is a marked new state, not removal (audit). A reviewer comment required by a four-eyes `submitted → returned` transition is created atomically with that transition and follows this same immutable-comment contract (RLS-4EY-03).
 - **Tenant boundary:** `firm_id` required.
 - **R0 status:** R0.
 

@@ -125,6 +125,28 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
   administrator's `actor_user_id` and the AAL2 step-up context where
   applicable (RLS-CRV-03, RLS-AAL-01).
 
+### 7b. Task audit partition (IMP-040 closure 2026-09-04)
+
+- **Layer A (baseline trigger audit):** ordinary permitted non-state task
+  writes, checklist writes, and comment append/retraction receive baseline
+  audit capture with old/new snapshots per the existing sensitivity
+  conventions (tasks MEDIUM-HIGH; comments MEDIUM; SCH-13…16).
+- **Layer B (controlled commands, atomic mutation + audit):**
+  `transition_task` executions (including the atomic reviewer-return
+  comment of RLS-4EY-03) and the dependency-graph commands
+  `add_task_dependency` / `remove_task_dependency` where
+  security-significant. Actor identity is server-derived via the trusted
+  audit-context mechanism (AUD-CTX-01); no browser-controlled actor
+  stamps.
+- **Denials:** unauthorized probes on the controlled commands follow the
+  approved API-ERR-02 / AUD-FAIL-01 posture — an existing but invisible
+  object is audited server-side as a security-significant denial, a
+  nonexistent object gets no invented audit row, and neither leaks through
+  the caller response.
+- Task event **publication** is not part of audit and not part of IMP-040:
+  `task.created` / `task.assigned` / `task.completed` publication remains
+  deferred to the AUTO-OQ-02 mechanism (IMP-050) — see `09`.
+
 ### 8. Immutable audit-log requirements (invariants)
 
 - **AUD-INV-01:** `audit_log` is **append-only for all application roles and

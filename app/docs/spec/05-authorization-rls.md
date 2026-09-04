@@ -141,6 +141,17 @@ applicable relationship. No rule in this document may assume
   independent of role seniority (DM-13; PRD §47).
 - **RLS-4EY-02:** The check is server-side (transition RPC), never client-side
   only. Verified by TEST-AUD-03 / transition tests in `11`.
+- **RLS-4EY-03 (task four-eyes; IMP-040 closure 2026-09-04):** for an
+  instance-linked task whose compliance type requires four-eyes
+  (`four_eyes_required`, SCH-10 — inherited Task → ComplianceInstance →
+  ComplianceType), `submitted → approved` and `submitted → returned` are
+  performed only by the assigned reviewer: `reviewer_membership_id` must be
+  an active same-firm membership and MUST differ from
+  `assignee_membership_id`; no partner/super_admin/manager rank bypass.
+  `submitted → returned` additionally requires a non-empty reviewer
+  comment, created atomically with the transition as an immutable SCH-16
+  comment. Ad-hoc tasks (no ComplianceInstance, hence no ComplianceType)
+  are NOT four-eyes-required by default.
 
 ### 8a. Step-up authentication (AAL2) defaults — RLS-OQ-01 RESOLVED directionally
 
@@ -290,7 +301,11 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
   - `state` may NEVER be changed by direct browser table UPDATE; all transitions go through the controlled Layer-B transition RPC. senior/article have no direct table mutation right on compliance_instances.
   - RPC invocation scope: super_admin — valid transitions firm-wide; partner — valid transitions firm-wide; manager — valid transitions only within manager portfolio scope (RLS-STF-03); senior/article — only when their live FirmMembership is currently the instance's `assignee_membership_id` OR `reviewer_membership_id`; billing — none; anon — none.
   - Four-eyes (where the compliance type's `four_eyes_required` applies, SCH-10): `reviewer_membership_id` MUST differ from `assignee_membership_id`; a transition leaving `internal_review` must be performed by the assigned reviewer — including the workflow-skipping `internal_review → ready_to_file` path when client_approval is skipped; this binds manager/partner/super_admin actors equally — no privileged role bypasses four-eyes by rank. Regression back to `preparation` from `internal_review` may be initiated by the assigned reviewer or a manager+ actor within scope, and is audit-logged (DM-SM-04).
-- **RLS-TSK-01** tasks + task_dependencies + task_checklist_items: read per scoping; assignee may update own task status/fields within DM-SM-05; assignment/reassignment manager+; ad-hoc task creation any staff for own clients.
+- **RLS-TSK-01** tasks + task_checklist_items (IMP-040 closure 2026-09-04): read per scoping (manager portfolio + directly-assigned, RLS-STF-03; senior/article assigned-work only, RLS-STF-04; billing denied). Routine non-state field updates remain ordinary RLS writes where the §11 matrix permits; `status` may NEVER be changed by direct browser table UPDATE — all DM-SM-05 transitions go through the controlled Layer-B command `transition_task`, which authorizes BEFORE exposing task existence, current status, transition legality, workflow vocabulary, or mutation/replay information: an unauthorized/out-of-scope existing task and a nonexistent task return the identical API-ERR-02 `not_found` posture (no existence oracle).
+  - Transition invocation scope (live membership lookup; suspended/removed memberships lose authorization on the next request with the same JWT): super_admin — firm-wide valid transitions; partner — firm-wide valid transitions; manager — only tasks within manager task scope (portfolio OR directly assigned to the current live membership); senior/article — ordinary transitions only where the current live membership is the current assignee (reviewer-only transitions per RLS-4EY-03); billing — none; anon — none.
+  - Assignment/reassignment: manager+ within scope.
+  - Ad-hoc task creation (supersedes the former "any staff for own clients" wording): super_admin/partner — any client in the active firm; manager — portfolio clients only; senior/article — only for a client ALREADY in current assigned-work scope (via an existing assigned ComplianceInstance or existing Task per this RLS model), the newly created ad-hoc task must initially assign the creator's own membership, and creation must NOT bootstrap access to an otherwise invisible client; billing — denied; anon — denied. Client-table RLS is not broadened to make task creation convenient.
+- **RLS-TSK-02** task_dependencies (IMP-040 closure 2026-09-04): direct browser mutation closed; graph changes only via the controlled commands `add_task_dependency` / `remove_task_dependency`. Authorization: super_admin/partner — firm-wide; manager — BOTH referenced tasks must be inside manager-authorized task scope (RLS-TSK-01); senior/article — denied; billing — denied; anon — denied. Both tasks must be same-firm via the composite references (SCH-14); no same-client-only rule beyond existing approved SCH rules. The add path is race-safe by construction: firm-scoped transaction advisory lock, then recursive cycle validation, then insert — one atomic commit (TEST-SCH-20).
 - **RLS-TCM-01** task_comments: read per task scoping; insert by any staff with task access; no update except `retracted` by author; no delete.
 - **RLS-RVW-01** review_items: submitters see own; reviewers (partner/manager per matrix) see firm/team queue; decisions via decision RPC (records decider/rationale); billing denied.
 - **RLS-ALR-01** alerts: read partner/manager/admin (+ senior/article for alerts on assigned work); acknowledge/snooze manager+; resolve per rule config (RLS-4EY n/a).

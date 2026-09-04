@@ -220,8 +220,12 @@ record:
 ## Database / schema tests (TEST-SCH-*)
 
 - **TEST-SCH-01:** task-dependency acyclicity rejected at insert (SCH-14).
+  Ownership: IMP-040 supplies the task-dependency implementation coverage
+  (the requirement is only executable once `task_dependencies` exists).
 - **TEST-SCH-02:** foreign keys and composite same-firm FKs reject
-  cross-firm references at the constraint layer (SCH-FK-01/02).
+  cross-firm references at the constraint layer (SCH-FK-01/02). Shared
+  requirement: each earlier package's coverage remains regression
+  coverage; IMP-040 adds the `tasks` / `task_dependencies` cases.
 - **TEST-SCH-03:** unique constraints hold (clients/registrations/
   memberships/profiles/instance key).
 - **TEST-SCH-04:** registration-scope invariants — registration-scoped
@@ -275,6 +279,33 @@ record:
   succession (SCH-32), existing instances keep their original
   `rule_version_id`; provenance fields unchanged; the historical version
   remains readable and referentially valid (AUTO-REC-07).
+- **TEST-SCH-15 (IMP-040 closure 2026-09-04):** task subject binding —
+  for a task with `compliance_instance_id IS NOT NULL`, `client_id` is
+  server-derived/validated from the linked instance; a caller cannot
+  create or rewrite a task whose `client_id` differs from the instance's
+  client; re-linking `compliance_instance_id` preserves the subject
+  invariant (SCH-13, DM-13).
+- **TEST-SCH-16 (IMP-040 closure 2026-09-04):** task mandatory lifecycle
+  fields — DM-SM-05 status CHECK vocabulary; `next_action` required;
+  entering `waiting` requires `waiting_reason`; `returned` requires a
+  non-empty reviewer comment created atomically with the transition
+  (SCH-13, API-ARCH-04).
+- **TEST-SCH-17 (IMP-040 closure 2026-09-04):** task four-eyes reviewer
+  authorization (RLS-4EY-03) — where four-eyes applies (instance-linked
+  task whose compliance type requires it), `submitted → approved` and
+  `submitted → returned` are accepted only from the assigned reviewer;
+  reviewer ≠ assignee; no privileged-rank bypass; ad-hoc tasks are not
+  four-eyes-required by default; direct `status` UPDATE denied for all
+  roles.
+- **TEST-SCH-18 (IMP-040 closure 2026-09-04):** dependency self-edge
+  rejection — `task_id = depends_on_task_id` rejected (SCH-14).
+- **TEST-SCH-19 (IMP-040 closure 2026-09-04):** dependency duplicate-pair
+  rejection — `(task_id, depends_on_task_id)` uniqueness enforced
+  (SCH-14).
+- **TEST-SCH-20 (IMP-040 closure 2026-09-04):** dependency cycle race —
+  concurrent `A → B` / `B → A` additions: at most one commits; the
+  committed graph remains acyclic; firm-scoped transaction advisory lock +
+  recursive cycle validation + insert are atomic (SCH-14, RLS-TSK-02).
 
 ## Automation tests (TEST-AUTO-*)
 
@@ -375,7 +406,9 @@ instance, one event). Extensions:
 5. **TEST-E2E-05** registration workflow;
 6. **TEST-E2E-06** compliance instance visible on Client 360/deadlines;
 7. **TEST-E2E-07** task assignment + update (incl. `waiting` requiring a
-   reason);
+   reason) — **owned by IMP-042 (Alerts & My Work) as downstream UI
+   acceptance**; IMP-040 owns the backend/data-adapter/API behavior this
+   flow exercises and carries no UI scope;
 8. **TEST-E2E-08** review submit + decision (approve and return);
 9. **TEST-E2E-09** My Work buckets render (Today/This Week/Waiting/
    Returned);
