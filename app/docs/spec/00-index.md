@@ -9,7 +9,7 @@
 - **Next phase:** Release-0 implementation (per `12-release-0-plan.md`) — STARTED 2026-09-01
 - **Current package:** IMP-022 Client 360 live wiring (IMPLEMENTED 2026-09-03; acceptance checks green; awaiting human approval and Git checkpoint)
 - **Completed packages:** IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`); IMP-011 staff authentication (COMPLETE — checkpoint `8ea9c4a`); IMP-012 foundational RLS (COMPLETE — checkpoint `7f5c7b6`); IMP-013 audit foundation (COMPLETE — checkpoint `3ee1e6d`); IMP-014 data-source adapter skeleton (COMPLETE — checkpoint `3fed76a`); IMP-020 client hierarchy persistence (COMPLETE — checkpoint `1d7bbb1`); IMP-021 engagements (COMPLETE — checkpoint `c38c758`)
-- **Next package:** IMP-030 compliance types & rule versions (blocked until the IMP-022 human approval + checkpoint and a separate explicit implementation instruction)
+- **Next package:** IMP-031 — Compliance profiles & instances (IMP-030 compliance types & rule versions landed; blocked until the IMP-030 human approval + checkpoint and a separate explicit implementation instruction)
 
 All existing OPEN / PROVISIONAL items remain governed by their documented
 future gates (see `12` Open / Provisional Dependency Matrix); this gate

@@ -917,13 +917,25 @@ separate explicit implementation instruction.
   `calculated_due_date`, `period_start`, `period_end`), manual vs
   generated representation, and status state machines.
 - **Requirement IDs:** DM-11, DM-27, DM-SM-01…06; SCH-11, SCH-12;
-  RLS-CCP-01, RLS-CIN-01; AUTO-REC-03/07 (provenance contract,
-  consumer-side); uniqueness incl. NULLS NOT DISTINCT behavior.
-- **TEST-* IDs:** TEST-SCH-04…09 (scope invariants, uniqueness,
-  provenance, lifecycle), TEST-RLS-GEN-*/MAT-*, TEST-API-*.
+  RLS-CCP-01, RLS-CIN-01; AUTO-REC-03 layer 3 only (database uniqueness —
+  schema-side duplicate protection; layers 1/2/4 are IMP-050), AUTO-REC-07
+  (provenance contract, consumer-side); uniqueness incl. NULLS NOT DISTINCT
+  behavior.
+- **TEST-* IDs:** TEST-SCH-04 (scope invariants), TEST-SCH-05 (instance
+  uniqueness NULLS NOT DISTINCT), TEST-SCH-08 (instance provenance +
+  immutability), TEST-SCH-09 (lifecycle/check constraints), TEST-SCH-12
+  (client_id trigger-maintenance), TEST-SCH-13 (four-eyes transition
+  authorization), TEST-SCH-14 (rule-version pinning stability);
+  TEST-RLS-GEN-01…04, TEST-RLS-MAT-01…03; TEST-API-01…10 as applicable to
+  API-R0-CCP/API-R0-CIN; TEST-AUD-01/03/07/08/09; TEST-MIG-06/07.
+  (TEST-SCH-06/07/10/11 are SCH-32 invariants owned/shipped by IMP-030 —
+  regression only.)
 - **Dependencies:** IMP-030.
 - **Allowed scope:** migrations, policies, adapter CRUD for profiles and
-  manual instances; status transitions per DM-SM-*.
+  manual instances; status transitions per DM-SM-*; profile approval
+  command (no instance materialization side effect); transition RPC with
+  the RLS-CIN-01 authorization matrix; NO domain-event publication
+  mechanism (AUTO-OQ-02 deferred to IMP-050).
 - **Non-goals:** the generator itself (IMP-050); alert evaluation
   (IMP-051).
 - **Expected files/areas:** `supabase/migrations/`, `src/data/`.
@@ -938,8 +950,11 @@ separate explicit implementation instruction.
 - **Human approval:** **yes** — RLS-bearing compliance surface.
 - **Git checkpoint:** `feat: compliance profiles and instances`.
 - **Rollback concern:** standard forward-only.
-- **Open/provisional dependency:** none blocking (MIG-OQ-04 back-
-  materialization depth affects seeding, not schema).
+- **Open/provisional dependency:** none blocking. Seeds use
+  `generation_source='manual'`/`'import'` only (never `'recurrence'` —
+  the generator is IMP-050; `10` Phase C). MIG-OQ-04 (back-materialization
+  depth) is NOT a build blocker for IMP-031 — it constrains production
+  onboarding materialization depth only; no depth is encoded.
 
 ### PHASE R0-E — Work Management
 
@@ -953,8 +968,10 @@ separate explicit implementation instruction.
   comments with retraction, explicit next-action fields for My Work.
 - **Requirement IDs:** DM-12…14, DM-SM-* (task lifecycle), SCH-13…16,
   RLS-TSK-01, RLS-TCM-01; DEC-H.
-- **TEST-* IDs:** TEST-SCH-05/06 (dependency constraints, acyclicity),
-  TEST-RLS-*, TEST-API-*, TEST-E2E-07.
+- **TEST-* IDs:** TEST-SCH-01 (dependency acyclicity, SCH-14),
+  TEST-SCH-02 (composite same-firm FK rejection incl. task_dependencies);
+  note: `11` defines no dedicated dependency-constraint test beyond
+  TEST-SCH-01/02 (gap recorded); TEST-RLS-*, TEST-API-*, TEST-E2E-07.
 - **Dependencies:** IMP-031 (tasks may link instances), IMP-013.
 - **Allowed scope:** migrations, policies, adapter functions, audit/
   domain events task.created/assigned/completed.
@@ -1300,9 +1317,9 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | TEST-RLS-GEN-01…04, TEST-RLS-MAT-01…03 | IMP-012, then re-run per RLS-bearing package (020/030/031/040/041/042) |
 | TEST-RLS-CRV-01…13 | IMP-030 |
 | TEST-RLS-SUP-01 | IMP-012 (shape), IMP-072 (operations) |
-| TEST-SCH-01…11 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 |
+| TEST-SCH-01…14 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 (TEST-SCH-12/13/14 owned by IMP-031) |
 | TEST-AUD-01…11 | IMP-013, extended per domain package |
-| TEST-API-01…10 | IMP-014, IMP-022, IMP-060, IMP-061, IMP-062 |
+| TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-060, IMP-061, IMP-062 |
 | TEST-AUTO-01…12 | IMP-050, IMP-051 |
 | TEST-MIG-01…15 | IMP-003, IMP-014, IMP-070, IMP-071 |
 | TEST-E2E-01…12 | IMP-001 (skeleton), flows land with their packages; full pass at IMP-071 |

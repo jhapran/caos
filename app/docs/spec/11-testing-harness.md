@@ -258,6 +258,23 @@ record:
   cannot downgrade the inherited `governance_class`; a genuinely custom
   firm type may be `non_statutory` and its versions may use
   `not_required` (SCH-10 governance inheritance, SCH-32 gate).
+- **TEST-SCH-12:** `client_id` on compliance_instances is
+  trigger-maintained and never user-writable (SCH-A-02, SCH-12) — direct
+  user UPDATE of `client_id` rejected; the denormalized value stays
+  consistent with the parent legal entity.
+- **TEST-SCH-13:** four-eyes transition authorization (RLS-CIN-01,
+  RLS-4EY-01/02) — reviewer ≠ assignee enforced where the type requires
+  it; transitions leaving `internal_review` (including
+  `internal_review → ready_to_file` when client_approval is skipped)
+  accepted only from the assigned reviewer; privileged roles cannot bypass
+  by rank; regression to `preparation` allowed from the assigned reviewer
+  or an in-scope manager+; senior/article transition rights limited to
+  instances where their membership is the current assignee/reviewer;
+  direct `state` UPDATE denied for all roles.
+- **TEST-SCH-14:** instance rule-version pinning stability — after rule
+  succession (SCH-32), existing instances keep their original
+  `rule_version_id`; provenance fields unchanged; the historical version
+  remains readable and referentially valid (AUTO-REC-07).
 
 ## Automation tests (TEST-AUTO-*)
 

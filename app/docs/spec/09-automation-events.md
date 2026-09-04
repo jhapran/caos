@@ -102,6 +102,12 @@ Exactly 14 domain events — completed, meaningful business facts:
 - **AUTO-EVT-01:** The catalogue above is exhaustive for R0 domain events;
   adding events requires a domain justification per AUTO-PRIN-01, not a
   trigger habit.
+- **`compliance_instance.created` publication note (IMP-031 partition):**
+  audit capture of manual creation (Layer A) is NOT domain-event
+  publication; the publication mechanism is AUTO-OQ-02 (open, resolved at
+  IMP-050). IMP-031 manual creation does not publish this event to any
+  bus/outbox/webhook. Once IMP-050 establishes the approved mechanism,
+  manual creation may be wired to publish under the event contract.
 
 ## Scheduler / internal-signal catalogue (Release 0)
 
@@ -176,7 +182,11 @@ compliance_instances (provenance: rule_version_id, generation_source,
   when an instance reaches `closed` (materialize its successor, linked via
   `successor_instance_id`, SCH-12); (c) on the `sched.recurrence.evaluate`
   signal, which materializes instances entering a look-ahead window so
-  work appears before the period starts.
+  work appears before the period starts. Trigger point (a) is owned by the
+  generator package (IMP-050); IMP-031 ships the profile approval command
+  without any generation side effect — an `active` profile with zero
+  materialized instances is valid in the interim; no trigger/RPC-enqueued
+  generation may be invented before IMP-050.
 - **AUTO-REC-02 — Look-ahead window.** The materialization lead time is
   configuration (firm settings / due_rule metadata), not hard-coded; the
   default value is set during implementation (AUTO-OQ-03).
@@ -198,6 +208,11 @@ compliance_instances (provenance: rule_version_id, generation_source,
      not a version edit;
   4. **Retry-safe behaviour:** a unique-violation on insert is treated as
      "already generated", not an error.
+
+  **Package partition:** layer 3 (database uniqueness, SCH-12 NULLS NOT
+  DISTINCT key) is owned by IMP-031 (schema); layers 1, 2 and 4
+  (deterministic identity computation, idempotent generator, retry-safe
+  behavior) are owned by IMP-050.
 - **AUTO-REC-08 — Concurrent-generator race semantics.** If two scheduler
   runs race to generate the same instance: exactly one insert succeeds;
   the loser's unique-violation is an idempotent already-exists outcome

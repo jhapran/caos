@@ -137,7 +137,7 @@ now so the schema is forward-compatible, built in a later release.
 - **Ownership:** Tenant-owned; belongs to a LegalEntity.
 - **Relationships:** N—1 LegalEntity; N—1 ComplianceType; optional N—1 Registration (per DM-27 conventions).
 - **Lifecycle:** `proposed (system-suggested) → active → suspended → ended`. CA approval activates (PRD §72 step 9).
-- **Invariants:** Only `active` profiles generate compliance instances. Applicability answers are stored for auditability.
+- **Invariants:** Only `active` profiles generate compliance instances. Applicability answers are stored for auditability. Profile activation does NOT itself create compliance instances: an `active` profile means "eligible for future recurrence/materialization" only; materialization is owned by the recurrence generator (IMP-050, AUTO-REC-01). An `active` profile with zero generated instances is valid and expected in the interim (C5 ruling).
 - **Tenant boundary:** `firm_id` required.
 - **R0 status:** R0. **Deferred:** AI-suggested profiles from extracted registrations (PRD §72 step 8 — needs AI).
 
@@ -326,6 +326,10 @@ Not Started → Information Requested → Information Received → Preparation
 - `Closed` triggers recurrence: next-period instance created (PRD §29).
 - Workflow templates may skip optional states (e.g. no Client Approval when
   the compliance type's flag is off) but may not reorder the pipeline.
+- Transition authorization (who may invoke which transition) is normative in
+  `05` (RLS-CIN-01 transition matrix); state changes occur only through the
+  controlled transition RPC (API-R0-CIN, API-ARCH-04) — never by direct
+  table UPDATE.
 
 #### DM-SM-05 — Task
 ```

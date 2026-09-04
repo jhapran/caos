@@ -183,7 +183,7 @@ Legend: ✔ full · ◐ scoped (see note) · ✖ denied · — n/a
 | Clients / entities / registrations / contacts | ✔ | ✔ | ◐ portfolio | ◐ assigned-work clients | ◐ identity + billing fields only |
 | Engagements | ✔ | ✔ | ◐ portfolio | read ◐ | read ◐ |
 | Compliance types & rule versions (firm-owned) | ✔ | ✔ | read (RLS-CTY-01/RLS-CRV-01 only — see note) | ✖ | ✖ |
-| Compliance profiles / instances | ✔ | ✔ | ◐ portfolio | ◐ assigned | ✖ |
+| Compliance profiles / instances | ✔ | ✔ | ◐ portfolio | ◐ assigned † | ✖ |
 | Tasks / checklist / dependencies | ✔ | ✔ | ◐ assign + supervise | ◐ assigned | ✖ |
 | Task comments / internal notes | ✔ | ✔ | ◐ | ◐ assigned work | ✖ |
 | Review items | ✔ | ✔ decide | ◐ decide (team) | submit only | ✖ |
@@ -203,6 +203,10 @@ workflow exists anywhere in the R0 specification, and default-deny
 rule versions (RLS-CTY-01 / RLS-CRV-01) and may NOT insert, draft-edit,
 change approval state, or activate. The cell is corrected accordingly; no
 proposal workflow is introduced.
+
+† Matrix note (compliance profiles / instances, Senior/Article "◐ assigned"):
+instance state transitions occur via the transition RPC only, per RLS-CIN-01
+— senior/article have no direct table writes on compliance_instances.
 
 ## 12. Table-level RLS intent (family IDs referenced by `06`)
 
@@ -281,8 +285,11 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
   versions follows RLS-SVC-01/02 — confined to Edge Functions and
   operator-run scripts, self-auditing; never a casual bypass of
   application authorization.
-- **RLS-CCP-01** client_compliance_profiles: read per client scoping; approve/write manager+; approval actor stamped (DM-11).
+- **RLS-CCP-01** client_compliance_profiles: read per client scoping; approve/write manager+; approval actor stamped (DM-11). Approval occurs through the controlled profile approval command (API-R0-CCP), which stamps `approved_by`/`approved_at` and does NOT create compliance instances (materialization is IMP-050).
 - **RLS-CIN-01** compliance_instances: read per scoping (assigned-only for senior/article); state transitions via transition RPC only (RLS-4EY-02); direct table writes limited to manager+ non-state fields.
+  - `state` may NEVER be changed by direct browser table UPDATE; all transitions go through the controlled Layer-B transition RPC. senior/article have no direct table mutation right on compliance_instances.
+  - RPC invocation scope: super_admin — valid transitions firm-wide; partner — valid transitions firm-wide; manager — valid transitions only within manager portfolio scope (RLS-STF-03); senior/article — only when their live FirmMembership is currently the instance's `assignee_membership_id` OR `reviewer_membership_id`; billing — none; anon — none.
+  - Four-eyes (where the compliance type's `four_eyes_required` applies, SCH-10): `reviewer_membership_id` MUST differ from `assignee_membership_id`; a transition leaving `internal_review` must be performed by the assigned reviewer — including the workflow-skipping `internal_review → ready_to_file` path when client_approval is skipped; this binds manager/partner/super_admin actors equally — no privileged role bypasses four-eyes by rank. Regression back to `preparation` from `internal_review` may be initiated by the assigned reviewer or a manager+ actor within scope, and is audit-logged (DM-SM-04).
 - **RLS-TSK-01** tasks + task_dependencies + task_checklist_items: read per scoping; assignee may update own task status/fields within DM-SM-05; assignment/reassignment manager+; ad-hoc task creation any staff for own clients.
 - **RLS-TCM-01** task_comments: read per task scoping; insert by any staff with task access; no update except `retracted` by author; no delete.
 - **RLS-RVW-01** review_items: submitters see own; reviewers (partner/manager per matrix) see firm/team queue; decisions via decision RPC (records decider/rationale); billing denied.

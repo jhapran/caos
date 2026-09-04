@@ -154,7 +154,12 @@ TEST-AUD-*, TEST-AUTO-*) are defined in `11-testing-harness.md`.
   API-SEC-*); recurrence generator and alert evaluator (design per `09`;
   mechanism per AUTO-OQ-01). Rule versioning / generation provenance is
   specified in `06` (SCH-32, SCH-12 — Batch 4 closure amendment) and is
-  implemented in this phase.
+  implemented in this phase. IMP-031 fixture/staging seed compliance
+  instances may use only `generation_source='manual'` or `'import'` —
+  NEVER `'recurrence'` (the generator is IMP-050 and does not exist yet);
+  `generated_at`/`rule_version_id`/`calculated_due_date` remain consistent
+  with the SCH-12 provenance contract (i.e. recurrence-only fields stay
+  NULL on manual/import rows); no fake recurrence-generated instances.
 - **Entry criteria:** Phase B exit criteria met; alert-rule defaults
   decided (AUTO-OQ-04).
 - **Exit criteria:** instances generate without duplicates and carry full
@@ -388,7 +393,7 @@ category below says otherwise.
 | MIG-OQ-01 (= DEC-OQ-03) | Production data-source cutover conditions | — | **Resolved:** cutover only via the MIG-DEP-04 gate (migrations, auth/RLS verification, seed validation, smoke tests, Harness Gate, rollback procedure, explicit deployment approval); production never runs/falls back to fixture; demo deployment independent |
 | MIG-OQ-02 | Deterministic-id scheme detail for dev seeds (uuidv5 namespace vs fixed uuid list) | implementation | Open — either satisfies MIG-SEED-06 |
 | MIG-OQ-03 | Pilot/customer data appearing before cutover | — | **Resolved directionally:** documented migration/backfill becomes mandatory; pilot data is never deleted as a migration shortcut (MIG-PD-01, MIG-PRIN-07) |
-| MIG-OQ-04 | How many historical periods are back-materialized for existing clients at onboarding (recurrence look-back vs forward-only, AUTO-REC-01) | product | Open |
+| MIG-OQ-04 | How many historical periods are back-materialized for existing clients at onboarding (recurrence look-back vs forward-only, AUTO-REC-01) | product | Open — NOT a blocker for IMP-031 schema/RLS/API/local/staging implementation; IS a blocker for production onboarding materialization depth and historical/back-materialization policy; IMP-031 must not encode any assumed depth (30 days / 90 days / 1 year / financial year etc.) |
 
 ## Acceptance Criteria
 

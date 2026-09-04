@@ -396,12 +396,25 @@ authorization/not-found semantics and API-SEC-* function security.
     RLS plus the activation RPC, with no fixture fallback (MIG-DS-05).
 - **API-R0-CCP — compliance profiles.** Propose/edit (manager+); approval
   RPC records `approved_by`/`approved_at` (RLS-CCP-01, DM-11); only `active`
-  profiles feed recurrence (`09`).
+  profiles feed recurrence (`09`). The approval command stamps
+  `approved_by`/`approved_at` and activates the profile only — it never
+  creates compliance instances; instance materialization is deferred to the
+  recurrence generator (IMP-050, AUTO-REC-01).
 - **API-R0-CIN — compliance instances.** Reads with filters (state,
   assignee, due window, client, type; paginated). **All state transitions
   via transition RPC** (DM-SM-04, RLS-CIN-01, RLS-4EY-02); routine
   transitions need no step-up (RLS-AAL-02). Non-state fields writable by
-  manager+ only (RLS-CIN-01).
+  manager+ only (RLS-CIN-01). **Transition authorization matrix
+  (RLS-CIN-01):** invocation scope per role — super_admin/partner firm-wide;
+  manager portfolio-scoped (RLS-STF-03); senior/article only when their live
+  membership is the instance's current `assignee_membership_id` or
+  `reviewer_membership_id`; billing/anon none. Four-eyes: a transition
+  leaving `internal_review` (including the workflow-skipping
+  `internal_review → ready_to_file` path when client_approval is skipped) is
+  performed by the assigned reviewer — privileged roles cannot bypass by
+  rank (RLS-4EY-01/02, RLS-CIN-01); regression to `preparation` may be
+  initiated by the assigned reviewer or a manager+ actor within scope. All
+  rejections are mapped per API-ERR-04 with machine-readable reason codes.
 - **API-R0-TSK — tasks.** CRUD + assignment (RLS-TSK-01); transitions per
   DM-SM-05 with mandatory-field validation (API-ARCH-04); ad-hoc task
   creation supported (`compliance_instance_id` nullable, DEC-H); dependency
