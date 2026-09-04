@@ -23,6 +23,18 @@
  * list_engagement_letter_statuses() projection RPC, and two guard trigger
  * functions (responsibility validation / DM-SM-03 status transitions).
  *
+ * IMP-030 changes reflected here: compliance_types (SCH-10) +
+ * compliance_rule_versions (SCH-32) exist with RLS enabled AND forced,
+ * seven policies (types: scoped select + privileged aal2 insert/update;
+ * versions: privileged all-status select, manager active-only select,
+ * privileged aal2 draft insert + payload-only update), column-pinned
+ * write grants (no id/status/domain_approval_status/created_by), the
+ * Layer-B activate_compliance_rule_version(uuid) definer RPC granted to
+ * authenticated only, three owner-only trigger functions (governance
+ * inheritance, insert path, update guard), and the intentionally
+ * PUBLIC-executable immutable CHECK validator
+ * compliance_workflow_template_valid(jsonb).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -32,8 +44,8 @@ import { FIRM_A, psql, userId } from '../helpers.mjs';
 
 const rows = (sql) => psql(sql).trim().split('\n').filter(Boolean).sort();
 
-describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
-  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy tables', () => {
+describe('IMP-012/013/020/021/030 catalog — RLS state (RLS-PRIN-02)', () => {
+  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule tables', () => {
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`),
@@ -41,6 +53,8 @@ describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
       'audit_log',
       'client_relationships',
       'clients',
+      'compliance_rule_versions',
+      'compliance_types',
       'contacts',
       'engagements',
       'firm_memberships',
@@ -60,7 +74,10 @@ describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
     // owner bypass.
     // SCH-01…03 stay unforced: forcing would recurse the live-membership
     // helper on firm_memberships and break owner-run seed/maintenance writes
-    // (IMP-012 documented exception).
+    // (IMP-012 documented exception). IMP-030's hybrid reference tables hold
+    // tenant-owned overrides/versions, so they are forced like the other
+    // content tables (the compliance write paths are postgres-owned definer
+    // functions / RLS-governed DML — no owner bypass needed).
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`),
@@ -68,6 +85,8 @@ describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
       'audit_log',
       'client_relationships',
       'clients',
+      'compliance_rule_versions',
+      'compliance_types',
       'contacts',
       'engagements',
       'legal_entities',
@@ -81,6 +100,10 @@ describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
     // SELECT policy (RLS-AUD-01). IMP-020 adds select/insert/update policies
     // per client-hierarchy table — active-firm scoped, manager+ writes,
     // manager portfolio-scoped reads (RLS-OQ-02), no DELETE anywhere.
+    // IMP-030 adds three compliance_types policies (scoped select;
+    // privileged aal2 insert/update) and four compliance_rule_versions
+    // policies (privileged all-status select; manager active-only select;
+    // privileged aal2 draft insert; privileged aal2 payload update).
     expect(
       rows(`select tablename || ':' || policyname || ':' || cmd from pg_policies where schemaname = 'public'`),
     ).toEqual(
@@ -92,6 +115,13 @@ describe('IMP-012/013/020/021 catalog — RLS state (RLS-PRIN-02)', () => {
         'clients:clients_insert_manager_plus:INSERT',
         'clients:clients_select_scoped:SELECT',
         'clients:clients_update_manager_plus:UPDATE',
+        'compliance_rule_versions:crv_insert_privileged_aal2:INSERT',
+        'compliance_rule_versions:crv_select_manager_active:SELECT',
+        'compliance_rule_versions:crv_select_privileged:SELECT',
+        'compliance_rule_versions:crv_update_privileged_aal2:UPDATE',
+        'compliance_types:compliance_types_insert_privileged_aal2:INSERT',
+        'compliance_types:compliance_types_select_scoped:SELECT',
+        'compliance_types:compliance_types_update_privileged_aal2:UPDATE',
         'contacts:contacts_insert_manager_plus:INSERT',
         'contacts:contacts_select_scoped:SELECT',
         'contacts:contacts_update_manager_plus:UPDATE',
@@ -128,6 +158,8 @@ const AUTHENTICATED_RPCS = [
   'list_client_identities(uuid)',
   // IMP-021: billing letter-status projection (RLS-ENG-01), same pattern.
   'list_engagement_letter_statuses(uuid)',
+  // IMP-030: Layer-B rule-version lifecycle command (RLS-CRV-03).
+  'activate_compliance_rule_version(uuid)',
 ];
 const SERVICE_ONLY_FNS = [
   'write_audit_event_server(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text)',
@@ -146,8 +178,19 @@ const IMP021_TRIGGER_FNS = [
   'engagements_validate_responsibility()',
   'engagements_guard_status_transition()',
 ];
+// IMP-030 function inventory: the Layer-B lifecycle command joins
+// AUTHENTICATED_RPCS; three owner-only trigger functions; the immutable
+// CHECK validator is intentionally PUBLIC-executable (CHECK expressions
+// evaluate with the DML caller's privileges — revoking EXECUTE would break
+// legitimate inserts; the function is read-only, no security surface).
+const IMP030_TRIGGER_FNS = [
+  'compliance_types_enforce_governance_inheritance()',
+  'crv_guard_update()',
+  'crv_prepare_insert()',
+];
+const IMP030_PUBLIC_VALIDATOR = ['compliance_workflow_template_valid(jsonb)'];
 
-describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
+describe('IMP-012/013/020/021/030 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
     expect(
       psql(`select count(*) from information_schema.role_table_grants
@@ -161,10 +204,18 @@ describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RL
       ...IMP020_HELPERS,
       ...IMP020_TRIGGER_FNS,
       ...IMP021_TRIGGER_FNS,
+      ...IMP030_TRIGGER_FNS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
       ).toBe('f');
+    }
+    // IMP-030 documented exception: the immutable CHECK validator stays
+    // PUBLIC-executable (CHECK constraints evaluate as the DML caller).
+    for (const fn of IMP030_PUBLIC_VALIDATOR) {
+      expect(
+        psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
+      ).toBe('t');
     }
   });
 
@@ -186,6 +237,8 @@ describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RL
       'audit_log:SELECT',
       'client_relationships:SELECT',
       'clients:SELECT',
+      'compliance_rule_versions:SELECT',
+      'compliance_types:SELECT',
       'contacts:SELECT',
       'engagements:SELECT',
       'firm_memberships:SELECT',
@@ -270,6 +323,87 @@ describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RL
         'clients:UPDATE:risk_rating',
         'clients:UPDATE:status',
         'clients:UPDATE:tags',
+        // IMP-030 compliance rules — SELECT covers readable columns;
+        // INSERT excludes id/created_at/status/domain_approval_status/
+        // created_by (server-managed or derived); UPDATE is payload-only
+        // (no lifecycle/governance/provenance columns).
+        'compliance_rule_versions:INSERT:compliance_type_id',
+        'compliance_rule_versions:INSERT:due_rule',
+        'compliance_rule_versions:INSERT:effective_from',
+        'compliance_rule_versions:INSERT:firm_id',
+        'compliance_rule_versions:INSERT:frequency',
+        'compliance_rule_versions:INSERT:version',
+        'compliance_rule_versions:SELECT:compliance_type_id',
+        'compliance_rule_versions:SELECT:created_at',
+        'compliance_rule_versions:SELECT:created_by',
+        'compliance_rule_versions:SELECT:domain_approval_status',
+        'compliance_rule_versions:SELECT:due_rule',
+        'compliance_rule_versions:SELECT:effective_from',
+        'compliance_rule_versions:SELECT:effective_to',
+        'compliance_rule_versions:SELECT:firm_id',
+        'compliance_rule_versions:SELECT:frequency',
+        'compliance_rule_versions:SELECT:id',
+        'compliance_rule_versions:SELECT:status',
+        'compliance_rule_versions:SELECT:version',
+        'compliance_rule_versions:UPDATE:due_rule',
+        'compliance_rule_versions:UPDATE:effective_from',
+        'compliance_rule_versions:UPDATE:frequency',
+        'compliance_types:INSERT:acknowledgement_required',
+        'compliance_types:INSERT:applicability',
+        'compliance_types:INSERT:authority',
+        'compliance_types:INSERT:category',
+        'compliance_types:INSERT:checklist_template',
+        'compliance_types:INSERT:client_approval_required',
+        'compliance_types:INSERT:due_rule',
+        'compliance_types:INSERT:filing_confirmation_required',
+        'compliance_types:INSERT:firm_id',
+        'compliance_types:INSERT:four_eyes_required',
+        'compliance_types:INSERT:frequency',
+        'compliance_types:INSERT:governance_class',
+        'compliance_types:INSERT:name',
+        'compliance_types:INSERT:registration_class',
+        'compliance_types:INSERT:required_documents',
+        'compliance_types:INSERT:scope_kind',
+        'compliance_types:INSERT:type_key',
+        'compliance_types:INSERT:workflow_template',
+        'compliance_types:SELECT:acknowledgement_required',
+        'compliance_types:SELECT:applicability',
+        'compliance_types:SELECT:authority',
+        'compliance_types:SELECT:category',
+        'compliance_types:SELECT:checklist_template',
+        'compliance_types:SELECT:client_approval_required',
+        'compliance_types:SELECT:created_at',
+        'compliance_types:SELECT:due_rule',
+        'compliance_types:SELECT:filing_confirmation_required',
+        'compliance_types:SELECT:firm_id',
+        'compliance_types:SELECT:four_eyes_required',
+        'compliance_types:SELECT:frequency',
+        'compliance_types:SELECT:governance_class',
+        'compliance_types:SELECT:id',
+        'compliance_types:SELECT:name',
+        'compliance_types:SELECT:registration_class',
+        'compliance_types:SELECT:required_documents',
+        'compliance_types:SELECT:scope_kind',
+        'compliance_types:SELECT:status',
+        'compliance_types:SELECT:type_key',
+        'compliance_types:SELECT:updated_at',
+        'compliance_types:SELECT:workflow_template',
+        'compliance_types:UPDATE:acknowledgement_required',
+        'compliance_types:UPDATE:applicability',
+        'compliance_types:UPDATE:authority',
+        'compliance_types:UPDATE:category',
+        'compliance_types:UPDATE:checklist_template',
+        'compliance_types:UPDATE:client_approval_required',
+        'compliance_types:UPDATE:due_rule',
+        'compliance_types:UPDATE:filing_confirmation_required',
+        'compliance_types:UPDATE:four_eyes_required',
+        'compliance_types:UPDATE:frequency',
+        'compliance_types:UPDATE:name',
+        'compliance_types:UPDATE:registration_class',
+        'compliance_types:UPDATE:required_documents',
+        'compliance_types:UPDATE:scope_kind',
+        'compliance_types:UPDATE:status',
+        'compliance_types:UPDATE:workflow_template',
         'contacts:INSERT:client_id',
         'contacts:INSERT:email',
         'contacts:INSERT:firm_id',
@@ -414,13 +548,13 @@ describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RL
     for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -436,13 +570,18 @@ describe('IMP-012/013/020/021 catalog — least-privilege grants (RLS-SVC-03, RL
       ...IMP020_HELPERS,
       ...IMP020_TRIGGER_FNS,
       ...IMP021_TRIGGER_FNS,
+      ...IMP030_TRIGGER_FNS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
+    }
+    // IMP-030 documented exception (see the anon assertion above).
+    for (const fn of IMP030_PUBLIC_VALIDATOR) {
+      expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
   });
 });
 
-describe('IMP-012/013/020/021 catalog — helper-function security properties', () => {
+describe('IMP-012/013/020/021/030 catalog — helper-function security properties', () => {
   // All public-schema application functions (trigger + definer paths).
   const ALL_FNS =
     "'active_membership_role', 'req_active_firm', 'shares_active_firm_with', 'set_updated_at', " +
@@ -450,7 +589,9 @@ describe('IMP-012/013/020/021 catalog — helper-function security properties', 
     "'invite_member', 'change_membership_role', 'suspend_membership', 'remove_membership', 'accept_invitation', " +
     "'active_membership_id', 'list_client_identities', " +
     "'clients_validate_responsibility', 'legal_entities_guard_entity_type', " +
-    "'engagements_validate_responsibility', 'engagements_guard_status_transition', 'list_engagement_letter_statuses'";
+    "'engagements_validate_responsibility', 'engagements_guard_status_transition', 'list_engagement_letter_statuses', " +
+    "'activate_compliance_rule_version', 'compliance_types_enforce_governance_inheritance', " +
+    "'crv_guard_update', 'crv_prepare_insert', 'compliance_workflow_template_valid'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -467,12 +608,15 @@ describe('IMP-012/013/020/021 catalog — helper-function security properties', 
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
       'accept_invitation',
+      'activate_compliance_rule_version',
       'active_membership_id',
       'active_membership_role',
       'audit_trg_row',
       'audit_write',
       'change_membership_role',
       'clients_validate_responsibility',
+      'compliance_types_enforce_governance_inheritance',
+      'crv_prepare_insert',
       'engagements_validate_responsibility',
       'invite_member',
       'list_client_identities',

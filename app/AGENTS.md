@@ -105,7 +105,26 @@ on logout, sign-in as a different user, or session replacement BEFORE
 the new identity's pages render, and the temporary R0 multi-firm
 default is deterministic — the ACTIVE membership with the smallest
 firm id (`resolveDefaultActiveFirm` in `src/data/context.ts`; switcher
-UI is a later package). No migration; DB inventory unchanged.
+UI is a later package). IMP-030 (compliance types & rule versions) is
+IMPLEMENTED and awaiting human approval: `compliance_types` (SCH-10 —
+hybrid reference data: `firm_id IS NULL` = system default, browser
+read-only per TEN-08; `governance_class` statutory|non_statutory is
+NOT NULL with no default, and firm overrides of a system `type_key`
+inherit the system classification — no statutory downgrade) and
+`compliance_rule_versions` (SCH-32 — NO `updated_at`; half-open
+effective windows `[effective_from, effective_to)` with a partial
+exclusion constraint on ACTIVE rows; rule content frozen once a
+version leaves draft; lifecycle metadata changes only via the Layer-B
+definer command `activate_compliance_rule_version(uuid)` — actor from
+`auth.uid()`, live same-firm super_admin/partner + AAL2 +
+governance-derived statutory approval gate, atomic predecessor window
+close + audit; succession keeps predecessors `active` for their
+historical windows). Layer-A audit via the extended `audit_trg_row()`;
+the provider-neutral `complianceRulesService` sits behind `@/data`
+(fixture adapter mirrors the seed catalogue with the SAME UUIDs; no
+UI screens in this package). Statutory seeds remain draft/pending —
+zero activated statutory rules (OPS-OQ-04 stays a production
+activation blocker).
 
 Authoritative sources:
 

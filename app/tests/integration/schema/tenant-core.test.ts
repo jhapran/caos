@@ -68,21 +68,22 @@ afterAll(() => {
 });
 
 describe('structure — tables, columns, PKs', () => {
-  it('exactly the IMP-010 tenant-core tables + IMP-013 audit_log + IMP-020 client hierarchy exist in public', () => {
+  it('exactly the IMP-010 tenant-core tables + IMP-013 audit_log + IMP-020 client hierarchy + IMP-021 engagements + IMP-030 compliance rules exist in public', () => {
     // Scoped to production objects: temporary harness/spike tables
     // (hgate_/decj_/audctx_) are managed by their own suites and by the
     // gate cleanliness phase; they may coexist during a combined run.
     // IMP-013 added audit_log (SCH-20); IMP-020 added the client hierarchy
     // (SCH-04…08: clients, legal_entities, registrations, contacts,
-    // client_relationships); IMP-021 added engagements (SCH-09). No other
-    // tables may appear.
+    // client_relationships); IMP-021 added engagements (SCH-09); IMP-030
+    // added compliance_types (SCH-10) + compliance_rule_versions (SCH-32).
+    // No other tables may appear.
     const tables = psql(
       `select string_agg(table_name, ',' order by table_name) from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
          and table_name not like 'hgate%' and table_name not like 'decj%' and table_name not like 'audctx%'`,
     ).trim();
     expect(tables).toBe(
-      'audit_log,client_relationships,clients,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations',
+      'audit_log,client_relationships,clients,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations',
     );
   });
 

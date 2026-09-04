@@ -109,6 +109,7 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'clientHierarchy')),
     ...tsFiles(join(SRC, 'data', 'engagements')),
     ...tsFiles(join(SRC, 'data', 'client360')),
+    ...tsFiles(join(SRC, 'data', 'complianceRules')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
     join(SRC, 'data', 'context.ts'),
@@ -119,6 +120,11 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     // Guards against the scan passing vacuously if the folder moves.
     expect(productionFiles).toContain(join(SRC, 'data', 'client360', 'supabase.ts'));
     expect(productionFiles).toContain(join(SRC, 'data', 'client360', 'fixture.ts'));
+  });
+
+  it('scans the compliance-rules adapter modules (IMP-030)', () => {
+    expect(productionFiles).toContain(join(SRC, 'data', 'complianceRules', 'supabase.ts'));
+    expect(productionFiles).toContain(join(SRC, 'data', 'complianceRules', 'fixture.ts'));
   });
 
   it('scans the engagement adapter modules (IMP-021)', () => {

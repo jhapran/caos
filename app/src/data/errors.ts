@@ -68,16 +68,22 @@ function classify(
   // PostgreSQL insufficient_privilege — RLS denials and authorized-RPC
   // rejections both surface as 42501 (HTTP 403 via PostgREST).
   if (code === '42501') return 'unauthorized';
-  if (code === '23505' || code === '23503' || code === 'PGRST109') return 'conflict';
+  if (code === '23505' || code === '23503' || code === '23P01' || code === 'PGRST109') return 'conflict';
   // check_violation (23514) splits by DISCRIMINATOR, never by loose message
   // matching (IMP-020 closure decision): the approved conflict cases are
   // database-guard violations carrying a stable DETAIL token — the
   // entity_type immutability invariant (API-R0-ENT, IMMUTABLE_FIELD:) and
   // lifecycle transition guards (API-ERR-01 "transition violation",
-  // INVALID_TRANSITION: — introduced by IMP-021 for DM-SM-03). Every other
-  // CHECK violation is rejected input → validation (API-ERR-01).
+  // INVALID_TRANSITION: — introduced by IMP-021 for DM-SM-03). IMP-030 adds
+  // GOVERNANCE_INHERITANCE: (SCH-10/32 statutory-classification and approval
+  // bypass rejections) to the IMMUTABLE_FIELD:/INVALID_TRANSITION: conflict
+  // family. 23P01 (exclusion violation) above covers the SCH-32 active-window
+  // non-overlap backstop. Every other CHECK violation is rejected input →
+  // validation (API-ERR-01).
   if (code === '23514') {
-    return details?.includes('IMMUTABLE_FIELD:') || details?.includes('INVALID_TRANSITION:')
+    return details?.includes('IMMUTABLE_FIELD:') ||
+      details?.includes('INVALID_TRANSITION:') ||
+      details?.includes('GOVERNANCE_INHERITANCE:')
       ? 'conflict'
       : 'validation';
   }

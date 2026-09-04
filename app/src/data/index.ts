@@ -59,6 +59,27 @@ export type {
   LetterStatus,
   UpdateEngagementInput,
 } from './engagements';
+// --- IMP-030: compliance types & rule versions -------------------------------
+export { complianceRulesService } from './complianceRules';
+export type {
+  ActivateRuleVersionResult,
+  ComplianceFrequency,
+  ComplianceRulesService,
+  ComplianceRuleVersionRecord,
+  ComplianceScopeKind,
+  ComplianceTypeListFilter,
+  ComplianceTypeRecord,
+  ComplianceTypeStatus,
+  CreateComplianceTypeInput,
+  CreateRuleVersionInput,
+  DomainApprovalStatus,
+  GovernanceClass,
+  RulePayload,
+  RuleVersionListFilter,
+  RuleVersionStatus,
+  UpdateComplianceTypeInput,
+  UpdateRuleVersionDraftInput,
+} from './complianceRules';
 // --- IMP-022: Client 360 composite read (API-R0-CLI, DM-X-02) ----------------
 export { client360Service } from './client360';
 export type {
