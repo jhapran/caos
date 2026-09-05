@@ -229,8 +229,8 @@ async function main() {
        where table_schema = 'public' and (table_name like 'hgate%' or table_name like 'decj%' or table_name like 'audctx%')`,
     ).trim();
     if (stray) throw new Error(`stray harness/spike tables remain: ${stray}`);
-    // IMP-010 + IMP-013 + IMP-020 + IMP-021 + IMP-030 + IMP-031: production
-    // schema now exists. The gate distinguishes the EXPECTED
+    // IMP-010 + IMP-013 + IMP-020 + IMP-021 + IMP-030 + IMP-031 + IMP-040:
+    // production schema now exists. The gate distinguishes the EXPECTED
     // committed-migration tables from anything unexpected; the forbidden
     // temporary-object check above is unchanged.
     const expectedTables = [
@@ -248,6 +248,10 @@ async function main() {
       'legal_entities', // SCH-05 (IMP-020)
       'profiles', // SCH-02 (IMP-010)
       'registrations', // SCH-07 (IMP-020)
+      'task_checklist_items', // SCH-15 (IMP-040)
+      'task_comments', // SCH-16 (IMP-040)
+      'task_dependencies', // SCH-14 (IMP-040)
+      'tasks', // SCH-13 (IMP-040)
     ];
     const appTables = psql(
       `select coalesce(string_agg(table_name, ',' order by table_name), '')
@@ -256,14 +260,15 @@ async function main() {
     const actual = appTables ? appTables.split(',') : [];
     if (actual.join(',') !== expectedTables.join(',')) {
       throw new Error(
-        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031 migrations)`,
+        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031/040 migrations)`,
       );
     }
-    // IMP-012/013/020/021/030/031: production RLS is part of the expected
+    // IMP-012/013/020/021/030/031/040: production RLS is part of the expected
     // posture — the gate fails on RLS absence/regression. The tenant-owned
     // content tables (audit_log + the five client-hierarchy tables +
     // engagements + the two compliance-rule tables + the two
-    // compliance-profile/instance tables) are additionally FORCED
+    // compliance-profile/instance tables + the four task-family tables) are
+    // additionally FORCED
     // (RLS-PRIN-02); the tenant core stays unforced per the IMP-012
     // documented exception (helper recursion + owner-run maintenance).
     const rlsTables = psql(
@@ -272,7 +277,7 @@ async function main() {
        where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`,
     ).trim();
     if (rlsTables !== expectedTables.join(',')) {
-      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031)`);
+      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031/040)`);
     }
     const expectedForced = [
       'audit_log',
@@ -286,6 +291,10 @@ async function main() {
       'engagements',
       'legal_entities',
       'registrations',
+      'task_checklist_items',
+      'task_comments',
+      'task_dependencies',
+      'tasks',
     ];
     const forcedTables = psql(
       `select coalesce(string_agg(c.relname, ',' order by c.relname), '')
@@ -293,7 +302,7 @@ async function main() {
        where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`,
     ).trim();
     if (forcedTables !== expectedForced.join(',')) {
-      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031; tenant core unforced per IMP-012 exception)`);
+      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031/040; tenant core unforced per IMP-012 exception)`);
     }
     const expectedPolicies = [
       'audit_log:audit_select_partner_admin',
@@ -333,16 +342,27 @@ async function main() {
       'registrations:registrations_insert_manager_plus',
       'registrations:registrations_select_scoped',
       'registrations:registrations_update_manager_plus',
+      'task_checklist_items:task_checklist_items_delete_via_task',
+      'task_checklist_items:task_checklist_items_insert_via_task',
+      'task_checklist_items:task_checklist_items_select_via_task',
+      'task_checklist_items:task_checklist_items_update_via_task',
+      'task_comments:task_comments_insert_author',
+      'task_comments:task_comments_select_via_task',
+      'task_comments:task_comments_update_retract_author',
+      'task_dependencies:task_dependencies_select_scoped',
+      'tasks:tasks_insert_scoped',
+      'tasks:tasks_select_scoped',
+      'tasks:tasks_update_scoped',
     ];
     const policies = psql(
       `select coalesce(string_agg(tablename || ':' || policyname, ',' order by tablename || ':' || policyname), '')
        from pg_policies where schemaname = 'public'`,
     ).trim();
     if (policies !== expectedPolicies.join(',')) {
-      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031)`);
+      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040)`);
     }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
-    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances (committed IMP-010/013/020/021/030/031 migrations); RLS posture verified (RLS on all 14, FORCE on the 11 tenant-owned content tables, 37 expected policies); 16 deterministic identities verified';
+    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family (committed IMP-010/013/020/021/030/031/040 migrations); RLS posture verified (RLS on all 18, FORCE on the 15 tenant-owned content tables, 48 expected policies); 16 deterministic identities verified';
   });
 
   currentPhase = 'secret-scan';

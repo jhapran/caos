@@ -67,7 +67,7 @@ afterAll(async () => {
     delete from public.firm_memberships where firm_id in ('${FIRM_A}', '${FIRM_B}');
     delete from public.profiles where id in (${PROFILE_USERS.map((k) => `'${userId(k)}'`).join(',')});
     delete from public.firms where id in ('${FIRM_A}', '${FIRM_B}');
-    delete from public.audit_log;
+    delete from public.audit_log where firm_id in ('${FIRM_A}', '${FIRM_B}');
   `);
 });
 

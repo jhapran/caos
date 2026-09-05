@@ -1,96 +1,96 @@
 {
   "gate": "CAOS Harness Gate (verify:harness)",
-  "startedAt": "2026-09-04T11:03:57.113Z",
+  "startedAt": "2026-09-05T03:31:15.137Z",
   "phases": [
     {
       "name": "preflight",
       "ok": true,
       "detail": "node v24.18.0, docker ok, supabase CLI ok, decision evidence present",
-      "durationMs": 566
+      "durationMs": 560
     },
     {
       "name": "stack-lifecycle",
       "ok": true,
       "detail": "stack already running — will be left running afterwards",
-      "durationMs": 905
+      "durationMs": 927
     },
     {
       "name": "db-reset-seed",
       "ok": true,
       "detail": "  \"errors\": [], |   \"warnings\": [] | }",
-      "durationMs": 31592
+      "durationMs": 29450
     },
     {
       "name": "decision-evidence",
       "ok": true,
       "detail": "DEC-J = live membership lookup (05); AUD-OQ-02 = layered A+B+C (08); spike evidence committed",
-      "durationMs": 5
+      "durationMs": 6
     },
     {
       "name": "lint",
       "ok": true,
       "detail": "> my-app@0.0.0 lint | > eslint .",
-      "durationMs": 4677
+      "durationMs": 4954
     },
     {
       "name": "unit-tests",
       "ok": true,
-      "detail": "      Tests  159 passed (159) |    Start at  16:34:35 |    Duration  1.65s (transform 4.08s, setup 1.95s, import 5.87s, tests 1.86s, environment 10.37s)",
-      "durationMs": 1948
+      "detail": "      Tests  192 passed (192) |    Start at  09:01:51 |    Duration  1.59s (transform 4.50s, setup 2.13s, import 6.17s, tests 2.05s, environment 10.58s)",
+      "durationMs": 1893
     },
     {
       "name": "auth-integration",
       "ok": true,
-      "detail": "      Tests  31 passed (31) |    Start at  16:34:37 |    Duration  35.98s (transform 57ms, setup 8.78s, import 54ms, tests 26.64s, environment 0ms)",
-      "durationMs": 36224
+      "detail": "      Tests  31 passed (31) |    Start at  09:01:53 |    Duration  33.93s (transform 64ms, setup 6.56s, import 62ms, tests 26.84s, environment 0ms)",
+      "durationMs": 34184
     },
     {
       "name": "rls-integration",
       "ok": true,
-      "detail": "      Tests  188 passed (188) |    Start at  16:35:13 |    Duration  21.91s (transform 137ms, setup 6.29s, import 140ms, tests 15.05s, environment 0ms)",
-      "durationMs": 22142
+      "detail": "      Tests  239 passed (239) |    Start at  09:02:27 |    Duration  27.67s (transform 161ms, setup 7.04s, import 175ms, tests 19.95s, environment 0ms)",
+      "durationMs": 27894
     },
     {
       "name": "schema-integration",
       "ok": true,
-      "detail": "      Tests  121 passed (121) |    Start at  16:35:35 |    Duration  29.94s (transform 93ms, setup 6.28s, import 90ms, tests 23.14s, environment 0ms)",
-      "durationMs": 30186
+      "detail": "      Tests  143 passed (143) |    Start at  09:02:55 |    Duration  36.59s (transform 105ms, setup 6.77s, import 110ms, tests 29.23s, environment 0ms)",
+      "durationMs": 36808
     },
     {
       "name": "audit-integration",
       "ok": true,
-      "detail": "      Tests  70 passed (70) |    Start at  16:36:05 |    Duration  22.47s (transform 82ms, setup 10.12s, import 76ms, tests 11.87s, environment 0ms)",
-      "durationMs": 22688
+      "detail": "      Tests  87 passed (87) |    Start at  09:03:32 |    Duration  21.72s (transform 91ms, setup 5.88s, import 88ms, tests 15.35s, environment 0ms)",
+      "durationMs": 21932
     },
     {
       "name": "clients-integration",
       "ok": true,
-      "detail": "      Tests  12 passed (12) |    Start at  16:36:28 |    Duration  3.24s (transform 103ms, setup 2.10s, import 117ms, tests 923ms, environment 0ms)",
-      "durationMs": 3494
+      "detail": "      Tests  12 passed (12) |    Start at  09:03:53 |    Duration  2.09s (transform 85ms, setup 1.01s, import 83ms, tests 909ms, environment 0ms)",
+      "durationMs": 2316
     },
     {
       "name": "engagements-integration",
       "ok": true,
-      "detail": "      Tests  10 passed (10) |    Start at  16:36:31 |    Duration  2.38s (transform 92ms, setup 1.15s, import 92ms, tests 1.05s, environment 0ms)",
-      "durationMs": 2615
+      "detail": "      Tests  10 passed (10) |    Start at  09:03:56 |    Duration  2.16s (transform 75ms, setup 980ms, import 75ms, tests 1.01s, environment 0ms)",
+      "durationMs": 2395
     },
     {
       "name": "client360-integration",
       "ok": true,
-      "detail": "      Tests  9 passed (9) |    Start at  16:36:34 |    Duration  2.77s (transform 99ms, setup 950ms, import 118ms, tests 1.61s, environment 0ms)",
-      "durationMs": 3008
+      "detail": "      Tests  9 passed (9) |    Start at  09:03:58 |    Duration  2.84s (transform 126ms, setup 1.05s, import 147ms, tests 1.54s, environment 0ms)",
+      "durationMs": 3056
     },
     {
       "name": "build",
       "ok": true,
-      "detail": "dist/assets/useAuth-DjMnQycI.js  221.34 kB │ gzip:  58.65 kB | dist/assets/App-C83Qr951.js      848.51 kB │ gzip: 244.48 kB | ✓ built in 3.20s",
-      "durationMs": 6843
+      "detail": "dist/assets/useAuth-oo-Skoos.js  221.34 kB │ gzip:  58.64 kB | dist/assets/App-CtiqAsHA.js      848.62 kB │ gzip: 244.46 kB | ✓ built in 3.08s",
+      "durationMs": 6898
     },
     {
       "name": "playwright-smoke",
       "ok": true,
-      "detail": "[7/7] [staff-auth] › e2e/staff-auth.spec.ts:63:1 › staff sign out revokes access: redirect, protected routes denied, back unusable |  |   7 passed (8.4s)",
-      "durationMs": 9856
+      "detail": "[7/7] [staff-auth] › e2e/staff-auth.spec.ts:63:1 › staff sign out revokes access: redirect, protected routes denied, back unusable |  |   7 passed (7.9s)",
+      "durationMs": 9230
     },
     {
       "name": "network-binding",
@@ -102,21 +102,21 @@
       "name": "mcp-regression",
       "ok": true,
       "detail": "local MCP initialize HTTP 200 (loopback)",
-      "durationMs": 1681
+      "durationMs": 1227
     },
     {
       "name": "db-cleanliness",
       "ok": true,
-      "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances (committed IMP-010/013/020/021/030/031 migrations); RLS posture verified (RLS on all 14, FORCE on the 11 tenant-owned content tables, 37 expected policies); 16 deterministic identities verified",
-      "durationMs": 1528
+      "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family (committed IMP-010/013/020/021/030/031/040 migrations); RLS posture verified (RLS on all 18, FORCE on the 15 tenant-owned content tables, 48 expected policies); 16 deterministic identities verified",
+      "durationMs": 1325
     },
     {
       "name": "secret-scan",
       "ok": true,
       "detail": "no service-role key or JWT secret in tracked files or dist/ (TEST-SEC-01 harness level)",
-      "durationMs": 27
+      "durationMs": 21
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-09-04T11:06:57.120Z"
+  "finishedAt": "2026-09-05T03:34:20.238Z"
 }

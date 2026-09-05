@@ -1,0 +1,1482 @@
+/**
+ * IMP-040 PASS B — Tasks / dependencies / checklist / comments RLS
+ * integration tests (SCH-13…16, RLS-TSK-01/02, RLS-TCM-01, RLS-4EY-03,
+ * RLS-STF-03/04/05/07, RLS-CTX-01/02, API-R0-TSK, API-ERR-02/04).
+ *
+ * Exercises the REAL production policies on public.tasks,
+ * public.task_dependencies, public.task_checklist_items, public.task_comments
+ * plus the Layer-B commands transition_task() / add_task_dependency() /
+ * remove_task_dependency() through PostgREST with signed-in access tokens —
+ * never service-role for authorization assertions. Service-side psql is used
+ * only for fixture setup, controlled membership mutation, operator-path
+ * staging (submitted tasks staged via the transaction-local command flag
+ * inside a DO block — never reachable from PostgREST), and teardown.
+ *
+ * Role posture under test (05 §11 rows 198/199, RLS-TSK-01/02, RLS-TCM-01):
+ *   super_admin/partner — firm-wide read + routine write, firm-wide
+ *                         transitions and dependency commands;
+ *   manager             — portfolio + directly-assigned read/write/
+ *                         transitions; dependency commands only when BOTH
+ *                         tasks are in scope; assignment manager+;
+ *   senior/article      — assigned-work read; routine writes as current
+ *                         assignee only; ordinary transitions as current
+ *                         assignee; reviewer-only four-eyes transitions
+ *                         (RLS-4EY-03); ad-hoc creation only inside the
+ *                         existing assigned-work client scope, self-assigned;
+ *   billing             — nothing;
+ *   suspended/removed   — nothing, live on the same JWT (DEC-J);
+ *   anon                — nothing.
+ *
+ * TEST mapping (spec 11 + 05 §14):
+ *   TEST-RLS-MAT-01…03 / TEST-RLS-GEN-01…04 — role-matrix cells, offensive
+ *   posture, freshness, mutation-denial surfacing;
+ *   TEST-SCH-01  dependency acyclicity (recursive cycle rejection);
+ *   TEST-SCH-16  waiting requires waiting_reason; returned requires a
+ *                non-empty reviewer comment created atomically;
+ *   TEST-SCH-17  task four-eyes reviewer authorization (RLS-4EY-03);
+ *   TEST-SCH-18/19 self-edge / duplicate-pair rejection through the command
+ *                (declarative backstops are asserted in schema/tasks.test.ts);
+ *   TEST-SCH-20  concurrent opposing-edge race — at most one commits, the
+ *                graph stays acyclic.
+ *
+ * Placement note: TEST-SCH-01/17/20 live in this RLS suite (not the schema
+ * suite) because the controlled commands require authenticated request
+ * contexts — no existing suite opens concurrent sessions; the race below
+ * uses genuinely concurrent PostgREST calls (Promise.all over two RPCs),
+ * which the firm advisory lock serializes.
+ *
+ * Re-runnable: deterministic ids in the 66000000-… range, force-reset on
+ * every run; fixture audit rows removed as the operator in teardown
+ * (append-only applies to application roles, AUD-INV-01).
+ */
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { api, FIRM_A, FIRM_B, psql, signIn, userEmail, userId } from '../helpers.mjs';
+
+const H = (firm: string) => ({ 'x-active-firm': firm });
+
+/** The ONE pre-authorization denial surface of all three Layer-B commands
+ *  (API-ERR-02): nonexistent, foreign, and out-of-scope tasks all return
+ *  exactly this body — no existence oracle. */
+const NOT_FOUND_BODY = {
+  status: 'denied',
+  kind: 'not_found',
+  message: 'task not found',
+};
+
+const SYS_ITR = '50000000-0000-4000-8000-000000000005'; // entity scope (seeded)
+
+const M = {
+  partnerA: '66000000-0000-4000-8000-000000000001',
+  superA: '66000000-0000-4000-8000-000000000002',
+  managerA: '66000000-0000-4000-8000-000000000003',
+  managerBInA: '66000000-0000-4000-8000-000000000004',
+  seniorA: '66000000-0000-4000-8000-000000000005',
+  articleA: '66000000-0000-4000-8000-000000000006',
+  billingA: '66000000-0000-4000-8000-000000000007',
+  suspendedA: '66000000-0000-4000-8000-000000000008',
+  removedA: '66000000-0000-4000-8000-000000000009',
+  partnerB: '66000000-0000-4000-8000-00000000000a',
+};
+const C = {
+  inPortfolio: '66000000-0000-4000-8000-000000000101', // manager = managerA
+  otherManaged: '66000000-0000-4000-8000-000000000102', // manager = managerBInA
+  unmanaged: '66000000-0000-4000-8000-000000000103', // manager = null
+  firmB: '66000000-0000-4000-8000-000000000111',
+};
+const E = {
+  inPortfolio: '66000000-0000-4000-8000-000000000201',
+  otherManaged: '66000000-0000-4000-8000-000000000202',
+  firmB: '66000000-0000-4000-8000-000000000211',
+};
+const TY = {
+  four: '66000000-0000-4000-8000-0000000002c1', // firm A, four-eyes, entity scope
+  plain: '66000000-0000-4000-8000-0000000002c2', // firm A, NO four-eyes
+};
+const I = {
+  fourIn: '66000000-0000-4000-8000-000000000301', // TY.four E.in assignee=senior reviewer=article
+  plainIn: '66000000-0000-4000-8000-000000000302', // TY.plain E.in assignee=senior reviewer=article
+  out: '66000000-0000-4000-8000-000000000303', // TY.plain E.otherManaged, unassigned
+  firmB: '66000000-0000-4000-8000-000000000311', // SYS_ITR E.firmB
+};
+const TK = {
+  four: '66000000-0000-4000-8000-000000000401', // linked I.fourIn, staged submitted
+  fourWrite: '66000000-0000-4000-8000-000000000402', // linked I.fourIn — write-time 4-eyes target
+  plain: '66000000-0000-4000-8000-000000000403', // linked I.plainIn (no four-eyes)
+  adhocIn: '66000000-0000-4000-8000-000000000404', // ad-hoc C.inPortfolio, assignee=seniorA
+  adhocOut: '66000000-0000-4000-8000-000000000405', // ad-hoc C.otherManaged, unassigned
+  adhocUnmanaged: '66000000-0000-4000-8000-000000000406', // ad-hoc C.unmanaged
+  mgrAssigned: '66000000-0000-4000-8000-000000000407', // ad-hoc C.otherManaged, assignee=managerA
+  reviewerOnly: '66000000-0000-4000-8000-000000000408', // ad-hoc C.inPortfolio, assignee=article reviewer=senior
+  cancelScratch: '66000000-0000-4000-8000-000000000409', // ad-hoc C.inPortfolio
+  replay: '66000000-0000-4000-8000-00000000040a', // ad-hoc C.inPortfolio (mutation-key replay)
+  firmB: '66000000-0000-4000-8000-000000000411',
+  depA: '66000000-0000-4000-8000-000000000421',
+  depB: '66000000-0000-4000-8000-000000000422',
+  depC: '66000000-0000-4000-8000-000000000423',
+  depOut: '66000000-0000-4000-8000-000000000424', // C.otherManaged — out of manager scope
+  // Five fresh pairs for the TEST-SCH-20 race iterations.
+  raceA1: '66000000-0000-4000-8000-000000000431', raceB1: '66000000-0000-4000-8000-000000000441',
+  raceA2: '66000000-0000-4000-8000-000000000432', raceB2: '66000000-0000-4000-8000-000000000442',
+  raceA3: '66000000-0000-4000-8000-000000000433', raceB3: '66000000-0000-4000-8000-000000000443',
+  raceA4: '66000000-0000-4000-8000-000000000434', raceB4: '66000000-0000-4000-8000-000000000444',
+  raceA5: '66000000-0000-4000-8000-000000000435', raceB5: '66000000-0000-4000-8000-000000000445',
+};
+const CM = {
+  senior: '66000000-0000-4000-8000-000000000501', // on TK.adhocIn by SENIOR_A
+};
+const CL = {
+  one: '66000000-0000-4000-8000-000000000601', // on TK.adhocIn
+  out: '66000000-0000-4000-8000-000000000602', // on TK.adhocOut (unassigned, out-of-scope)
+};
+
+const PARTNER_A = userId('USER_A_PARTNER');
+const SUPER_ADMIN_A = userId('USER_A_SUPER_ADMIN');
+const MANAGER_A = userId('USER_A_MANAGER');
+const MANAGER_B = userId('USER_B_MANAGER');
+const SENIOR_A = userId('USER_A_SENIOR');
+const ARTICLE_A = userId('USER_A_ARTICLE');
+const BILLING_A = userId('USER_A_BILLING');
+const PARTNER_B = userId('USER_B_PARTNER');
+
+let partnerA: string;
+let superAdminA: string;
+let managerA: string;
+let seniorA: string;
+let articleA: string;
+let billingA: string;
+let suspendedA: string;
+let removedA: string;
+let partnerB: string;
+
+function cleanRows() {
+  psql(`
+    delete from public.audit_log where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.task_comments where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.task_checklist_items where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.task_dependencies where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.tasks where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.compliance_instances where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.client_compliance_profiles where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.compliance_rule_versions where compliance_type_id in ('${TY.four}', '${TY.plain}');
+    delete from public.compliance_types where id in ('${TY.four}', '${TY.plain}');
+    delete from public.legal_entities where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.clients where firm_id in ('${FIRM_A}', '${FIRM_B}');
+    delete from public.firm_memberships where id in
+      ('${M.partnerA}','${M.superA}','${M.managerA}','${M.managerBInA}','${M.seniorA}','${M.articleA}',
+       '${M.billingA}','${M.suspendedA}','${M.removedA}','${M.partnerB}');
+  `);
+}
+
+function seedFixture() {
+  cleanRows();
+  const racePairs = [1, 2, 3, 4, 5]
+    .map(
+      (n) =>
+        `('${TK[`raceA${n}` as keyof typeof TK]}', '${FIRM_A}', '${C.inPortfolio}', null, 'TSK race A${n}', 'race a', null, null),
+         ('${TK[`raceB${n}` as keyof typeof TK]}', '${FIRM_A}', '${C.inPortfolio}', null, 'TSK race B${n}', 'race b', null, null)`,
+    )
+    .join(',\n      ');
+  psql(`
+    insert into public.firms (id, name) values
+      ('${FIRM_A}', 'IMP-040 RLS Firm A'),
+      ('${FIRM_B}', 'IMP-040 RLS Firm B')
+    on conflict (id) do nothing;
+
+    insert into public.firm_memberships (id, firm_id, user_id, role, status) values
+      ('${M.partnerA}',    '${FIRM_A}', '${PARTNER_A}',     'partner',     'active'),
+      ('${M.superA}',      '${FIRM_A}', '${SUPER_ADMIN_A}', 'super_admin', 'active'),
+      ('${M.managerA}',    '${FIRM_A}', '${MANAGER_A}',     'manager',     'active'),
+      ('${M.managerBInA}', '${FIRM_A}', '${MANAGER_B}',     'manager',     'active'),
+      ('${M.seniorA}',     '${FIRM_A}', '${SENIOR_A}',      'senior',      'active'),
+      ('${M.articleA}',    '${FIRM_A}', '${ARTICLE_A}',     'article_executive', 'active'),
+      ('${M.billingA}',    '${FIRM_A}', '${BILLING_A}',     'billing',     'active'),
+      ('${M.suspendedA}',  '${FIRM_A}', '${userId('USER_A_SUSPENDED')}', 'senior', 'suspended'),
+      ('${M.removedA}',    '${FIRM_A}', '${userId('USER_A_REMOVED')}',   'senior', 'removed'),
+      ('${M.partnerB}',    '${FIRM_B}', '${PARTNER_B}',     'partner',     'active')
+    on conflict (firm_id, user_id) do nothing;
+
+    -- Force-reset mutable state so re-runs are deterministic even if a
+    -- previous run mutated status mid-flight (freshness cases).
+    update public.firm_memberships set status = 'active' where id in ('${M.partnerA}', '${M.managerA}');
+    update public.firm_memberships set status = 'suspended' where id = '${M.suspendedA}';
+    update public.firm_memberships set status = 'removed' where id = '${M.removedA}';
+
+    insert into public.clients (id, firm_id, name, owner_partner_membership_id, manager_membership_id) values
+      ('${C.inPortfolio}',  '${FIRM_A}', 'TSK RLS InPortfolio',  '${M.partnerA}', '${M.managerA}'),
+      ('${C.otherManaged}', '${FIRM_A}', 'TSK RLS OtherManaged', '${M.partnerA}', '${M.managerBInA}'),
+      ('${C.unmanaged}',    '${FIRM_A}', 'TSK RLS Unmanaged',    '${M.partnerA}', null),
+      ('${C.firmB}',        '${FIRM_B}', 'TSK RLS FirmB',        '${M.partnerB}', null);
+
+    insert into public.legal_entities (id, firm_id, client_id, entity_type, legal_name) values
+      ('${E.inPortfolio}',  '${FIRM_A}', '${C.inPortfolio}',  'private_limited', 'TSK Entity In'),
+      ('${E.otherManaged}', '${FIRM_A}', '${C.otherManaged}', 'llp',             'TSK Entity Out'),
+      ('${E.firmB}',        '${FIRM_B}', '${C.firmB}',        'private_limited', 'TSK Entity B');
+
+    insert into public.compliance_types
+      (id, firm_id, type_key, name, category, frequency, due_rule, workflow_template,
+       scope_kind, registration_class, governance_class, four_eyes_required)
+    values
+      ('${TY.four}', '${FIRM_A}', 'rls40-four', 'RLS40 Four-Eyes', 'Certificates',
+       'custom', '{}', '{"states":["not_started","preparation","internal_review","ready_to_file","closed"]}',
+       'entity', null, 'non_statutory', true),
+      ('${TY.plain}', '${FIRM_A}', 'rls40-plain', 'RLS40 Plain', 'Certificates',
+       'custom', '{}', '{"states":["not_started","preparation","internal_review","ready_to_file","closed"]}',
+       'entity', null, 'non_statutory', false);
+
+    insert into public.compliance_instances
+      (id, firm_id, legal_entity_id, compliance_type_id, period_start, period_end,
+       period_label, due_date, assignee_membership_id, reviewer_membership_id)
+    values
+      ('${I.fourIn}',  '${FIRM_A}', '${E.inPortfolio}',  '${TY.four}',  '2026-04-01', '2026-06-30', 'FY26 Q1', '2026-07-31', '${M.seniorA}', '${M.articleA}'),
+      ('${I.plainIn}', '${FIRM_A}', '${E.inPortfolio}',  '${TY.plain}', '2026-07-01', '2026-09-30', 'FY26 Q2', '2026-10-31', '${M.seniorA}', '${M.articleA}'),
+      ('${I.out}',     '${FIRM_A}', '${E.otherManaged}', '${TY.plain}', '2026-04-01', '2026-06-30', 'FY26 Q1', '2026-07-31', null, null),
+      ('${I.firmB}',   '${FIRM_B}', '${E.firmB}',        '${SYS_ITR}',  '2026-04-01', '2027-03-31', 'FY 2026-27', '2027-10-31', null, null);
+
+    insert into public.tasks
+      (id, firm_id, client_id, compliance_instance_id, title, next_action,
+       assignee_membership_id, reviewer_membership_id)
+    values
+      ('${TK.four}',           '${FIRM_A}', '${C.inPortfolio}',  '${I.fourIn}',  'TSK four-eyes',       'finish prep',  '${M.seniorA}', '${M.articleA}'),
+      ('${TK.fourWrite}',      '${FIRM_A}', '${C.inPortfolio}',  '${I.fourIn}',  'TSK four write-time', 'finish prep',  '${M.seniorA}', '${M.articleA}'),
+      ('${TK.plain}',          '${FIRM_A}', '${C.inPortfolio}',  '${I.plainIn}', 'TSK plain linked',    'finish prep',  '${M.seniorA}', '${M.articleA}'),
+      ('${TK.adhocIn}',        '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK ad-hoc in',       'collect docs', '${M.seniorA}', null),
+      ('${TK.adhocOut}',       '${FIRM_A}', '${C.otherManaged}', null,           'TSK ad-hoc out',      'collect docs', null, null),
+      ('${TK.adhocUnmanaged}', '${FIRM_A}', '${C.unmanaged}',    null,           'TSK ad-hoc unmanaged','collect docs', null, null),
+      ('${TK.mgrAssigned}',    '${FIRM_A}', '${C.otherManaged}', null,           'TSK manager assigned','collect docs', '${M.managerA}', null),
+      ('${TK.reviewerOnly}',   '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK reviewer only',   'collect docs', '${M.articleA}', '${M.seniorA}'),
+      ('${TK.cancelScratch}',  '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK cancel scratch',  'collect docs', null, null),
+      ('${TK.replay}',         '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK replay',          'collect docs', '${M.seniorA}', null),
+      ('${TK.firmB}',          '${FIRM_B}', '${C.firmB}',        null,           'TSK firm B',          'collect docs', null, null),
+      ('${TK.depA}',           '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK dep A',           'collect docs', null, null),
+      ('${TK.depB}',           '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK dep B',           'collect docs', null, null),
+      ('${TK.depC}',           '${FIRM_A}', '${C.inPortfolio}',  null,           'TSK dep C',           'collect docs', null, null),
+      ('${TK.depOut}',         '${FIRM_A}', '${C.otherManaged}', null,           'TSK dep out',         'collect docs', null, null),
+      ${racePairs};
+
+    insert into public.task_comments (id, firm_id, task_id, author_id, body) values
+      ('${CM.senior}', '${FIRM_A}', '${TK.adhocIn}', '${SENIOR_A}', 'TSK RLS seed comment');
+
+    insert into public.task_checklist_items (id, firm_id, task_id, label, sort_order) values
+      ('${CL.one}', '${FIRM_A}', '${TK.adhocIn}', 'TSK RLS checklist line', 1),
+      ('${CL.out}', '${FIRM_A}', '${TK.adhocOut}', 'TSK RLS out-of-scope line', 1);
+
+    -- Stage TK.four at 'submitted' (transaction-local command flag inside a
+    -- DO block — the IMP-030/031 staging precedent; never a request path).
+    do $$ begin
+      perform set_config('app.task_transition_command', '1', true);
+      update public.tasks set status = 'submitted' where id = '${TK.four}';
+    end $$;
+  `);
+  // Fixture writes are operator/system-actor rows; remove fixture noise so
+  // denial-by-side-effect checks read a clean table (IMP-031 precedent).
+  psql(`delete from public.audit_log where firm_id in ('${FIRM_A}', '${FIRM_B}')`);
+}
+
+beforeAll(async () => {
+  seedFixture();
+  for (const [key, set] of [
+    ['USER_A_PARTNER', (t: string) => (partnerA = t)],
+    ['USER_A_SUPER_ADMIN', (t: string) => (superAdminA = t)],
+    ['USER_A_MANAGER', (t: string) => (managerA = t)],
+    ['USER_A_SENIOR', (t: string) => (seniorA = t)],
+    ['USER_A_ARTICLE', (t: string) => (articleA = t)],
+    ['USER_A_BILLING', (t: string) => (billingA = t)],
+    ['USER_A_SUSPENDED', (t: string) => (suspendedA = t)],
+    ['USER_A_REMOVED', (t: string) => (removedA = t)],
+    ['USER_B_PARTNER', (t: string) => (partnerB = t)],
+  ] as Array<[string, (t: string) => void]>) {
+    const s = await signIn(userEmail(key));
+    if (!s.ok) throw new Error(`sign-in failed for ${key}: ${JSON.stringify(s.raw)}`);
+    set(s.token);
+  }
+});
+
+afterAll(() => {
+  // Child rows first — the membership/firm deletes would otherwise trip the
+  // hierarchy FKs, and leaving rows behind poisons the next suite in the
+  // sequential chain.
+  cleanRows();
+  psql(`
+    delete from public.firms where id in ('${FIRM_A}', '${FIRM_B}')
+      and not exists (select 1 from public.firm_memberships m where m.firm_id = firms.id)
+      and not exists (select 1 from public.clients c where c.firm_id = firms.id);
+  `);
+});
+
+const ids = (body: Array<{ id: string }>) => body.map((r) => r.id);
+
+/** Drive a task along ordinary transitions, asserting each step. */
+async function walk(token: string, taskId: string, steps: string[], firm = FIRM_A) {
+  for (const to of steps) {
+    const res = await api(token, 'POST', 'rpc/transition_task', {
+      headers: H(firm),
+      body: { p_task_id: taskId, p_target_status: to },
+    });
+    expect(res.body.status, `transition to ${to}`).toBe('transitioned');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TEST-RLS-MAT-01 — read posture per role (all four tables)
+// ---------------------------------------------------------------------------
+
+describe('TEST-RLS-MAT-01 — read posture per role', () => {
+  it('super_admin/partner read every task/dependency/checklist/comment of the active firm, and only that firm', async () => {
+    for (const token of [partnerA, superAdminA]) {
+      const tasks = await api(token, 'GET', 'tasks?select=id', { headers: H(FIRM_A) });
+      expect(tasks.status).toBe(200);
+      expect(ids(tasks.body)).toEqual(
+        expect.arrayContaining([TK.four, TK.plain, TK.adhocIn, TK.adhocOut, TK.adhocUnmanaged, TK.mgrAssigned]),
+      );
+      expect(ids(tasks.body)).not.toContain(TK.firmB);
+      const comments = await api(token, 'GET', 'task_comments?select=id', { headers: H(FIRM_A) });
+      expect(ids(comments.body)).toContain(CM.senior);
+      const items = await api(token, 'GET', 'task_checklist_items?select=id', { headers: H(FIRM_A) });
+      expect(ids(items.body)).toContain(CL.one);
+    }
+  });
+
+  it('manager reads the portfolio PLUS directly-assigned tasks (RLS-STF-03); dependency edges require BOTH endpoints in scope (RLS-A-03)', async () => {
+    const tasks = await api(managerA, 'GET', 'tasks?select=id', { headers: H(FIRM_A) });
+    // Portfolio: every C.inPortfolio task; directly assigned: TK.mgrAssigned
+    // (C.otherManaged, outside the portfolio). Out: TK.adhocOut / TK.depOut /
+    // TK.adhocUnmanaged.
+    expect(ids(tasks.body).sort()).toEqual(
+      [
+        TK.four, TK.fourWrite, TK.plain, TK.adhocIn, TK.mgrAssigned, TK.reviewerOnly,
+        TK.cancelScratch, TK.replay, TK.depA, TK.depB, TK.depC,
+        TK.raceA1, TK.raceB1, TK.raceA2, TK.raceB2, TK.raceA3, TK.raceB3,
+        TK.raceA4, TK.raceB4, TK.raceA5, TK.raceB5,
+      ].sort(),
+    );
+    expect(ids(tasks.body)).not.toContain(TK.adhocOut);
+    expect(ids(tasks.body)).not.toContain(TK.firmB);
+    const items = await api(managerA, 'GET', 'task_checklist_items?select=id', { headers: H(FIRM_A) });
+    expect(ids(items.body)).toEqual([CL.one]);
+  });
+
+  it('senior/article read assigned-work tasks only (RLS-STF-04)', async () => {
+    const seniorTasks = await api(seniorA, 'GET', 'tasks?select=id', { headers: H(FIRM_A) });
+    // Assignee of four/fourWrite/plain/adhocIn/replay; reviewer of reviewerOnly.
+    expect(ids(seniorTasks.body).sort()).toEqual(
+      [TK.four, TK.fourWrite, TK.plain, TK.adhocIn, TK.replay, TK.reviewerOnly].sort(),
+    );
+    const articleTasks = await api(articleA, 'GET', 'tasks?select=id', { headers: H(FIRM_A) });
+    // Reviewer of four/fourWrite/plain; assignee of reviewerOnly.
+    expect(ids(articleTasks.body).sort()).toEqual(
+      [TK.four, TK.fourWrite, TK.plain, TK.reviewerOnly].sort(),
+    );
+    // Comments/checklist follow the parent task scope.
+    const seniorComments = await api(seniorA, 'GET', 'task_comments?select=id', { headers: H(FIRM_A) });
+    expect(ids(seniorComments.body)).toEqual([CM.senior]);
+    const articleComments = await api(articleA, 'GET', 'task_comments?select=id', { headers: H(FIRM_A) });
+    expect(articleComments.body).toEqual([]);
+  });
+
+  it('billing reads NOTHING on any task-family table; anon is denied outright', async () => {
+    for (const table of ['tasks', 'task_dependencies', 'task_checklist_items', 'task_comments']) {
+      const res = await api(billingA, 'GET', `${table}?select=id`, { headers: H(FIRM_A) });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+      const anon = await api('invalid-anon-token', 'GET', `${table}?select=id`, { headers: H(FIRM_A) });
+      expect(anon.status).toBeGreaterThanOrEqual(400);
+    }
+    for (const rpc of ['transition_task', 'add_task_dependency', 'remove_task_dependency']) {
+      const res = await api('invalid-anon-token', 'POST', `rpc/${rpc}`, {
+        headers: H(FIRM_A),
+        body: { p_task_id: TK.adhocIn, p_depends_on_task_id: TK.depA, p_target_status: 'in_progress' },
+      });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEST-RLS-GEN-02 — offensive posture (cross-tenant, forged context)
+// ---------------------------------------------------------------------------
+
+describe('TEST-RLS-GEN-02 — offensive posture', () => {
+  it('known foreign ids are indistinguishable from nonexistent, both directions, all tables', async () => {
+    const asA = await api(partnerA, 'GET', `tasks?id=eq.${TK.firmB}`, { headers: H(FIRM_A) });
+    expect(asA.body).toEqual([]);
+    const asB = await api(partnerB, 'GET', `tasks?id=eq.${TK.adhocIn}`, { headers: H(FIRM_B) });
+    expect(asB.body).toEqual([]);
+    const commentsAsB = await api(partnerB, 'GET', `task_comments?id=eq.${CM.senior}`, { headers: H(FIRM_B) });
+    expect(commentsAsB.body).toEqual([]);
+    const itemsAsB = await api(partnerB, 'GET', `task_checklist_items?id=eq.${CL.one}`, { headers: H(FIRM_B) });
+    expect(itemsAsB.body).toEqual([]);
+  });
+
+  it('cross-tenant insert fails even with the foreign selector forged (RLS-CTX-02)', async () => {
+    const forgedSelector = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_B),
+      body: { firm_id: FIRM_B, client_id: C.firmB, title: 'x', next_action: 'x' },
+    });
+    expect(forgedSelector.status).toBe(403);
+    const mismatchedColumn = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_B, client_id: C.firmB, title: 'x', next_action: 'x' },
+    });
+    expect(mismatchedColumn.status).toBe(403);
+    expect(psql(`select count(*) from public.tasks where firm_id = '${FIRM_B}' and title = 'x';`).trim()).toBe('0');
+  });
+
+  it('cross-tenant update/delete are silent zero-rows with rows provably unchanged (GEN-04)', async () => {
+    const upd = await api(superAdminA, 'PATCH', `tasks?id=eq.${TK.firmB}`, {
+      headers: H(FIRM_A),
+      body: { title: 'hijacked' },
+    });
+    expect(upd.status).toBe(200);
+    expect(upd.body).toEqual([]);
+    expect(psql(`select title from public.tasks where id = '${TK.firmB}';`).trim()).toBe('TSK firm B');
+    const del = await api(partnerA, 'DELETE', `task_checklist_items?id=eq.${CL.one}`, { headers: H(FIRM_B) });
+    expect(psql(`select count(*) from public.task_checklist_items where id = '${CL.one}';`).trim()).toBe('1');
+    expect([200, 204, 400, 403]).toContain(del.status);
+  });
+
+  it('no selector at all selects nothing (context is required, not optional)', async () => {
+    const res = await api(partnerA, 'GET', 'tasks?select=id');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+    const rpc = await api(partnerA, 'POST', 'rpc/transition_task', {
+      body: { p_task_id: TK.adhocIn, p_target_status: 'in_progress' },
+    });
+    expect(rpc.body).toEqual(NOT_FOUND_BODY);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEST-RLS-MAT-02/03 — write posture per role (routine non-state writes)
+// ---------------------------------------------------------------------------
+
+describe('TEST-RLS-MAT-02/03 — write posture per role', () => {
+  it('partner/super_admin update any firm task; server keeps subject binding on re-link', async () => {
+    const upd = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocUnmanaged}`, {
+      headers: H(FIRM_A),
+      body: { title: 'partner edit', priority: 'high', time_spent_minutes: 15 },
+    });
+    expect(upd.status).toBe(200);
+    expect(upd.body[0].title).toBe('partner edit');
+    // Re-linking pins client_id to the instance's client (server-derived by
+    // the guard — TEST-SCH-15 on the request path). client_id itself is
+    // outside the UPDATE grant (asserted in the column-pin test below), so
+    // the forged-value case is a 400 there, not a silent overwrite here.
+    const relink = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocUnmanaged}`, {
+      headers: H(FIRM_A),
+      body: { compliance_instance_id: I.out },
+    });
+    expect(relink.status).toBe(200);
+    expect(relink.body[0].client_id).toBe(C.otherManaged);
+    // Restore ad-hoc.
+    const restore = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocUnmanaged}`, {
+      headers: H(FIRM_A),
+      body: { compliance_instance_id: null },
+    });
+    expect(restore.status).toBe(200);
+    expect(restore.body[0].client_id).toBe(C.otherManaged); // client_id is not browser-rewritable
+  });
+
+  it('manager writes portfolio + directly-assigned tasks; out-of-scope is a silent zero-row', async () => {
+    const inPortfolio = await api(managerA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { priority: 'high' },
+    });
+    expect(inPortfolio.status).toBe(200);
+    expect(inPortfolio.body[0].priority).toBe('high');
+    const assigned = await api(managerA, 'PATCH', `tasks?id=eq.${TK.mgrAssigned}`, {
+      headers: H(FIRM_A),
+      body: { priority: 'low' },
+    });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body[0].priority).toBe('low');
+    const out = await api(managerA, 'PATCH', `tasks?id=eq.${TK.adhocOut}`, {
+      headers: H(FIRM_A),
+      body: { priority: 'urgent' },
+    });
+    expect(out.status).toBe(200);
+    expect(out.body).toEqual([]);
+    expect(psql(`select priority from public.tasks where id = '${TK.adhocOut}';`).trim()).toBe('normal');
+  });
+
+  it('senior/article update only tasks where their membership is the CURRENT assignee; reviewer-only visibility grants no write', async () => {
+    const own = await api(seniorA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { next_action: 'chase the client' },
+    });
+    expect(own.status).toBe(200);
+    expect(own.body[0].next_action).toBe('chase the client');
+    // TK.reviewerOnly: senior is the REVIEWER, not the assignee — no write.
+    const reviewerOnly = await api(seniorA, 'PATCH', `tasks?id=eq.${TK.reviewerOnly}`, {
+      headers: H(FIRM_A),
+      body: { next_action: 'escape attempt' },
+    });
+    expect(reviewerOnly.status).toBe(200);
+    expect(reviewerOnly.body).toEqual([]);
+    expect(psql(`select next_action from public.tasks where id = '${TK.reviewerOnly}';`).trim()).toBe('collect docs');
+    // Completely out of scope.
+    const out = await api(seniorA, 'PATCH', `tasks?id=eq.${TK.adhocOut}`, {
+      headers: H(FIRM_A),
+      body: { next_action: 'escape attempt' },
+    });
+    expect(out.body).toEqual([]);
+  });
+
+  it('assignment/reassignment is manager+ (RLS-TSK-01): manager assigns in scope, senior/article assignment attempts are 42501', async () => {
+    const assign = await api(managerA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { reviewer_membership_id: M.articleA },
+    });
+    expect(assign.status).toBe(200);
+    expect(assign.body[0].reviewer_membership_id).toBe(M.articleA);
+    // Senior (current assignee) cannot reassign, even to themselves-adjacent slots.
+    const reassign = await api(seniorA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { assignee_membership_id: M.articleA },
+    });
+    expect(reassign.status).toBe(403);
+    expect((reassign.body as { code: string }).code).toBe('42501');
+    expect(psql(`select assignee_membership_id from public.tasks where id = '${TK.adhocIn}';`).trim()).toBe(M.seniorA);
+    const setReviewer = await api(seniorA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { reviewer_membership_id: null },
+    });
+    expect(setReviewer.status).toBe(403);
+  });
+
+  it('responsibility write path: foreign-firm and suspended memberships are rejected (23503)', async () => {
+    const foreign = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { assignee_membership_id: M.partnerB },
+    });
+    expect(foreign.status).toBe(409); // PostgREST maps 23503 -> 409
+    expect((foreign.body as { code: string }).code).toBe('23503');
+    const suspended = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, {
+      headers: H(FIRM_A),
+      body: { reviewer_membership_id: M.suspendedA },
+    });
+    expect(suspended.status).toBe(409);
+    expect((suspended.body as { code: string }).code).toBe('23503');
+    const intact = psql(
+      `select assignee_membership_id || '|' || coalesce(reviewer_membership_id::text, '<null>') from public.tasks where id = '${TK.adhocIn}';`,
+    ).trim();
+    expect(intact).toBe(`${M.seniorA}|${M.articleA}`);
+  });
+
+  it('column-pinned write surface: status / waiting_reason / identity / client_id have NO browser write path', async () => {
+    for (const body of [
+      { status: 'in_progress' },
+      { status: 'cancelled' },
+      { waiting_reason: 'forge the blocker' },
+      { client_id: C.otherManaged },
+      { firm_id: FIRM_B },
+      { id: TK.firmB },
+    ]) {
+      const res = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.adhocIn}`, { headers: H(FIRM_A), body });
+      expect(res.status, JSON.stringify(body)).toBeGreaterThanOrEqual(400);
+    }
+    const intact = psql(
+      `select status || '|' || coalesce(waiting_reason, '<null>') || '|' || client_id from public.tasks where id = '${TK.adhocIn}';`,
+    ).trim();
+    expect(intact).toBe(`open|<null>|${C.inPortfolio}`);
+  });
+
+  it('DELETE is not granted on tasks/comments/dependencies (lifecycle states + immutability)', async () => {
+    const delTask = await api(partnerA, 'DELETE', `tasks?id=eq.${TK.adhocOut}`, { headers: H(FIRM_A) });
+    expect(delTask.status).toBeGreaterThanOrEqual(400);
+    const delComment = await api(partnerA, 'DELETE', `task_comments?id=eq.${CM.senior}`, { headers: H(FIRM_A) });
+    expect(delComment.status).toBeGreaterThanOrEqual(400);
+    expect(psql(`select count(*) from public.tasks where id = '${TK.adhocOut}';`).trim()).toBe('1');
+    expect(psql(`select count(*) from public.task_comments where id = '${CM.senior}';`).trim()).toBe('1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ad-hoc / instance-linked creation scope (RLS-TSK-01)
+// ---------------------------------------------------------------------------
+
+describe('creation scope matrix (RLS-TSK-01 ad-hoc + linked creation)', () => {
+  it('super_admin/partner create ad-hoc tasks for ANY client of the active firm; status forced to open', async () => {
+    const res = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.unmanaged, title: 'partner ad-hoc',
+        next_action: 'do it', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body[0].status).toBe('open'); // forced default — transition-command-only
+    psql(`delete from public.tasks where firm_id = '${FIRM_A}' and title = 'partner ad-hoc';`);
+  });
+
+  it('manager creates only inside the portfolio (RLS-STF-03)', async () => {
+    const inPortfolio = await api(managerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, client_id: C.inPortfolio, title: 'mgr in', next_action: 'x' },
+    });
+    expect(inPortfolio.status).toBe(201);
+    for (const client of [C.otherManaged, C.unmanaged]) {
+      const out = await api(managerA, 'POST', 'tasks', {
+        headers: H(FIRM_A),
+        body: { firm_id: FIRM_A, client_id: client, title: 'mgr out', next_action: 'x' },
+      });
+      expect(out.status).toBe(403);
+    }
+    psql(`delete from public.tasks where firm_id = '${FIRM_A}' and title in ('mgr in', 'mgr out');`);
+  });
+
+  it('senior/article create only inside the EXISTING assigned-work client scope, self-assigned — no bootstrapping', async () => {
+    // C.inPortfolio is in senior's assigned-work scope (assigned instances
+    // and tasks exist). Self-assigned: accepted.
+    const ok = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, title: 'senior ad-hoc',
+        next_action: 'x', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(ok.status).toBe(201);
+    // Not self-assigned: denied even on an in-scope client.
+    const other = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, title: 'senior for other',
+        next_action: 'x', assignee_membership_id: M.articleA,
+      },
+    });
+    expect(other.status).toBe(403);
+    // Unassigned (NULL) is equally not self-assignment.
+    const unassigned = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, client_id: C.inPortfolio, title: 'senior unassigned', next_action: 'x' },
+    });
+    expect(unassigned.status).toBe(403);
+    // No bootstrapping: a client with NOTHING assigned to the caller stays
+    // uncreatable even self-assigned.
+    const bootstrap = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.unmanaged, title: 'senior bootstrap',
+        next_action: 'x', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(bootstrap.status).toBe(403);
+    const outOfScope = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.otherManaged, title: 'senior out',
+        next_action: 'x', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(outOfScope.status).toBe(403);
+    // Setting a reviewer is assignment — manager+ only (write guard, 42501).
+    const withReviewer = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, title: 'senior reviewer-set',
+        next_action: 'x', assignee_membership_id: M.seniorA, reviewer_membership_id: M.articleA,
+      },
+    });
+    expect(withReviewer.status).toBe(403);
+    psql(`delete from public.tasks where firm_id = '${FIRM_A}' and title like 'senior %';`);
+  });
+
+  it('billing cannot create; status cannot be supplied on INSERT (column-pinned grant)', async () => {
+    const billing = await api(billingA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, client_id: C.inPortfolio, title: 'billing', next_action: 'x' },
+    });
+    expect(billing.status).toBe(403);
+    const forged = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, client_id: C.inPortfolio, title: 'forged status', next_action: 'x', status: 'done' },
+    });
+    expect(forged.status).toBe(403);
+    expect((forged.body as { code: string }).code).toBe('42501');
+    const forgedReason = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, client_id: C.inPortfolio, title: 'forged reason', next_action: 'x', waiting_reason: 'x' },
+    });
+    expect(forgedReason.status).toBe(403);
+  });
+
+  it('instance-linked creation respects the linked instance scope and derives the subject', async () => {
+    // Senior is the assignee of I.plainIn → linked creation self-assigned OK,
+    // client_id derived from the instance (a forged client_id is overwritten).
+    const ok = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.otherManaged, compliance_instance_id: I.plainIn,
+        title: 'senior linked', next_action: 'x', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(ok.status).toBe(201);
+    expect(ok.body[0].client_id).toBe(C.inPortfolio);
+    // I.out (C.otherManaged): nothing assigned to senior there → denied.
+    const outSenior = await api(seniorA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.otherManaged, compliance_instance_id: I.out,
+        title: 'senior linked out', next_action: 'x', assignee_membership_id: M.seniorA,
+      },
+    });
+    expect(outSenior.status).toBe(403);
+    // Manager: the derived client is outside the portfolio → denied.
+    const outManager = await api(managerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.otherManaged, compliance_instance_id: I.out,
+        title: 'manager linked out', next_action: 'x',
+      },
+    });
+    expect(outManager.status).toBe(403);
+    // Partner: firm-wide → accepted, subject derived.
+    const okPartner = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, compliance_instance_id: I.out,
+        title: 'partner linked', next_action: 'x',
+      },
+    });
+    expect(okPartner.status).toBe(201);
+    expect(okPartner.body[0].client_id).toBe(C.otherManaged);
+    psql(`delete from public.tasks where firm_id = '${FIRM_A}' and title in ('senior linked', 'partner linked');`);
+  });
+
+  it('creation with a foreign-firm or suspended assignee/reviewer is rejected (23503)', async () => {
+    const foreign = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, title: 'foreign assignee',
+        next_action: 'x', assignee_membership_id: M.partnerB,
+      },
+    });
+    expect(foreign.status).toBe(409); // PostgREST maps 23503 -> 409
+    expect((foreign.body as { code: string }).code).toBe('23503');
+    const suspended = await api(partnerA, 'POST', 'tasks', {
+      headers: H(FIRM_A),
+      body: {
+        firm_id: FIRM_A, client_id: C.inPortfolio, title: 'suspended reviewer',
+        next_action: 'x', reviewer_membership_id: M.suspendedA,
+      },
+    });
+    expect(suspended.status).toBe(409);
+    expect((suspended.body as { code: string }).code).toBe('23503');
+    expect(psql(`select count(*) from public.tasks where firm_id = '${FIRM_A}' and title in ('foreign assignee', 'suspended reviewer');`).trim()).toBe('0');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// transition_task — authorization-first posture (API-ERR-02) + matrix
+// ---------------------------------------------------------------------------
+
+describe('transition_task — API-ERR-02 uniformity and matrix', () => {
+  it('unauthorized-existing and nonexistent are BYTE-IDENTICAL (no existence oracle)', async () => {
+    const ghost = '66000000-0000-4000-8000-00000000fffe';
+    const missing = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: ghost, p_target_status: 'in_progress' },
+    });
+    expect(missing.body).toEqual(NOT_FOUND_BODY);
+    for (const [token, label, taskId] of [
+      [managerA, 'out-of-portfolio manager', TK.adhocOut],
+      [seniorA, 'out-of-scope senior', TK.adhocOut],
+      [billingA, 'billing', TK.adhocIn],
+      [partnerA, 'foreign firm task', TK.firmB],
+    ] as Array<[string, string, string]>) {
+      const res = await api(token, 'POST', 'rpc/transition_task', {
+        headers: H(FIRM_A),
+        body: { p_task_id: taskId, p_target_status: 'in_progress' },
+      });
+      expect(res.body, label).toEqual(NOT_FOUND_BODY);
+    }
+    expect(Object.keys(missing.body as Record<string, unknown>).sort()).toEqual(['kind', 'message', 'status']);
+  });
+
+  it('authorization runs FIRST: replay/vocabulary/legality probes by out-of-scope callers all return not_found', async () => {
+    for (const probe of [
+      { p_task_id: TK.adhocOut, p_target_status: 'open', p_mutation_key: 'probe' }, // replay path returns the full row to authorized callers
+      { p_task_id: TK.adhocOut, p_target_status: 'teleported' }, // vocabulary (CA400)
+      { p_task_id: TK.adhocOut, p_target_status: 'done' }, // legality (CA402)
+    ]) {
+      const res = await api(managerA, 'POST', 'rpc/transition_task', { headers: H(FIRM_A), body: probe });
+      expect(res.body, JSON.stringify(probe)).toEqual(NOT_FOUND_BODY);
+    }
+    expect(psql(`select status from public.tasks where id = '${TK.adhocOut}';`).trim()).toBe('open');
+  });
+
+  it('invalid transition and unknown target are visible ONLY after authorization (conflict / validation)', async () => {
+    const jump = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocOut, p_target_status: 'done' },
+    });
+    expect(jump.body.status).toBe('denied');
+    expect(jump.body.kind).toBe('conflict');
+    expect(String(jump.body.message)).toContain('invalid status transition');
+    const unknown = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocOut, p_target_status: 'teleported' },
+    });
+    expect(unknown.body.status).toBe('denied');
+    expect(unknown.body.kind).toBe('validation');
+    const sameState = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocOut, p_target_status: 'open' },
+    });
+    expect(sameState.body.kind).toBe('conflict');
+  });
+
+  it('senior ordinary transitions as current assignee incl. waiting (TEST-SCH-16) and mutation-key replay', async () => {
+    await walk(seniorA, TK.adhocIn, ['in_progress']);
+    // waiting requires waiting_reason — the authorized caller sees the
+    // conflict (API-ERR-04); the row is unchanged.
+    const noReason = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'waiting' },
+    });
+    expect(noReason.body.status).toBe('denied');
+    expect(noReason.body.kind).toBe('conflict');
+    expect(String(noReason.body.message)).toContain('waiting_reason');
+    const blankReason = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'waiting', p_waiting_reason: '   ' },
+    });
+    expect(blankReason.body.kind).toBe('conflict');
+    expect(psql(`select status from public.tasks where id = '${TK.adhocIn}';`).trim()).toBe('in_progress');
+    // With a reason: persisted on the task.
+    const waited = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'waiting', p_waiting_reason: 'client documents pending', p_mutation_key: 'rls40-wait-1' },
+    });
+    expect(waited.body.status).toBe('transitioned');
+    expect(waited.body.task.waiting_reason).toBe('client documents pending');
+    // Replay with the same key: already_applied, no second mutation.
+    const replay = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'waiting', p_mutation_key: 'rls40-wait-1' },
+    });
+    expect(replay.body.status).toBe('already_applied');
+    // Resume: waiting -> in_progress; the reason is RETAINED as history
+    // (documented contract choice).
+    const resumed = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'in_progress' },
+    });
+    expect(resumed.body.status).toBe('transitioned');
+    expect(resumed.body.task.waiting_reason).toBe('client documents pending');
+    // Back to open for later tests? open <- ... there is no in_progress->open
+    // edge (DM-SM-05) — verify that gap explicitly, then leave in_progress.
+    const back = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'open' },
+    });
+    expect(back.body.kind).toBe('conflict');
+  });
+
+  it('reviewer-only senior cannot perform ORDINARY transitions on a non-four-eyes task (RLS-TSK-01 + RLS-4EY-03 boundary)', async () => {
+    const res = await api(seniorA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.reviewerOnly, p_target_status: 'in_progress' },
+    });
+    expect(res.body.status).toBe('denied');
+    expect(res.body.kind).toBe('unauthorized');
+    expect(String(res.body.message)).toContain('current assignee');
+    expect(psql(`select status from public.tasks where id = '${TK.reviewerOnly}';`).trim()).toBe('open');
+    // The actual assignee can.
+    await walk(articleA, TK.reviewerOnly, ['in_progress']);
+  });
+
+  it('manager transitions the directly-assigned task outside the portfolio; partner drives firm-wide', async () => {
+    await walk(managerA, TK.mgrAssigned, ['in_progress']);
+    await walk(partnerA, TK.adhocOut, ['in_progress']);
+    // in_progress -> open is not an edge (DM-SM-05) — locked in for the
+    // cancellation scratch below.
+  });
+
+  it('cancellation: any non-terminal state -> cancelled; cancelled is terminal', async () => {
+    const cancelled = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.cancelScratch, p_target_status: 'cancelled' },
+    });
+    expect(cancelled.body.status).toBe('transitioned');
+    expect(cancelled.body.to_status).toBe('cancelled');
+    for (const target of ['open', 'in_progress', 'done']) {
+      const res = await api(partnerA, 'POST', 'rpc/transition_task', {
+        headers: H(FIRM_A),
+        body: { p_task_id: TK.cancelScratch, p_target_status: target },
+      });
+      expect(res.body.status).toBe('denied');
+      expect(res.body.kind).toBe('conflict');
+    }
+  });
+
+  it('suspended/removed memberships cannot transition with the same JWT; mid-session suspension is immediate (DEC-J)', async () => {
+    for (const token of [suspendedA, removedA]) {
+      const res = await api(token, 'POST', 'rpc/transition_task', {
+        headers: H(FIRM_A),
+        body: { p_task_id: TK.adhocIn, p_target_status: 'submitted' },
+      });
+      expect(res.body).toEqual(NOT_FOUND_BODY);
+    }
+    try {
+      psql(`update public.firm_memberships set status = 'suspended' where id = '${M.managerA}'`);
+      const denied = await api(managerA, 'POST', 'rpc/transition_task', {
+        headers: H(FIRM_A),
+        body: { p_task_id: TK.mgrAssigned, p_target_status: 'submitted' },
+      });
+      expect(denied.body).toEqual(NOT_FOUND_BODY);
+    } finally {
+      psql(`update public.firm_memberships set status = 'active' where id = '${M.managerA}'`);
+    }
+    const ok = await api(managerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.mgrAssigned, p_target_status: 'submitted' },
+    });
+    expect(ok.body.status).toBe('transitioned');
+  });
+
+  it('cross-tenant transition shares the not_found surface; firm B drives its own task', async () => {
+    const foreign = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.firmB, p_target_status: 'in_progress' },
+    });
+    expect(foreign.body).toEqual(NOT_FOUND_BODY);
+    const forgedSelector = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_B),
+      body: { p_task_id: TK.adhocIn, p_target_status: 'submitted' },
+    });
+    expect(forgedSelector.body).toEqual(NOT_FOUND_BODY);
+    await walk(partnerB, TK.firmB, ['in_progress'], FIRM_B);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEST-SCH-17 — task four-eyes reviewer authorization (RLS-4EY-03)
+// ---------------------------------------------------------------------------
+
+describe('TEST-SCH-17 — four-eyes, no rank bypass (TK.four staged submitted)', () => {
+  it('privileged roles and the assignee cannot decide review; only the assigned reviewer can', async () => {
+    expect(psql(`select status from public.tasks where id = '${TK.four}';`).trim()).toBe('submitted');
+    for (const [token, label] of [
+      [superAdminA, 'super_admin'],
+      [partnerA, 'partner'],
+      [managerA, 'in-portfolio manager'],
+      [seniorA, 'assignee senior'],
+    ] as Array<[string, string]>) {
+      for (const target of ['approved', 'returned']) {
+        const res = await api(token, 'POST', 'rpc/transition_task', {
+          headers: H(FIRM_A),
+          body: {
+            p_task_id: TK.four,
+            p_target_status: target,
+            p_reviewer_comment: target === 'returned' ? 'fix the schedule' : undefined,
+          },
+        });
+        expect(res.body.status, `${label} -> ${target}`).toBe('denied');
+        expect(res.body.kind, `${label} -> ${target}`).toBe('unauthorized');
+        expect(String(res.body.message), label).toContain('assigned reviewer');
+      }
+    }
+    expect(psql(`select status from public.tasks where id = '${TK.four}';`).trim()).toBe('submitted');
+    expect(psql(`select count(*) from public.task_comments where task_id = '${TK.four}';`).trim()).toBe('0');
+  });
+
+  it('return without a comment / with a blank comment is rejected and leaves BOTH task and comments unchanged', async () => {
+    for (const body of [
+      { p_task_id: TK.four, p_target_status: 'returned' },
+      { p_task_id: TK.four, p_target_status: 'returned', p_reviewer_comment: '   ' },
+    ]) {
+      const res = await api(articleA, 'POST', 'rpc/transition_task', { headers: H(FIRM_A), body });
+      expect(res.body.status).toBe('denied');
+      expect(res.body.kind).toBe('conflict');
+      expect(String(res.body.message)).toContain('reviewer comment');
+    }
+    expect(psql(`select status from public.tasks where id = '${TK.four}';`).trim()).toBe('submitted');
+    expect(psql(`select count(*) from public.task_comments where task_id = '${TK.four}';`).trim()).toBe('0');
+  });
+
+  it('the assigned reviewer returns WITH a comment — atomic task + exactly one immutable comment; then rework and approval', async () => {
+    const returned = await api(articleA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.four, p_target_status: 'returned', p_reviewer_comment: 'rework the working papers' },
+    });
+    expect(returned.body.status).toBe('transitioned');
+    expect(returned.body.to_status).toBe('returned');
+    const comments = psql(
+      `select author_id || '|' || body || '|' || retracted from public.task_comments where task_id = '${TK.four}';`,
+    ).trim();
+    expect(comments).toBe(`${ARTICLE_A}|rework the working papers|false`);
+    // The assignee picks the work back up (returned -> in_progress ->
+    // submitted); the reviewer then approves.
+    await walk(seniorA, TK.four, ['in_progress', 'submitted']);
+    const approved = await api(articleA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.four, p_target_status: 'approved' },
+    });
+    expect(approved.body.status).toBe('transitioned');
+    expect(approved.body.to_status).toBe('approved');
+  });
+
+  it('ad-hoc tasks are NOT four-eyes by default; non-four-eyes linked tasks follow the ordinary matrix; done -> open reopen works', async () => {
+    // TK.plain is instance-linked but the type is four_eyes=false: an
+    // in-scope partner drives the full chain including the review decision.
+    await walk(seniorA, TK.plain, ['in_progress', 'submitted']);
+    const approved = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.plain, p_target_status: 'approved' },
+    });
+    expect(approved.body.status).toBe('transitioned');
+    const done = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.plain, p_target_status: 'done' },
+    });
+    expect(done.body.status).toBe('transitioned');
+    // done is terminal EXCEPT the audited reopen edge.
+    const cancelled = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.plain, p_target_status: 'cancelled' },
+    });
+    expect(cancelled.body.kind).toBe('conflict');
+    const reopen = await api(partnerA, 'POST', 'rpc/transition_task', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.plain, p_target_status: 'open' },
+    });
+    expect(reopen.body.status).toBe('transitioned');
+    expect(reopen.body.from_status).toBe('done');
+    expect(reopen.body.to_status).toBe('open');
+  });
+
+  it('write-time four-eyes: reviewer = assignee on a four-eyes-linked task is rejected (FOUR_EYES marker)', async () => {
+    const res = await api(partnerA, 'PATCH', `tasks?id=eq.${TK.fourWrite}`, {
+      headers: H(FIRM_A),
+      body: { reviewer_membership_id: M.seniorA }, // = assignee
+    });
+    expect(res.status).toBe(400);
+    expect(String((res.body as { details?: string }).details)).toContain('FOUR_EYES:tasks.assignments');
+    expect(
+      psql(`select reviewer_membership_id from public.tasks where id = '${TK.fourWrite}';`).trim(),
+    ).toBe(M.articleA);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Comment security (RLS-TCM-01, SCH-16, DM-15)
+// ---------------------------------------------------------------------------
+
+describe('task_comments — append-only, author-pinned, retract-only update', () => {
+  it('any staff with task access appends; author is server-pinned to the caller', async () => {
+    const byReviewer = await api(articleA, 'POST', 'task_comments', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.reviewerOnly, author_id: ARTICLE_A, body: 'article note' },
+    });
+    expect(byReviewer.status).toBe(201);
+    expect(byReviewer.body[0].author_id).toBe(ARTICLE_A);
+    const byPartnerOut = await api(partnerA, 'POST', 'task_comments', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.adhocOut, author_id: PARTNER_A, body: 'partner note' },
+    });
+    expect(byPartnerOut.status).toBe(201);
+  });
+
+  it('author forgery is impossible (WITH CHECK pins author_id = auth.uid())', async () => {
+    const forged = await api(seniorA, 'POST', 'task_comments', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.adhocIn, author_id: PARTNER_A, body: 'forged' },
+    });
+    expect(forged.status).toBe(403);
+    expect(psql(`select count(*) from public.task_comments where body = 'forged';`).trim()).toBe('0');
+  });
+
+  it('no task access -> no comment (senior on an unassigned task; billing anywhere)', async () => {
+    const noAccess = await api(seniorA, 'POST', 'task_comments', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.adhocOut, author_id: SENIOR_A, body: 'escape' },
+    });
+    expect(noAccess.status).toBe(403);
+    const billing = await api(billingA, 'POST', 'task_comments', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.adhocIn, author_id: BILLING_A, body: 'billing' },
+    });
+    expect(billing.status).toBe(403);
+  });
+
+  it('only the author may retract; retraction is one-way; body/author/task are immutable; delete denied', async () => {
+    // Non-author (partner, firm-wide visibility) cannot retract — the USING
+    // clause excludes the row (silent zero-row, no mutation).
+    const notAuthor = await api(partnerA, 'PATCH', `task_comments?id=eq.${CM.senior}`, {
+      headers: H(FIRM_A),
+      body: { retracted: true },
+    });
+    expect(notAuthor.status).toBe(200);
+    expect(notAuthor.body).toEqual([]);
+    expect(psql(`select retracted from public.task_comments where id = '${CM.senior}';`).trim()).toBe('f');
+    // Body/authorship/parentage carry no update grant at all (column-pinned).
+    const editBody = await api(seniorA, 'PATCH', `task_comments?id=eq.${CM.senior}`, {
+      headers: H(FIRM_A),
+      body: { body: 'edited' },
+    });
+    expect(editBody.status).toBeGreaterThanOrEqual(400);
+    // The author retracts.
+    const retract = await api(seniorA, 'PATCH', `task_comments?id=eq.${CM.senior}`, {
+      headers: H(FIRM_A),
+      body: { retracted: true },
+    });
+    expect(retract.status).toBe(200);
+    expect(retract.body[0].retracted).toBe(true);
+    // Un-retraction reaches the one-way guard (IMMUTABLE_FIELD → conflict).
+    const unretract = await api(seniorA, 'PATCH', `task_comments?id=eq.${CM.senior}`, {
+      headers: H(FIRM_A),
+      body: { retracted: false },
+    });
+    expect(unretract.status).toBe(400);
+    expect(String((unretract.body as { details?: string }).details)).toContain('IMMUTABLE_FIELD:task_comments.retracted');
+    // Delete is denied to everyone.
+    const del = await api(seniorA, 'DELETE', `task_comments?id=eq.${CM.senior}`, { headers: H(FIRM_A) });
+    expect(del.status).toBeGreaterThanOrEqual(400);
+    expect(psql(`select count(*) from public.task_comments where id = '${CM.senior}';`).trim()).toBe('1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Checklist security (RLS-TSK-01 family scope; API-MUT-02 optimistic toggle)
+// ---------------------------------------------------------------------------
+
+describe('task_checklist_items — parent-task-scoped writes, unforgeable who/when', () => {
+  it('the assignee toggles: done_at is server-stamped and done_by forced to the caller; unchecking clears both', async () => {
+    const done = await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: true },
+    });
+    expect(done.status).toBe(200);
+    expect(done.body[0].is_done).toBe(true);
+    expect(done.body[0].done_by).toBe(SENIOR_A);
+    expect(done.body[0].done_at).not.toBeNull();
+    const undone = await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: false },
+    });
+    expect(undone.status).toBe(200);
+    expect(undone.body[0].done_by).toBeNull();
+    expect(undone.body[0].done_at).toBeNull();
+  });
+
+  it('a forged done_by can never stick — the trigger forces the caller identity', async () => {
+    const forged = await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: true, done_by: PARTNER_A },
+    });
+    expect(forged.status).toBe(200);
+    expect(forged.body[0].done_by).toBe(SENIOR_A);
+    // done_at is outside the grant entirely (server-stamped).
+    const forgedWhen = await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { done_at: '2020-01-01T00:00:00Z' },
+    });
+    expect(forgedWhen.status).toBeGreaterThanOrEqual(400);
+    await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: false },
+    });
+  });
+
+  it('an unrelated true->true edit preserves the recorded done_by/done_at exactly (DM-14 attribution is not re-stamped)', async () => {
+    // Senior completes the line (the flip stamps who/when).
+    const done = await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: true },
+    });
+    expect(done.status).toBe(200);
+    const stamp = done.body[0] as { done_by: string; done_at: string };
+    expect(stamp.done_by).toBe(SENIOR_A);
+    // A DIFFERENT user (partner, firm-wide access) edits the label while the
+    // line stays done — attribution must survive untouched.
+    const edit = await api(partnerA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { label: 'TSK RLS checklist line (edited)' },
+    });
+    expect(edit.status).toBe(200);
+    expect(edit.body[0].label).toBe('TSK RLS checklist line (edited)');
+    expect(edit.body[0].done_by).toBe(SENIOR_A);
+    expect(edit.body[0].done_at).toBe(stamp.done_at);
+    // Nor can the editor forge attribution on a true->true write.
+    const forge = await api(partnerA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { label: 'TSK RLS checklist line', is_done: true, done_by: PARTNER_A },
+    });
+    expect(forge.status).toBe(200);
+    expect(forge.body[0].done_by).toBe(SENIOR_A);
+    expect(forge.body[0].done_at).toBe(stamp.done_at);
+    // Restore the seeded unchecked state for later tests.
+    await api(seniorA, 'PATCH', `task_checklist_items?id=eq.${CL.one}`, {
+      headers: H(FIRM_A),
+      body: { is_done: false },
+    });
+  });
+
+  it('no task access -> no toggle (article unassigned; billing; cross-firm); no status side effect on the task', async () => {
+    // CL.out hangs off TK.adhocOut (unassigned, outside every non-manager
+    // scope) — NOT CL.one: the assignment test above makes articleA the
+    // REVIEWER of TK.adhocIn, which legitimately grants checklist access.
+    const before = psql(`select status from public.tasks where id = '${TK.adhocOut}';`).trim();
+    for (const token of [articleA, billingA]) {
+      const res = await api(token, 'PATCH', `task_checklist_items?id=eq.${CL.out}`, {
+        headers: H(FIRM_A),
+        body: { is_done: true },
+      });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+    }
+    const cross = await api(partnerB, 'PATCH', `task_checklist_items?id=eq.${CL.out}`, {
+      headers: H(FIRM_B),
+      body: { is_done: true },
+    });
+    expect(cross.body).toEqual([]);
+    expect(psql(`select is_done from public.task_checklist_items where id = '${CL.out}';`).trim()).toBe('f');
+    // Checklist activity NEVER moves the task status (API-MUT-02 path).
+    expect(psql(`select status from public.tasks where id = '${TK.adhocOut}';`).trim()).toBe(before);
+  });
+
+  it('insert/delete follow the parent task scope', async () => {
+    const added = await api(seniorA, 'POST', 'task_checklist_items', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.adhocIn, label: 'second line', sort_order: 2 },
+    });
+    expect(added.status).toBe(201);
+    const id = added.body[0].id as string;
+    // Neither article (no access to adhocOut) nor senior (assignee elsewhere,
+    // not of adhocOut) can add a line to an out-of-scope task.
+    for (const token of [articleA, seniorA]) {
+      const denied = await api(token, 'POST', 'task_checklist_items', {
+        headers: H(FIRM_A),
+        body: { firm_id: FIRM_A, task_id: TK.adhocOut, label: 'escape line' },
+      });
+      expect(denied.status).toBe(403);
+    }
+    const removed = await api(seniorA, 'DELETE', `task_checklist_items?id=eq.${id}`, { headers: H(FIRM_A) });
+    expect([200, 204]).toContain(removed.status);
+    expect(psql(`select count(*) from public.task_checklist_items where id = '${id}';`).trim()).toBe('0');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dependency commands (RLS-TSK-02; TEST-SCH-01/18/19/20)
+// ---------------------------------------------------------------------------
+
+describe('task_dependencies — command-owned graph', () => {
+  it('direct browser mutation is closed (no grant, no policies)', async () => {
+    const ins = await api(partnerA, 'POST', 'task_dependencies', {
+      headers: H(FIRM_A),
+      body: { firm_id: FIRM_A, task_id: TK.depA, depends_on_task_id: TK.depB },
+    });
+    expect(ins.status).toBe(403);
+    const del = await api(partnerA, 'DELETE', `task_dependencies?task_id=eq.${TK.depA}`, { headers: H(FIRM_A) });
+    expect(del.status).toBeGreaterThanOrEqual(400);
+    expect(psql(`select count(*) from public.task_dependencies where firm_id = '${FIRM_A}';`).trim()).toBe('0');
+  });
+
+  it('partner adds edges; duplicate is a conflict; keyed repeat is already_applied (TEST-SCH-19)', async () => {
+    const add = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB },
+    });
+    expect(add.body.status).toBe('added');
+    expect(add.body.dependency.task_id).toBe(TK.depA);
+    const dup = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB },
+    });
+    expect(dup.body.status).toBe('denied');
+    expect(dup.body.kind).toBe('conflict');
+    expect(String(dup.body.message)).toContain('already exists');
+    const keyed = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB, p_mutation_key: 'rls40-dep-1' },
+    });
+    expect(keyed.body.status).toBe('already_applied');
+    expect(keyed.body.reason).toBe('edge_already_exists');
+    // The partner sees the edge; an unassigned senior does not (read follows
+    // the task graph).
+    const partnerView = await api(partnerA, 'GET', 'task_dependencies?select=id', { headers: H(FIRM_A) });
+    expect(partnerView.body).toHaveLength(1);
+    const seniorView = await api(seniorA, 'GET', 'task_dependencies?select=id', { headers: H(FIRM_A) });
+    expect(seniorView.body).toEqual([]);
+  });
+
+  it('self-edge and ordinary cycles are rejected (TEST-SCH-18 / TEST-SCH-01)', async () => {
+    const selfEdge = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depA },
+    });
+    expect(selfEdge.body.status).toBe('denied');
+    expect(selfEdge.body.kind).toBe('conflict');
+    expect(String(selfEdge.body.message)).toContain('itself');
+    // Chain A -> B -> C; then C -> A must fail as a cycle.
+    const bc = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depB, p_depends_on_task_id: TK.depC },
+    });
+    expect(bc.body.status).toBe('added');
+    const cycle = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depC, p_depends_on_task_id: TK.depA },
+    });
+    expect(cycle.body.status).toBe('denied');
+    expect(cycle.body.kind).toBe('conflict');
+    expect(String(cycle.body.message)).toContain('cycle');
+    // The direct reverse of an existing edge is a length-2 cycle too.
+    const reverse = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depB, p_depends_on_task_id: TK.depA },
+    });
+    expect(reverse.body.kind).toBe('conflict');
+    expect(psql(`select count(*) from public.task_dependencies where firm_id = '${FIRM_A}';`).trim()).toBe('2');
+  });
+
+  it('authorization: manager needs BOTH tasks in scope; senior/article/billing denied; foreign pair leaks nothing', async () => {
+    // Manager: depA (portfolio) + depOut (out of portfolio, unassigned) —
+    // denied with the uniform not_found body (both rows EXIST — the denial
+    // is audited server-side; asserted in the audit suite).
+    const oneOut = await api(managerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depOut },
+    });
+    expect(oneOut.body).toEqual(NOT_FOUND_BODY);
+    const ghost = '66000000-0000-4000-8000-00000000fffd';
+    const missing = await api(managerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: ghost },
+    });
+    expect(missing.body).toEqual(oneOut.body);
+    for (const token of [seniorA, articleA, billingA]) {
+      const res = await api(token, 'POST', 'rpc/add_task_dependency', {
+        headers: H(FIRM_A),
+        body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depC },
+      });
+      expect(res.body).toEqual(NOT_FOUND_BODY);
+    }
+    // Cross-firm pair: indistinguishable from nonexistent.
+    const foreign = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.firmB, p_depends_on_task_id: TK.depA },
+    });
+    expect(foreign.body).toEqual(NOT_FOUND_BODY);
+    expect(psql(`select count(*) from public.task_dependencies where firm_id = '${FIRM_A}';`).trim()).toBe('2');
+  });
+
+  it('remove is symmetric: same authorization, idempotent replay, no direct-delete fallback', async () => {
+    const denied = await api(managerA, 'POST', 'rpc/remove_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depB, p_depends_on_task_id: TK.depOut },
+    });
+    expect(denied.body).toEqual(NOT_FOUND_BODY);
+    const removed = await api(partnerA, 'POST', 'rpc/remove_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB },
+    });
+    expect(removed.body.status).toBe('removed');
+    // Keyless repeat: the edge is gone — conflict. Keyed repeat: no-op.
+    const again = await api(partnerA, 'POST', 'rpc/remove_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB },
+    });
+    expect(again.body.status).toBe('denied');
+    expect(again.body.kind).toBe('conflict');
+    const keyed = await api(partnerA, 'POST', 'rpc/remove_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depA, p_depends_on_task_id: TK.depB, p_mutation_key: 'rls40-dep-rm-1' },
+    });
+    expect(keyed.body.status).toBe('already_applied');
+    expect(keyed.body.reason).toBe('edge_already_absent');
+    expect(psql(`select count(*) from public.task_dependencies where firm_id = '${FIRM_A}';`).trim()).toBe('1');
+    // A manager may remove an edge where both endpoints are in scope.
+    const mgrRemove = await api(managerA, 'POST', 'rpc/remove_task_dependency', {
+      headers: H(FIRM_A),
+      body: { p_task_id: TK.depB, p_depends_on_task_id: TK.depC },
+    });
+    expect(mgrRemove.body.status).toBe('removed');
+    expect(psql(`select count(*) from public.task_dependencies where firm_id = '${FIRM_A}';`).trim()).toBe('0');
+  });
+
+  it('TEST-SCH-20 — concurrent opposing edges: at most one commits, the graph stays acyclic (5 fresh pairs)', async () => {
+    for (const n of [1, 2, 3, 4, 5] as const) {
+      const a = TK[`raceA${n}` as keyof typeof TK];
+      const b = TK[`raceB${n}` as keyof typeof TK];
+      const [ab, ba] = await Promise.all([
+        api(partnerA, 'POST', 'rpc/add_task_dependency', {
+          headers: H(FIRM_A),
+          body: { p_task_id: a, p_depends_on_task_id: b },
+        }),
+        api(partnerA, 'POST', 'rpc/add_task_dependency', {
+          headers: H(FIRM_A),
+          body: { p_task_id: b, p_depends_on_task_id: a },
+        }),
+      ]);
+      const outcomes = [ab.body.status, ba.body.status].sort();
+      expect(outcomes, `pair ${n}: ${JSON.stringify([ab.body, ba.body])}`).toEqual(['added', 'denied']);
+      const loser = ab.body.status === 'denied' ? ab.body : ba.body;
+      expect(loser.kind).toBe('conflict');
+      // Exactly one direction exists — never both.
+      const count = psql(
+        `select count(*) from public.task_dependencies
+         where firm_id = '${FIRM_A}'
+           and ((task_id = '${a}' and depends_on_task_id = '${b}')
+             or (task_id = '${b}' and depends_on_task_id = '${a}'));`,
+      ).trim();
+      expect(count).toBe('1');
+    }
+    // Global acyclicity proof for the whole firm graph after the races:
+    // every node reachable from itself via depends_on edges must be empty.
+    const cyclic = psql(`
+      with recursive walk(task_id, root) as (
+        select d.depends_on_task_id, d.task_id from public.task_dependencies d where d.firm_id = '${FIRM_A}'
+        union
+        select d.depends_on_task_id, w.root
+        from public.task_dependencies d join walk w on d.task_id = w.task_id
+        where d.firm_id = '${FIRM_A}'
+      )
+      select count(*) from walk where task_id = root;
+    `).trim();
+    expect(cyclic).toBe('0');
+    // Clean up the race edges so teardown order stays simple.
+    psql(`delete from public.task_dependencies where firm_id = '${FIRM_A}';`);
+  });
+
+  it('SELECT requires BOTH endpoints visible (API-ERR-02 / RLS-A-03): a hidden endpoint leaves no trace in the payload', async () => {
+    // Three real edges created by the partner (firm-wide authorization):
+    //   both-visible   depA  -> depB    (both C.inPortfolio — managerA portfolio)
+    //   task-visible   depA  -> depOut  (depOut is C.otherManaged, hidden from managerA)
+    //   dep-visible    depOut -> depB   (same hidden endpoint, other direction)
+    for (const [t, d] of [[TK.depA, TK.depB], [TK.depA, TK.depOut], [TK.depOut, TK.depB]] as const) {
+      const add = await api(partnerA, 'POST', 'rpc/add_task_dependency', {
+        headers: H(FIRM_A),
+        body: { p_task_id: t, p_depends_on_task_id: d },
+      });
+      expect(add.body.status).toBe('added');
+    }
+
+    // Sanity: the partner (both endpoints always in scope) sees all three.
+    const partnerView = await api(partnerA, 'GET', 'task_dependencies?select=id,task_id,depends_on_task_id', { headers: H(FIRM_A) });
+    expect(partnerView.body).toHaveLength(3);
+
+    // Manager: exactly the both-visible edge — the two half-hidden edges are
+    // omitted, and the raw payload carries NO trace of the hidden endpoint's
+    // UUID in either edge direction.
+    const mgrView = await api(managerA, 'GET', 'task_dependencies?select=id,task_id,depends_on_task_id,dependency_type,created_at', { headers: H(FIRM_A) });
+    expect(mgrView.status).toBe(200);
+    expect(mgrView.body).toHaveLength(1);
+    expect(mgrView.body[0].task_id).toBe(TK.depA);
+    expect(mgrView.body[0].depends_on_task_id).toBe(TK.depB);
+    expect(JSON.stringify(mgrView.body)).not.toContain(TK.depOut);
+
+    // Neither endpoint visible: the senior (no assignment on any dep task)
+    // sees nothing at all — no edge existence, no endpoint ids.
+    const seniorView = await api(seniorA, 'GET', 'task_dependencies?select=id,task_id,depends_on_task_id,dependency_type,created_at', { headers: H(FIRM_A) });
+    expect(seniorView.body).toEqual([]);
+    const seniorRaw = JSON.stringify(seniorView.body);
+    for (const hidden of [TK.depA, TK.depB, TK.depOut]) {
+      expect(seniorRaw).not.toContain(hidden);
+    }
+
+    psql(`delete from public.task_dependencies where firm_id = '${FIRM_A}';`);
+  });
+});

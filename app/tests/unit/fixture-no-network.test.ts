@@ -19,6 +19,7 @@ vi.mock('@supabase/supabase-js', () => ({
 import { authService } from '@/data/auth/authService';
 import { client360Service } from '@/data/client360/client360Service';
 import { engagementService } from '@/data/engagements/engagementService';
+import { taskService } from '@/data/tasks/taskService';
 import { tenancyService } from '@/data/tenancy/tenancyService';
 
 describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
@@ -50,6 +51,10 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
     expect(client360Service.mode).toBe('fixture');
     await client360Service.getClient360('c-abc');
     await client360Service.listActiveStaff();
+    // IMP-040: the tasks fixture adapter is on the same guarantee.
+    expect(taskService.mode).toBe('fixture');
+    await taskService.listTasks();
+    await taskService.getTaskDetail('task-abc-gstr1-filing');
 
     expect(createClientSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();

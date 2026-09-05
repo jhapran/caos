@@ -99,6 +99,33 @@ export type {
   UpdateInstanceInput,
   UpdateProfileInput,
 } from './complianceInstances';
+// --- IMP-040: tasks, dependencies, checklists, comments (API-R0-TSK) --------
+// NAMING HAZARD: the extensionless specifier './tasks' resolves to the
+// LEGACY flat fixture module src/data/tasks.ts (file-first resolution under
+// "moduleResolution": "bundler") — it stays exported unchanged in the
+// fixture block below. The IMP-040 domain folder src/data/tasks/ is
+// therefore wired through its explicit sub-barrel path './tasks/index'.
+// Consumers import taskService / these types from '@/data' exactly like the
+// other IMP domains; nothing should ever import '@/data/tasks' expecting
+// the folder (that specifier is and remains the legacy module).
+export { taskService } from './tasks/index';
+export type {
+  AddTaskDependencyInput,
+  AddTaskDependencyResult,
+  CreateTaskInput,
+  RemoveTaskDependencyResult,
+  TaskChecklistItemRecord,
+  TaskCommentRecord,
+  TaskDependencyRecord,
+  TaskDetail,
+  TaskListFilter,
+  TaskRecord,
+  TaskService,
+  TaskStatus,
+  TransitionTaskInput,
+  TransitionTaskResult,
+  UpdateTaskInput,
+} from './tasks/index';
 // --- IMP-022: Client 360 composite read (API-R0-CLI, DM-X-02) ----------------
 export { client360Service } from './client360';
 export type {

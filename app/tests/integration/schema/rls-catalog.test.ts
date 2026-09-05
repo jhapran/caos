@@ -47,6 +47,20 @@
  * only, and four owner-only definer functions (the shared DM-27 scope
  * validator, the assignment/four-eyes validator, the two write guards).
  *
+ * IMP-040 changes reflected here (PASS B): tasks / task_dependencies /
+ * task_checklist_items / task_comments (SCH-13…16) carry the final
+ * RLS-TSK-01/RLS-TSK-02/RLS-TCM-01 policy set (11 policies: scoped
+ * select/insert/update on tasks; select-only on dependencies;
+ * select/insert/update/delete via-parent-task on checklist items;
+ * select/insert/retract-only-update on comments), column-pinned write
+ * grants (status/waiting_reason/client_id never browser-writable on tasks;
+ * comments update is retracted-only; dependencies have NO write grant), the
+ * Layer-B commands transition_task(uuid,text,text,text,text),
+ * add_task_dependency(uuid,uuid,text,text) and
+ * remove_task_dependency(uuid,uuid,text) granted to authenticated only, and
+ * three owner-only trigger functions (the tasks write guard, the comment
+ * immutability guard, the checklist who/when stamper).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -56,8 +70,8 @@ import { FIRM_A, psql, userId } from '../helpers.mjs';
 
 const rows = (sql) => psql(sql).trim().split('\n').filter(Boolean).sort();
 
-describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () => {
-  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance tables', () => {
+describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', () => {
+  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance + task-family tables', () => {
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`),
@@ -76,6 +90,10 @@ describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () =
       'legal_entities',
       'profiles',
       'registrations',
+      'task_checklist_items',
+      'task_comments',
+      'task_dependencies',
+      'tasks',
     ]);
   });
 
@@ -93,6 +111,8 @@ describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () =
     // content tables (the compliance write paths are postgres-owned definer
     // functions / RLS-governed DML — no owner bypass needed). IMP-031's
     // profiles/instances are tenant-owned content, forced the same way.
+    // IMP-040's four task-family tables are tenant-owned content, forced the
+    // same way (zero policies in PASS A = fail-closed for browser roles).
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`),
@@ -108,6 +128,10 @@ describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () =
       'engagements',
       'legal_entities',
       'registrations',
+      'task_checklist_items',
+      'task_comments',
+      'task_dependencies',
+      'tasks',
     ]);
   });
 
@@ -124,6 +148,11 @@ describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () =
     // IMP-031 adds scoped select + manager+ insert/update policies on both
     // client_compliance_profiles (RLS-CCP-01) and compliance_instances
     // (RLS-CIN-01) — state moves remain command-gated beneath the policies.
+    // IMP-040 PASS B adds eleven task-family policies (RLS-TSK-01/02,
+    // RLS-TCM-01): tasks scoped select/insert/update; task_dependencies
+    // select-only (graph writes are command-owned); task_checklist_items
+    // select/insert/update/delete via parent-task scope; task_comments
+    // select + author-pinned insert + author retract-only update.
     expect(
       rows(`select tablename || ':' || policyname || ':' || cmd from pg_policies where schemaname = 'public'`),
     ).toEqual(
@@ -165,6 +194,18 @@ describe('IMP-012/013/020/021/030/031 catalog — RLS state (RLS-PRIN-02)', () =
         'registrations:registrations_insert_manager_plus:INSERT',
         'registrations:registrations_select_scoped:SELECT',
         'registrations:registrations_update_manager_plus:UPDATE',
+        // IMP-040 PASS B task family.
+        'task_checklist_items:task_checklist_items_delete_via_task:DELETE',
+        'task_checklist_items:task_checklist_items_insert_via_task:INSERT',
+        'task_checklist_items:task_checklist_items_select_via_task:SELECT',
+        'task_checklist_items:task_checklist_items_update_via_task:UPDATE',
+        'task_comments:task_comments_insert_author:INSERT',
+        'task_comments:task_comments_select_via_task:SELECT',
+        'task_comments:task_comments_update_retract_author:UPDATE',
+        'task_dependencies:task_dependencies_select_scoped:SELECT',
+        'tasks:tasks_insert_scoped:INSERT',
+        'tasks:tasks_select_scoped:SELECT',
+        'tasks:tasks_update_scoped:UPDATE',
       ].sort(),
     );
   });
@@ -190,6 +231,11 @@ const AUTHENTICATED_RPCS = [
   // (API-R0-CCP / API-R0-CIN).
   'approve_client_compliance_profile(uuid)',
   'transition_compliance_instance(uuid,text,text)',
+  // IMP-040: Layer-B task transition + dependency-graph commands
+  // (API-R0-TSK, RLS-TSK-01/02).
+  'transition_task(uuid,text,text,text,text)',
+  'add_task_dependency(uuid,uuid,text,text)',
+  'remove_task_dependency(uuid,uuid,text)',
 ];
 const SERVICE_ONLY_FNS = [
   'write_audit_event_server(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text)',
@@ -229,6 +275,19 @@ const IMP031_FNS = [
   'cin_validate_assignments(uuid,uuid,uuid,uuid,uuid)',
   'compliance_scope_validate(uuid,uuid,uuid,jsonb,boolean)',
 ];
+// IMP-040 function inventory: the three Layer-B commands join
+// AUTHENTICATED_RPCS above; the task write guard, the comment immutability
+// guard, and the checklist who/when stamper are owner-only trigger functions
+// (invoked by triggers, never by application roles).
+const IMP040_TRIGGER_FNS = [
+  'task_checklist_items_stamp_done()',
+  'task_comments_guard_update()',
+  'tasks_guard_write()',
+];
+// IMP-040 policy helper: the senior/article creation predicate consults
+// tasks itself — the DEC-J definer pattern (active_membership_role
+// precedent) to avoid RLS self-recursion; authenticated-executable.
+const IMP040_HELPERS = ['task_client_in_assigned_scope(uuid,uuid)'];
 
 describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
@@ -246,6 +305,8 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP021_TRIGGER_FNS,
       ...IMP030_TRIGGER_FNS,
       ...IMP031_FNS,
+      ...IMP040_TRIGGER_FNS,
+      ...IMP040_HELPERS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
@@ -288,6 +349,14 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       'firms:SELECT',
       'legal_entities:SELECT',
       'registrations:SELECT',
+      // IMP-040 PASS B: task-family SELECT (RLS does the row filtering) +
+      // the one table-level DELETE (checklist lines, governed by the
+      // parent-task DELETE policy — no other task-family delete exists).
+      'task_checklist_items:DELETE',
+      'task_checklist_items:SELECT',
+      'task_comments:SELECT',
+      'task_dependencies:SELECT',
+      'tasks:SELECT',
     ]);
   });
 
@@ -666,21 +735,111 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
         'registrations:UPDATE:status',
         'registrations:UPDATE:valid_from',
         'registrations:UPDATE:valid_to',
+        // IMP-040 PASS B task family — SELECT covers readable columns on all
+        // four tables. tasks INSERT is exactly the caller-supplied set (no
+        // id/created_at/updated_at, no status — forced default 'open',
+        // transition-command-only — and no waiting_reason, transition-owned);
+        // tasks UPDATE is the routine non-state set (no status /
+        // waiting_reason / client_id / identity). Checklist INSERT excludes
+        // id/done_at/created_at/updated_at (done_at is server-stamped by the
+        // who/when trigger; done_by is accepted but force-stamped to the
+        // caller); checklist UPDATE is label/is_done/done_by/sort_order
+        // (template_source is insert-only provenance). Comments INSERT is
+        // firm_id/task_id/author_id/body (retracted forced default false);
+        // comments UPDATE is retracted ONLY (RLS-TCM-01). task_dependencies
+        // has NO write grant at any column — the graph is command-owned
+        // (RLS-TSK-02).
+        'task_checklist_items:INSERT:done_by',
+        'task_checklist_items:INSERT:firm_id',
+        'task_checklist_items:INSERT:is_done',
+        'task_checklist_items:INSERT:label',
+        'task_checklist_items:INSERT:sort_order',
+        'task_checklist_items:INSERT:task_id',
+        'task_checklist_items:INSERT:template_source',
+        'task_checklist_items:SELECT:created_at',
+        'task_checklist_items:SELECT:done_at',
+        'task_checklist_items:SELECT:done_by',
+        'task_checklist_items:SELECT:firm_id',
+        'task_checklist_items:SELECT:id',
+        'task_checklist_items:SELECT:is_done',
+        'task_checklist_items:SELECT:label',
+        'task_checklist_items:SELECT:sort_order',
+        'task_checklist_items:SELECT:task_id',
+        'task_checklist_items:SELECT:template_source',
+        'task_checklist_items:SELECT:updated_at',
+        'task_checklist_items:UPDATE:done_by',
+        'task_checklist_items:UPDATE:is_done',
+        'task_checklist_items:UPDATE:label',
+        'task_checklist_items:UPDATE:sort_order',
+        'task_comments:INSERT:author_id',
+        'task_comments:INSERT:body',
+        'task_comments:INSERT:firm_id',
+        'task_comments:INSERT:task_id',
+        'task_comments:SELECT:author_id',
+        'task_comments:SELECT:body',
+        'task_comments:SELECT:created_at',
+        'task_comments:SELECT:firm_id',
+        'task_comments:SELECT:id',
+        'task_comments:SELECT:retracted',
+        'task_comments:SELECT:task_id',
+        'task_comments:UPDATE:retracted',
+        'task_dependencies:SELECT:created_at',
+        'task_dependencies:SELECT:dependency_type',
+        'task_dependencies:SELECT:depends_on_task_id',
+        'task_dependencies:SELECT:firm_id',
+        'task_dependencies:SELECT:id',
+        'task_dependencies:SELECT:task_id',
+        'tasks:INSERT:assignee_membership_id',
+        'tasks:INSERT:client_id',
+        'tasks:INSERT:compliance_instance_id',
+        'tasks:INSERT:description',
+        'tasks:INSERT:due_date',
+        'tasks:INSERT:firm_id',
+        'tasks:INSERT:next_action',
+        'tasks:INSERT:priority',
+        'tasks:INSERT:reviewer_membership_id',
+        'tasks:INSERT:time_spent_minutes',
+        'tasks:INSERT:title',
+        'tasks:SELECT:assignee_membership_id',
+        'tasks:SELECT:client_id',
+        'tasks:SELECT:compliance_instance_id',
+        'tasks:SELECT:created_at',
+        'tasks:SELECT:description',
+        'tasks:SELECT:due_date',
+        'tasks:SELECT:firm_id',
+        'tasks:SELECT:id',
+        'tasks:SELECT:next_action',
+        'tasks:SELECT:priority',
+        'tasks:SELECT:reviewer_membership_id',
+        'tasks:SELECT:status',
+        'tasks:SELECT:time_spent_minutes',
+        'tasks:SELECT:title',
+        'tasks:SELECT:updated_at',
+        'tasks:SELECT:waiting_reason',
+        'tasks:UPDATE:assignee_membership_id',
+        'tasks:UPDATE:compliance_instance_id',
+        'tasks:UPDATE:description',
+        'tasks:UPDATE:due_date',
+        'tasks:UPDATE:next_action',
+        'tasks:UPDATE:priority',
+        'tasks:UPDATE:reviewer_membership_id',
+        'tasks:UPDATE:time_spent_minutes',
+        'tasks:UPDATE:title',
       ].sort(),
     );
   });
 
   it('helper/RPC EXECUTE privileges are exactly the approved set (not PUBLIC)', () => {
-    for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS]) {
+    for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS, ...IMP040_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -698,6 +857,8 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP021_TRIGGER_FNS,
       ...IMP030_TRIGGER_FNS,
       ...IMP031_FNS,
+      ...IMP040_TRIGGER_FNS,
+      ...IMP040_HELPERS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
@@ -720,7 +881,9 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     "'activate_compliance_rule_version', 'compliance_types_enforce_governance_inheritance', " +
     "'crv_guard_update', 'crv_prepare_insert', 'compliance_workflow_template_valid', " +
     "'approve_client_compliance_profile', 'transition_compliance_instance', " +
-    "'ccp_guard_write', 'cin_guard_write', 'cin_validate_assignments', 'compliance_scope_validate'";
+    "'ccp_guard_write', 'cin_guard_write', 'cin_validate_assignments', 'compliance_scope_validate', " +
+    "'transition_task', 'add_task_dependency', 'remove_task_dependency', 'task_client_in_assigned_scope', " +
+    "'tasks_guard_write', 'task_comments_guard_update', 'task_checklist_items_stamp_done'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -736,7 +899,16 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     // columns carry no grant and the guard's single-writer marker admits
     // only the command path); the scope/assignment validators and write
     // guards are definer so enforcement never depends on caller RLS
-    // visibility under FORCE RLS.
+    // visibility under FORCE RLS. IMP-040: the three Layer-B commands are
+    // definer (status/waiting_reason and the dependency graph carry no
+    // browser grant; single-writer markers admit only the command paths)
+    // and tasks_guard_write is definer (it reads compliance_instances /
+    // compliance_types / firm_memberships under FORCE RLS);
+    // task_client_in_assigned_scope is definer (RLS self-recursion on
+    // tasks inside the INSERT policy — the DEC-J helper pattern);
+    // task_comments_guard_update (pure OLD/NEW) and
+    // task_checklist_items_stamp_done (pure NEW mutation + auth.uid()) are
+    // INVOKER.
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
@@ -744,6 +916,7 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'activate_compliance_rule_version',
       'active_membership_id',
       'active_membership_role',
+      'add_task_dependency',
       'approve_client_compliance_profile',
       'audit_trg_row',
       'audit_write',
@@ -761,9 +934,13 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'list_engagement_letter_statuses',
       'mirror_login_history',
       'remove_membership',
+      'remove_task_dependency',
       'shares_active_firm_with',
       'suspend_membership',
+      'task_client_in_assigned_scope',
+      'tasks_guard_write',
       'transition_compliance_instance',
+      'transition_task',
       'write_audit_event',
       'write_audit_event_server',
     ]);
