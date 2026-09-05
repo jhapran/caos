@@ -524,12 +524,35 @@ authorization/not-found semantics and API-SEC-* function security.
     confirms (API-MUT-02); server result wins (API-MUT-01); actor stamping is
     server-side (API-MUT-04).
 - **API-R0-ALR — alerts.** List/read (RLS-ALR-01); acknowledge/snooze/
-  resolve RPCs; alert-rule administration RPCs restricted per RLS-ARL-01
-  with AAL2 (RLS-AAL-01); realtime per API-RT-01.
+  resolve Layer-B definer commands implementing the SCH-18 manual
+  transition matrix (authorization-before-disclosure per API-ERR-02 —
+  existing-but-hidden and nonexistent alerts return one identical
+  `not_found`; state-based mutation-key idempotency returns
+  `already_applied`, never an error, per API-MUT-03; `invalid_state`
+  maps to `conflict`). Manual resolve is super_admin/partner/manager
+  only and is `acknowledged_at`-gated when the rule requires explicit
+  acknowledgement (RLS-ALR-01, SCH-18); senior/article are read-only on
+  assigned-work alerts; billing has no access. Alert-rule administration
+  RPCs restricted per RLS-ARL-01 with AAL2 (RLS-AAL-01). Freshness per
+  API-RT-01 — for R0 delivered via the API-RT-07 sanctioned polling
+  fallback (human-ruled at IMP-042 contract reconciliation 2026-09-06):
+  a provider-neutral subscription interface whose ticks are bare
+  invalidations, with authoritative state always re-read through
+  RLS-protected reads; no postgres_changes dependency, no
+  `x-active-firm` Realtime workaround, no JWT/RLS change; the polling
+  interval is an implementation parameter, not a product SLA.
 - **API-R0-MWK — My Work.** One read contract returning the four buckets
   (Today, This Week, Waiting, Returned — DEC-L) with explicit `next_action`
   per task (PRD §44); backed by SCH-13 indexes. No recommendation
-  intelligence (deferred per DEC-L).
+  intelligence (deferred per DEC-L). Bucket semantics (Asia/Kolkata
+  business-date boundaries, single-bucket precedence, Returned
+  canonicalization, next_action rules, sorting, own-assignment-only
+  visibility) are normative in DEC-L (`01`). Read architecture
+  (human-ruled at IMP-042 contract reconciliation 2026-09-06): plain
+  RLS-protected task/review reads composed behind `@/data` (DM-X-02
+  precedent) — NO aggregate SECURITY DEFINER RPC; a genuine read gap
+  discovered at implementation escalates to a view (API-A-01), and any
+  demand for a definer RPC STOPs for human ruling.
 - **API-R0-DLN — deadlines & dependency.** Deadline board + group drill-down
   (read model over instances); client-dependency board (instances in
   `information_requested`, waiting tasks, ageing derived server-side,

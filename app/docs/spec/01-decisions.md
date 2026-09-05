@@ -153,6 +153,42 @@ My Work ships in R0 with: Today, This Week, Waiting, Returned groupings and
 an explicit next action per item. Workload recommendation intelligence is
 deferred.
 
+Bucket semantics (human-ruled at IMP-042 contract reconciliation
+2026-09-06):
+
+- **Business timezone:** Asia/Kolkata is the R0 CAOS business timezone;
+  all bucket date boundaries are evaluated against the current CAOS
+  business date in Asia/Kolkata.
+- **Eligibility / role visibility:** My Work is personal in R0 — every
+  staff role (super_admin, partner, manager, senior, article) sees only
+  their own assigned/actionable work; billing has no My Work access.
+  Broader scoped/team visibility belongs to other operational surfaces
+  and must not be introduced into My Work.
+- **Single-bucket precedence:** each work item appears in exactly one
+  bucket — Returned → Waiting → Today → This Week. Deduplication is by
+  canonical work identity (see Returned below).
+- **Today:** an eligible non-terminal actionable task with
+  `due_date <=` the current business date (overdue work is included),
+  unless claimed by Returned/Waiting precedence.
+- **This Week:** an eligible task with `due_date >` the current business
+  date and `<=` the end of the current ISO week, inclusive.
+- **`due_date IS NULL`:** excluded from Today and This Week; the task may
+  still appear in Waiting or Returned.
+- **Waiting:** an eligible task in the DM-SM-05 `waiting` state (with its
+  mandatory `waiting_reason`).
+- **Returned canonicalization:** a returned ReviewItem linked to a Task
+  surfaces the **Task** as the canonical Returned work item — the linked
+  ReviewItem is not additionally surfaced; a returned ReviewItem with
+  `task_id IS NULL` surfaces as standalone returned work.
+- **next_action:** a task surfaces its stored `tasks.next_action`
+  (PRD §44, NOT NULL); a standalone returned ReviewItem carries the
+  deterministic contract action "Address reviewer feedback". Reviewer
+  rationale remains separate explanatory data and is never used as
+  next_action.
+- **Sorting (date buckets):** `due_date ASC NULLS LAST`, then the
+  existing authoritative task priority order (highest first), then a
+  stable ID tie-breaker. No new priority enum is introduced.
+
 ### DEC-M — Billing: native billing deferred
 
 Native billing is deferred. Early releases may support read-only/imported

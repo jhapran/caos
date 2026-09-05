@@ -480,6 +480,37 @@ instance, one event). Extensions:
   states reject further decisions; non-empty non-whitespace rationale is
   mandatory for all four outcomes; rejections map to `conflict`/
   `validation` with machine-readable reason codes (API-ERR-04).
+- **TEST-API-16 (newly allocated, IMP-042 contract reconciliation
+  2026-09-06):** alert acknowledge/snooze/resolve commands enforce
+  authorization-before-disclosure (API-ERR-02): an unauthorized or
+  out-of-scope existing alert and a nonexistent id return the identical
+  `not_found` surface; no existence, status, legality, or replay oracle
+  (RLS-ALR-01).
+- **TEST-API-17 (newly allocated, IMP-042 contract reconciliation
+  2026-09-06):** the SCH-18 manual transition matrix holds — acknowledge
+  from `active`/`snoozed` (stamping acknowledgement and clearing
+  `snoozed_until` per the matrix); identical repeated commands return
+  `already_applied`; `invalid_state` from `resolved` maps to `conflict`;
+  snooze requires a future `snoozed_until`, preserves prior
+  acknowledgement stamps, and a changed valid `snoozed_until` is a real
+  audited update; resolve is permitted from any non-resolved state and is
+  `acknowledged_at`-gated when the rule requires explicit
+  acknowledgement; no reopen path exists.
+- **TEST-API-18 (newly allocated, IMP-042 contract reconciliation
+  2026-09-06):** snooze-expiry read derivation — a persisted `snoozed`
+  alert with `snoozed_until <= now()` reads with effective status
+  `acknowledged` (when `acknowledged_at IS NOT NULL`) else `active`, and
+  commands remain correct against the expired persisted row; IMP-042
+  performs no expiry writes.
+- **TEST-API-19 (newly allocated, IMP-042 contract reconciliation
+  2026-09-06):** the My Work read contract (API-R0-MWK / DEC-L) returns
+  exactly four buckets with single-bucket precedence
+  (Returned → Waiting → Today → This Week), canonical-work-identity
+  deduplication (a task-linked returned ReviewItem surfaces only as its
+  Task), own-assignment visibility for every staff role (billing none),
+  Asia/Kolkata business-date boundaries (overdue-inclusive Today,
+  ISO-week-bounded This Week, NULL `due_date` excluded from date
+  buckets), and the ruled sort order with stable ID tie-break.
 
 ## Security family (TEST-SEC-*)
 

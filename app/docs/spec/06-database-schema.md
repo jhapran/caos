@@ -305,10 +305,35 @@ prevention only; full design lands with each feature's release spec.
 - **FKs:** `(firm_id, alert_rule_id)` → alert_rules; `(firm_id, client_id)` → clients; `(firm_id, compliance_instance_id)` → compliance_instances (nullable); acknowledged_by/resolved_by → auth.users (actor identity, SCH-RESP-02).
 - **Indexes:** `(firm_id, status, severity)`; `(firm_id, raised_at)`.
 - **Audit sensitivity:** MEDIUM-HIGH (ack/resolution).
+- **Manual transition matrix (human-ruled at IMP-042 contract
+  reconciliation 2026-09-06):** all browser status writes are Layer-B
+  definer commands (API-R0-ALR); direct table writes are closed.
+  **ACKNOWLEDGE:** `active → acknowledged` (stamps
+  `acknowledged_by`/`acknowledged_at`, server-derived actor); `snoozed →
+  acknowledged` (stamps acknowledgement if not already stamped; clears
+  `snoozed_until`); `acknowledged → acknowledged` returns
+  `already_applied`; from `resolved` = `invalid_state` (→ `conflict`).
+  **SNOOZE:** `active | acknowledged | snoozed → snoozed`;
+  `snoozed_until` must be in the future; prior
+  `acknowledged_by`/`acknowledged_at` are preserved; an identical
+  already-applied snooze returns `already_applied`; a changed valid
+  `snoozed_until` is a real audited update. **RESOLVE:** `active |
+  acknowledged | snoozed → resolved` with `resolution_type='manual'`;
+  where the rule's `requires_explicit_ack=true`, manual resolve requires
+  `acknowledged_at IS NOT NULL` (acknowledgement-history based, not
+  status-based — an acknowledged alert may subsequently be snoozed);
+  `resolved → resolved` returns `already_applied`. No reopen transition
+  exists in IMP-042. `resolution_type='auto'` is written only by the
+  IMP-051 evaluator. **Snooze expiry:** IMP-042 adds no expiry scheduler
+  and persists no expiry transition; authoritative reads derive the
+  effective status — persisted `snoozed` with `snoozed_until <= now()`
+  reads as `acknowledged` when `acknowledged_at IS NOT NULL`, else
+  `active`; commands remain correct against an expired-but-persisted
+  `snoozed` row; persisted normalization belongs to the IMP-051 evaluator.
 - **RLS:** RLS-ALR-*. **Tests:** TEST-RLS-ALR-*, TEST-AUD-03.
 
 ### SCH-19 — alert_rules
-- **Purpose:** Per-firm alert rule configuration (DM-22). **R0.** Tenant-owned (firm rows seeded from templates at firm creation — no NULL-firm pattern here; TEN-09).
+- **Purpose:** Per-firm alert rule configuration (DM-22). **R0.** Tenant-owned (firm rows seeded from templates at firm creation — no NULL-firm pattern here; TEN-09). **Seed stance (human-ruled at IMP-042 contract reconciliation 2026-09-06):** IMP-042 ships NO alert-rule seed rows and no thresholds; which rules ship enabled by default remains AUTO-OQ-04 (open) — template seeding/activation is deferred to its own authorized package/decision.
 - **Columns:** `rule_key text NOT NULL`; `name text NOT NULL`; `severity text NOT NULL`; `config jsonb NOT NULL DEFAULT '{}'` (thresholds); `enabled bool NOT NULL DEFAULT true`; `auto_resolve bool NOT NULL DEFAULT true`; `requires_explicit_ack bool NOT NULL DEFAULT false` (DM-OQ-05 resolution).
 - **Unique:** `(firm_id, rule_key)`.
 - **Audit sensitivity:** HIGH (changing alert thresholds changes risk visibility; administration restricted per RLS-ARL-01 and every change audited).

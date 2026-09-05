@@ -306,6 +306,11 @@ compliance_instances (provenance: rule_version_id, generation_source,
   `resolution_type='auto'`. Rules with `requires_explicit_ack=true` stay
   acknowledged-but-open until an authorized human resolves them. Manual
   alerts resolve only via the resolve RPC (RLS-ALR-01).
+- **Snooze-expiry ownership (human-ruled at IMP-042 contract
+  reconciliation 2026-09-06):** persisted snooze-expiry normalization is
+  the evaluator's responsibility (IMP-051). IMP-042 derives the effective
+  status at read time per the SCH-18 matrix and performs no expiry
+  writes.
 
 ## Reminder-ready events (recording only in R0)
 

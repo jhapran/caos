@@ -1049,17 +1049,36 @@ separate explicit implementation instruction.
 - **Purpose:** `alerts` and `alert_rules` (SCH-18/19) persistence + RLS;
   My Work surface (Today / This Week / Waiting / Returned / explicit next
   action, DEC-L) wired to live data.
-- **Requirement IDs:** DM-16…18, DM-25, SCH-18, SCH-19, RLS-ALR-01,
-  RLS-ARL-01 (rule administration roles per RLS-OQ-03 resolution);
-  DEC-L.
-- **TEST-* IDs:** TEST-RLS-*, TEST-API-*, TEST-E2E-07 (task assignment +
-  update — downstream UI acceptance; backend behavior delivered by
-  IMP-040), TEST-E2E-09.
+- **Requirement IDs (erratum, human-ruled 2026-09-06: DM-16…18 are the
+  deferred Release-1 document family — Document/DocumentVersion/
+  DocumentRequest per DEC-T — and were a card citation error; corrected
+  to the owning R0 entities):** DM-13, DM-21, DM-22, DM-25, SCH-18,
+  SCH-19, RLS-ALR-01, RLS-ARL-01 (rule administration roles per
+  RLS-OQ-03 resolution); DEC-L.
+- **TEST-* IDs:** TEST-RLS-ALR-*, TEST-RLS-ARL-*, TEST-SCH-* (next
+  family, SCH-18/19), TEST-API-16…19 (newly allocated at contract
+  reconciliation 2026-09-06, `11`), TEST-AUD-02 (alert_rules portion),
+  TEST-AUD-03 (alert manual-transition portion; the auto-resolution
+  clause is exercisable only with the IMP-051 evaluator), TEST-E2E-07
+  (task assignment + update — downstream UI acceptance; backend behavior
+  delivered by IMP-040), TEST-E2E-09.
 - **Dependencies:** IMP-040, IMP-041; alert *generation* lands in IMP-051
   — this package ships persistence, ack/resolve, and the My Work surface.
-- **Allowed scope:** migrations, policies, adapter, My Work page wiring.
+- **Allowed scope:** migrations, policies, adapter, My Work page wiring
+  (D1 ruling 2026-09-06: the existing `/alerts` page is NOT wired in
+  this package; its ModuleGate is unchanged — alert ack/snooze/resolve
+  acceptance is proven through the provider-neutral adapter plus
+  RLS/API/integration/audit verification).
 - **Non-goals:** alert-rule authoring UI beyond read/admin basics;
-  workload recommendations; reminder delivery.
+  workload recommendations; reminder delivery; alert
+  generation/evaluation/dedupe/auto-resolution and any scheduler
+  (IMP-051); domain-event publication (`alert.created`/`alert.resolved`
+  — IMP-050 / AUTO-OQ-02); alert-rule seed rows or thresholds (D3 ruling
+  2026-09-06 — AUTO-OQ-04 stays open); postgres_changes for the alert
+  badge/list surface (D2 ruling 2026-09-06 — the API-RT-07 sanctioned
+  polling fallback is used: subscription interface → bare invalidation →
+  authoritative RLS re-read; the interval is an implementation
+  parameter, not a product SLA).
 - **Expected files/areas:** `supabase/migrations/`, `src/data/`,
   `src/pages/` (My Work).
 - **Entry criteria:** R0-E persistence green.
@@ -1071,6 +1090,14 @@ separate explicit implementation instruction.
 - **Human approval:** no.
 - **Git checkpoint:** `feat: alerts and my work`.
 - **Rollback concern:** standard.
+- **Contract reconciliation (human-ruled 2026-09-06):** My Work bucket
+  semantics are normative in DEC-L (`01`); the alert manual transition
+  matrix and snooze-expiry read derivation are normative in SCH-18
+  (`06`); command/read behavior is normative in API-R0-ALR / API-R0-MWK
+  (`07`); the My Work read architecture is least-privilege — plain
+  RLS-protected task/review reads composed behind `@/data`, NO aggregate
+  SECURITY DEFINER RPC (any newly discovered authoritative requirement
+  for one STOPs for human ruling).
 - **Open/provisional dependency:** AUTO-OQ-04 (which rules ship enabled
   by default) affects seed config, not this schema.
 
