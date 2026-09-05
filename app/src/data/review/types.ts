@@ -180,10 +180,13 @@ export interface ReviewService {
   /**
    * API-RT-01 invalidation subscription for the review queue count/list.
    * The callback means "re-read through the normal RLS-controlled list" —
-   * payloads are never treated as data (API-RT-03/05). Returns the
-   * unsubscribe function; subscriptions are scoped to the active firm and
-   * cleaned up by the caller. Fixture mode simulates this locally
-   * (API-RT-04) — no Supabase channel is ever opened in demo mode.
+   * freshness signals never carry business data (API-RT-03/05). Returns
+   * the unsubscribe function; subscriptions require an active-firm context
+   * and are cleaned up by the caller. The Supabase implementation uses the
+   * approved API-RT-07 polling fallback (authenticated postgres_changes
+   * cannot satisfy the R0 active-firm RLS context — see
+   * review/supabase.ts); fixture mode simulates this locally (API-RT-04) —
+   * no Supabase channel is ever opened in demo mode.
    */
   subscribeReviewQueue(onInvalidate: () => void): () => void;
 }

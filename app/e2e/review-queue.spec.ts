@@ -68,6 +68,32 @@ const APPROVE_RATIONALE = 'E2E approve: schedules tie out.';
 const RETURN_RATIONALE = 'E2E return: please attach the revised register.';
 const SENIOR_TASK_TITLE = 'E2E assigned task — GST filing';
 const SENIOR_ITEM = 'E2E senior task-linked item';
+const POLL_ITEM = 'E2E poll freshness item';
+
+/** Pending-count from the queue header, truthful for the zero state too.
+ *  The header renders "0 items awaiting review" DURING load, so wait for the
+ *  loading panel to clear before reading. */
+async function pendingCount(page: import('@playwright/test').Page): Promise<number> {
+  await page.waitForFunction(
+    () => !document.body.textContent?.includes('Loading the review queue'),
+    null,
+    { timeout: 30_000 },
+  );
+  const text =
+    (await page
+      .getByText(/items awaiting review|Review queue is clear/)
+      .first()
+      .textContent()) ?? '';
+  const m = /(\d+)\s+items awaiting review/.exec(text);
+  return m ? Number(m[1]) : 0;
+}
+
+/** Navbar review badge (visible desktop nav anchor); 0 when no badge renders. */
+async function navbarBadge(page: import('@playwright/test').Page): Promise<number> {
+  const text = (await page.locator('a[href="/review"]:visible').first().textContent()) ?? '';
+  const m = /(\d+)/.exec(text.replace(/Review Queue/, ''));
+  return m ? Number(m[1]) : 0;
+}
 
 async function signInWithMfa(page: import('@playwright/test').Page, email: string) {
   await page.goto('/auth/sign-in');
@@ -277,4 +303,86 @@ test('PASS C.1 — senior submits against assigned work; client server-derived; 
   );
 
   await seniorContext.close();
+});
+
+test('API-RT-07 — cross-session queue freshness without reload (polling fallback)', async ({
+  browser,
+}) => {
+  // Governing ruling (2026-09-06): authenticated postgres_changes cannot
+  // satisfy the R0 active-firm RLS context, so the review queue count/list
+  // uses the approved API-RT-07 polling fallback. This test proves the real
+  // user-visible behavior: two browser sessions, no manual reload, queue
+  // list + navbar badge become current via poll → RLS refetch. Waits allow
+  // >2× the production 15s poll interval; production polling is NOT sped up.
+  test.setTimeout(240_000);
+
+  // Deterministic enrolment for the identities reused from earlier tests
+  // (the suite's established local-harness mechanism — LOCAL registry users
+  // only, never the hosted synthetic identities).
+  for (const u of [PARTNER, SENIOR]) {
+    for (const f of await adminListFactors(u)) {
+      await adminDeleteFactor(u, f.id);
+    }
+  }
+
+  // Deterministic DB baselines — reading counts from either page at a fixed
+  // moment races the async first load (the header renders "0 items awaiting
+  // review" before data arrives), so the truthful baseline is the RLS-scoped
+  // DB count and the UI must CONVERGE to it.
+  const dbPending = (scope: string) =>
+    Number(
+      psql(
+        `select count(*) from public.review_items where firm_id = '${FIRM_B}' and status = 'pending'${scope};`,
+      ).trim(),
+    );
+  const baseA = dbPending(''); // partner: firm-wide
+  const baseB = dbPending(` and submitted_by_membership_id = '${SENIOR_MEMBERSHIP}'`); // senior: own
+
+  // --- Session A: reviewer (partner) with the queue open ------------------
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await signInWithMfa(pageA, PARTNER_EMAIL);
+  await pageA.goto('/review');
+  await expect(
+    pageA.getByRole('heading', { name: 'Review Queue', exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => pendingCount(pageA), { timeout: 30_000 }).toBe(baseA);
+  await expect.poll(() => navbarBadge(pageA), { timeout: 30_000 }).toBe(baseA);
+
+  // --- Session B: senior submits through the real UI ----------------------
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await signInWithMfa(pageB, SENIOR_EMAIL);
+  await pageB.goto('/review');
+  await expect.poll(() => pendingCount(pageB), { timeout: 30_000 }).toBe(baseB);
+
+  await pageB.getByRole('button', { name: /Submit for review/ }).click();
+  const dialog = pageB.getByRole('dialog');
+  await dialog.getByLabel('Assigned work item').click();
+  await pageB.getByRole('option', { name: new RegExp(SENIOR_TASK_TITLE) }).click();
+  await dialog.getByLabel('Work type').click();
+  await pageB.getByRole('option', { name: 'GST Reconciliation' }).click();
+  await dialog.getByLabel('Title').fill(POLL_ITEM);
+  await dialog.getByRole('button', { name: 'Submit for review' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(() => pendingCount(pageB), { timeout: 15_000 }).toBe(baseB + 1);
+
+  // --- Session A becomes current WITHOUT any reload ------------------------
+  await expect.poll(() => pendingCount(pageA), { timeout: 60_000 }).toBe(baseA + 1);
+  await expect(pageA.getByRole('button', { name: new RegExp(POLL_ITEM) })).toBeVisible();
+  // Navbar badge and page count agree (both are independent consumers).
+  await expect.poll(() => navbarBadge(pageA), { timeout: 60_000 }).toBe(baseA + 1);
+
+  // --- Reverse direction: A approves; B's open queue becomes current -------
+  await pageA.getByRole('button', { name: new RegExp(POLL_ITEM) }).click();
+  await pageA.getByRole('button', { name: 'Approve', exact: true }).click();
+  await pageA.getByLabel('Approval rationale').fill('E2E poll freshness approve');
+  await pageA.getByRole('button', { name: 'Confirm approval' }).click();
+  await expect.poll(() => pendingCount(pageA), { timeout: 15_000 }).toBe(baseA);
+
+  await expect.poll(() => pendingCount(pageB), { timeout: 60_000 }).toBe(baseB);
+  await expect.poll(() => navbarBadge(pageB), { timeout: 60_000 }).toBe(baseB);
+
+  await contextA.close();
+  await contextB.close();
 });

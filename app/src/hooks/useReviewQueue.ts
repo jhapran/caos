@@ -4,8 +4,9 @@
  *
  * One place that owns: the initial RLS-filtered queue read, the loading /
  * error states, manual refetch, and the API-RT-01 invalidation
- * subscription (realtime event → refetch through reviewService; payloads
- * are never used as data). The subscription is established once per
+ * subscription (freshness signal → refetch through reviewService; the
+ * signal never carries data — the Supabase implementation is the approved
+ * API-RT-07 polling fallback). The subscription is established once per
  * mounted consumer and always unsubscribed on cleanup.
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -52,8 +53,9 @@ export function useReviewQueue(filter?: ReviewQueueFilter): ReviewQueueState {
     };
   }, [reloadKey, status, type, submittedBy]);
 
-  // API-RT-01: realtime/invalidation — every event simply refetches
-  // through the RLS-controlled list. Exactly one subscription per mount.
+  // API-RT-01: freshness/invalidation — every signal simply refetches
+  // through the RLS-controlled list (API-RT-03/05). Exactly one
+  // subscription per mount.
   useEffect(() => reviewService.subscribeReviewQueue(refetch), [refetch]);
 
   return { items, loading: items === null, error, refetch };

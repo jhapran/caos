@@ -21,10 +21,16 @@
  * arrives as { status: 'already_applied', … } and is returned as a DTO,
  * never an error.
  *
- * Realtime (API-RT-01/03/04/05): subscribeReviewQueue opens ONE
- * firm-scoped postgres_changes channel on review_items; every event is
- * treated purely as an invalidation signal — the consumer re-reads through
- * the normal RLS-controlled list, so payloads never widen authorization.
+ * Freshness (API-RT-01/03/05, API-RT-07): subscribeReviewQueue is a
+ * provider-neutral invalidation subscription. The Supabase implementation
+ * uses the APPROVED API-RT-07 POLLING FALLBACK: authenticated
+ * postgres_changes cannot satisfy the R0 active-firm RLS context
+ * (realtime's per-row RLS evaluation provides role + request.jwt.claims
+ * only — never request.headers — so req_active_firm() is NULL there and
+ * every tenant row is filtered out; proven by the 2026-09-06 executable
+ * differential harness run). Every poll tick is treated purely as an
+ * invalidation signal — the consumer re-reads through the normal
+ * RLS-controlled list, so polling never widens authorization.
  *
  * Errors are translated once through toApiError() — no Supabase SDK or
  * PostgREST types cross this boundary (API-ARCH-01/02, API-ERR-01).
@@ -181,11 +187,11 @@ function denialError(result: { kind?: ApiErrorKind; message?: string }): ApiErro
   return new ApiError(result.kind ?? 'internal', result.message ?? 'command denied');
 }
 
-// Every subscriber gets its OWN channel: the Supabase client dedupes
-// channel(name) by topic, and adding an .on() callback to an already
-// subscribed channel throws — with two mounted consumers (the queue page
-// and the navbar badge) a shared name crashes the second subscription.
-let channelSeq = 0;
+// API-RT-07 fallback interval. Authenticated postgres_changes cannot
+// satisfy the R0 active-firm RLS context (see the header above), so the
+// review queue count/list freshness uses the approved polling fallback.
+// Implementation parameter — tuneable later, NOT a product/SLA guarantee.
+export const REVIEW_QUEUE_POLL_INTERVAL_MS = 15_000;
 
 export const supabaseReview: ReviewService = {
   mode: 'supabase',
@@ -256,21 +262,16 @@ export const supabaseReview: ReviewService = {
   },
 
   subscribeReviewQueue(onInvalidate) {
-    // Firm-scoped invalidation channel (API-RT-01/03): the payload is never
-    // used as data — the consumer re-reads through the RLS-controlled list.
+    // API-RT-07 polling fallback: each tick is a bare invalidation signal —
+    // no payload, no channel, no client-side authorization; the consumer
+    // re-reads through the RLS-controlled list (API-RT-03/05). Every
+    // consumer owns an independent timer (Navbar badge + queue page may be
+    // mounted simultaneously); unsubscribe always clears it.
     const firmId = getActiveFirm();
     if (!firmId) return () => {}; // no selector context → no subscription
-    const client = getSupabaseClient();
-    const channel = client
-      .channel(`review-queue-${firmId}-${++channelSeq}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'review_items', filter: `firm_id=eq.${firmId}` },
-        () => onInvalidate(),
-      )
-      .subscribe();
+    const timer = setInterval(onInvalidate, REVIEW_QUEUE_POLL_INTERVAL_MS);
     return () => {
-      void client.removeChannel(channel);
+      clearInterval(timer);
     };
   },
 };

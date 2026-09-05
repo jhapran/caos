@@ -18,9 +18,10 @@
  *     is a DTO, never an error; embedded task/comment rows map onto the
  *     camelCase DTOs;
  *   - NO direct review_items INSERT/UPDATE/DELETE is ever issued;
- *   - subscribeReviewQueue opens ONE firm-scoped postgres_changes channel
- *     whose callback is pure invalidation, and unsubscribes via
- *     removeChannel (API-RT-01/03); without an active firm it is a no-op.
+ *   - subscribeReviewQueue is the API-RT-07 polling fallback: a bare
+ *     invalidation tick every REVIEW_QUEUE_POLL_INTERVAL_MS, NO realtime
+ *     channel opened, unsubscribe clears the timer; without an active
+ *     firm it is a no-op.
  *
  * The supabase adapter is imported DIRECTLY here (not via the
  * DATA_SOURCE-pinned selector) — a test-only reach into the implementation
@@ -175,7 +176,7 @@ vi.mock('@/lib/supabaseClient', () => ({
   }),
 }));
 
-import { supabaseReview } from '@/data/review/supabase';
+import { REVIEW_QUEUE_POLL_INTERVAL_MS, supabaseReview } from '@/data/review/supabase';
 
 /** Keys no browser caller may ever send on submission (server-controlled). */
 const FORBIDDEN_SUBMIT_KEYS = [
@@ -422,54 +423,59 @@ describe('supabase review adapter — decide_review_item', () => {
   });
 });
 
-describe('supabase review adapter — realtime invalidation (API-RT-01/03)', () => {
+describe('supabase review adapter — queue freshness (API-RT-01 via the API-RT-07 polling fallback)', () => {
   beforeEach(() => {
     channels.length = 0;
+    vi.useFakeTimers();
     setActiveFirm('firm-1');
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     clearActiveFirm();
   });
 
-  it('opens ONE firm-scoped channel; events are pure invalidation; unsubscribe removes it', async () => {
+  it('ticks invalidation on the polling interval and opens NO realtime channel', () => {
     let invalidated = 0;
     const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
       invalidated += 1;
     });
-    expect(channels).toHaveLength(1);
-    const ch = channels[0];
-    expect(ch.name).toMatch(/^review-queue-firm-1-\d+$/);
-    expect(ch.subscribed).toBe(true);
-    expect(ch.on).toEqual([
-      {
-        event: 'postgres_changes',
-        config: {
-          event: '*',
-          schema: 'public',
-          table: 'review_items',
-          filter: 'firm_id=eq.firm-1',
-        },
-      },
-    ]);
-    ch.emit();
-    ch.emit();
-    expect(invalidated).toBe(2);
+    // No immediate fire, and no postgres_changes channel at all — the
+    // 2026-09-06 differential harness run proved authenticated realtime
+    // cannot satisfy the R0 active-firm RLS context (request.headers is
+    // unavailable in realtime's RLS evaluation), so the approved API-RT-07
+    // fallback is polling.
+    expect(invalidated).toBe(0);
+    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
+    expect(invalidated).toBe(1);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 2);
+    expect(invalidated).toBe(3);
     unsubscribe();
-    expect(ch.removed).toBe(true);
+  });
+
+  it('unsubscribe clears the timer — no further invalidations, no leak', () => {
+    let invalidated = 0;
+    const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
+      invalidated += 1;
+    });
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
+    expect(invalidated).toBe(1);
+    unsubscribe();
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 5);
+    expect(invalidated).toBe(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('without an active firm the subscription is a no-op', () => {
     clearActiveFirm();
     const unsubscribe = supabaseReview.subscribeReviewQueue(() => {});
-    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 2);
+    expect(vi.getTimerCount()).toBe(0);
     expect(() => unsubscribe()).not.toThrow();
   });
 
-  it('simultaneous subscribers (Navbar + page) get DISTINCT channels; each unsubscribes independently', () => {
-    // PASS C.1 §13: Navbar badge and the Review Queue page can be mounted at
-    // the same time — duplicate channel names would crash the Supabase
-    // realtime client, so each subscription gets its own sequenced name.
+  it('simultaneous consumers (Navbar badge + queue page) poll on independent timers and unsubscribe independently', () => {
     let first = 0;
     let second = 0;
     const unsubFirst = supabaseReview.subscribeReviewQueue(() => {
@@ -479,24 +485,19 @@ describe('supabase review adapter — realtime invalidation (API-RT-01/03)', () 
       second += 1;
     });
 
-    expect(channels).toHaveLength(2);
-    expect(channels[0].name).not.toBe(channels[1].name);
-    expect(channels[0].name).toMatch(/^review-queue-firm-1-\d+$/);
-    expect(channels[1].name).toMatch(/^review-queue-firm-1-\d+$/);
-    expect(channels.every((c) => c.subscribed)).toBe(true);
-
-    // Each channel invalidates its own subscriber only.
-    channels[0].emit();
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
     expect(first).toBe(1);
-    expect(second).toBe(0);
-
-    // Unsubscribing one marks only its own channel removed.
-    unsubFirst();
-    expect(channels[0].removed).toBe(true);
-    expect(channels[1].removed).toBe(false);
-    channels[1].emit();
     expect(second).toBe(1);
+
+    // Unsubscribing one stops only its own timer.
+    unsubFirst();
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
+    expect(first).toBe(1);
+    expect(second).toBe(2);
+
     unsubSecond();
-    expect(channels[1].removed).toBe(true);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 3);
+    expect(second).toBe(2);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
