@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-031 (see the status block below and
+hosted staging through IMP-040 (see the status block below and
 `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,14 +25,14 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-031; the Supabase track
+Implementation packages have landed through IMP-040; the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
 document future behavior as if it exists. When a section below describes
 target state, it says so explicitly.
 
-**Release-0 implementation status (2026-09-04):** the Harness Gate is PASS
-(16/16), IMP-010 has landed (`supabase/migrations/` carries the production
+**Release-0 implementation status (2026-09-05):** the Harness Gate is PASS
+(19/19), IMP-010 has landed (`supabase/migrations/` carries the production
 tenant core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and
 IMP-011 (staff authentication) is COMPLETE: a dual-mode auth adapter behind
 `@/data` (`src/data/auth/`), staff auth pages, authentication-level route
@@ -164,17 +164,52 @@ keys; the server defaults `generation_source` to `'manual'` and the
 IMP-050 generator (service_role) is the only provenance writer.
 Coverage: 40 schema
 + 39 RLS + 18 audit integration tests and 22 unit tests (21 fixture
-service contract + 1 Supabase-adapter write-payload shape).
+service contract + 1 Supabase-adapter write-payload shape). IMP-040
+(tasks, dependencies, checklists, comments) is COMPLETE and CLOSED
+(implementation checkpoint `be15229`; hosted staging promoted and
+verified; Netlify staging published; human browser acceptance PASS
+2026-09-05): `tasks` (SCH-13 — instance-linked or ad-hoc; nullable
+`compliance_instance_id`, DEC-H; `client_id` server-derived from the
+linked instance, same-firm client required for ad-hoc), `task_dependencies`
+(SCH-14), `task_checklist_items` (SCH-15), `task_comments` (SCH-16 —
+append-only, author-only retraction, no edit/delete), all RLS enabled
+AND forced with composite same-firm FKs. `status` is NEVER
+browser-writable (column-pinned grants + write guard) — every DM-SM-05
+transition goes through the Layer-B definer command
+`transition_task(uuid,text,text,text,text)` (authorization BEFORE
+disclosure: unauthorized-existing and nonexistent tasks return one
+identical `not_found`; state-based mutation-key idempotency). Task
+four-eyes (RLS-4EY-03): instance-linked tasks inherit
+`four_eyes_required` via ComplianceInstance → ComplianceType;
+`submitted → approved`/`submitted → returned` are assigned-reviewer-only
+with NO privileged-rank bypass; `returned` requires a non-empty reviewer
+comment created atomically in the same transaction. Dependency graph
+changes go ONLY through `add_task_dependency` /
+`remove_task_dependency` (direct table mutation closed; manager needs
+BOTH tasks in scope; firm-scoped transaction advisory lock + recursive
+cycle check — concurrent opposing edges commit at most once); dependency
+SELECT requires BOTH endpoint tasks visible (API-ERR-02 / RLS-A-03 —
+either-endpoint visibility was rejected as an endpoint-identity leak).
+Layer-A audit on tasks/checklist/comments; Layer-B command audit with
+skip-flag (no double logging); existing-but-invisible probes audited as
+denials, nonexistent un-audited. The provider-neutral `taskService` sits
+behind `@/data` (`src/data/tasks/` — note the naming hazard: the legacy
+flat fixture module `src/data/tasks.ts` shadows the folder, so the barrel
+wires `./tasks/index` explicitly). No task/My Work UI, no recurrence,
+no event publication in this package (TEST-E2E-07 → IMP-042; generator
+and events → IMP-050). Coverage: 22 schema + 51 RLS + 17 audit + 16
+provider integration tests and 32 unit tests.
 
-Release-0 state through IMP-031 (CLOSED 2026-09-04): 16 / 27 formal R0
+Release-0 state through IMP-040 (CLOSED 2026-09-05): 17 / 27 formal R0
 packages complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030,
-IMP-031); migrations run through
-`20260905000000_compliance_profiles_instances.sql`; 14 application public
-tables (RLS enabled on all 14, FORCE RLS on the 11 tenant-owned content
-tables, 37 policies); Harness Gate green (19/19 phases). Next package:
-IMP-040 — Tasks, dependencies, checklists, comments (NOT STARTED —
-begins only with a fresh contract extraction and an explicit
-implementation instruction).
+IMP-031, IMP-040; ≈ 63.0%); migrations run through
+`20260906000000_tasks_dependencies_checklists_comments.sql` (hosted
+ledger 8/8); 18 application public
+tables (RLS enabled on all 18, FORCE RLS on the 15 tenant-owned content
+tables, 48 policies); Harness Gate green (19/19 phases). Next package:
+IMP-041 — Review queue (NOT STARTED — begins only with a fresh contract
+extraction and an explicit implementation instruction; entry criterion
+API-OQ-01 review-item vocabulary decision per `12-release-0-plan.md`).
 
 Authoritative sources:
 
@@ -425,7 +460,8 @@ Current fixture modules:
   `@/data`, never from the individual fixture modules.**
 
 Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton;
-IMP-020 client hierarchy):
+IMP-020 client hierarchy; IMP-021 engagements; IMP-022 client360; IMP-030
+compliance rules; IMP-031 compliance instances; IMP-040 tasks):
 
 - `source.ts` — THE single data-source selection boundary: `getDataSource()`
   (cached, fail-closed) and `validateStartupConfig()` (called once by
@@ -455,6 +491,15 @@ IMP-020 client hierarchy):
   allowed to import fixture modules); `supabase.ts` is plain PostgREST
   under RLS + the `list_client_identities()` RPC; the selector in
   `clientHierarchyService.ts` picks once via `getDataSource()`.
+- `engagements/`, `client360/`, `complianceRules/`, `complianceInstances/`,
+  `tasks/` — the same five-file domain convention (`types.ts` +
+  `fixture.ts` + `supabase.ts` + `<domain>Service.ts` + `index.ts`):
+  a provider-neutral service contract, a demo bridge fixture adapter, and
+  a plain-PostgREST-under-RLS Supabase adapter whose privileged operations
+  go through the Layer-B RPCs (never direct guarded-column writes).
+  NOTE the `tasks/` naming hazard: the legacy flat fixture module
+  `src/data/tasks.ts` shadows the folder — import the service via the
+  barrel (`@/data`), never via `@/data/tasks`.
 - `../lib/supabaseClient.ts` — the ONLY browser Supabase client (lazy
   singleton; throws in fixture mode). Injects the untrusted
   `x-active-firm` selector header from `context.ts` on every request.

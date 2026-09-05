@@ -7,10 +7,10 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human staging acceptance date: 2026-09-04
-- Last CLOSED package: IMP-031 — Compliance profiles & instances
-- IMP-031 implementation checkpoint: `03e999d`
-- Git staging (`origin/staging`) contains accepted IMP-031
+- Human staging acceptance date: 2026-09-05
+- Last CLOSED package: IMP-040 — Tasks, dependencies, checklists, comments
+- IMP-040 implementation checkpoint: `be15229` (`feat: tasks and dependencies`)
+- Git staging (`origin/staging`) contains accepted IMP-040
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -18,39 +18,43 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (16 / 27, ≈ 59%):
+Completed (17 / 27, ≈ 63.0%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
 - IMP-020…IMP-022 (Core Domain)
 - IMP-030, IMP-031 (Compliance Foundation)
+- IMP-040 (Work Management — tasks/dependencies/checklists/comments)
 
 Remaining formal R0 packages:
 
-- IMP-040, IMP-041, IMP-042 (Work Management)
+- IMP-041, IMP-042 (Work Management)
 - IMP-050, IMP-051 (Automation & Deadlines)
 - IMP-060, IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-031 — Compliance profiles & instances — CLOSED
-- Next: IMP-040 — Tasks, dependencies, checklists, comments — NOT STARTED
+- Current: IMP-040 — Tasks, dependencies, checklists, comments — CLOSED
+- Next: IMP-041 — Review queue — NOT STARTED
 - Next action: fresh-session contract extraction / reconciliation for
-  IMP-040. IMP-040 implementation is NOT authorized yet.
+  IMP-041. IMP-041 implementation is NOT authorized yet. Entry criterion
+  per `12-release-0-plan.md`: API-OQ-01 review-item vocabulary decision.
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260905000000_compliance_profiles_instances.sql`
-- Hosted staging migration ledger: 7 migrations, local == remote through
-  `20260905000000`
-- Application public tables: 14
-- RLS enabled: 14 / 14
-- FORCE-RLS: 11 (all tenant-owned content tables)
-- Policies: 37
-- IMP-031 tables: `client_compliance_profiles`, `compliance_instances`
-- Post-promotion staging row counts: `client_compliance_profiles` = 0,
-  `compliance_instances` = 0 — no recurrence-generated rows introduced
+- Latest migration: `20260906000000_tasks_dependencies_checklists_comments.sql`
+- Hosted staging migration ledger: 8 migrations, local == remote through
+  `20260906000000` (8 / 8)
+- Application public tables: 18
+- RLS enabled: 18 / 18
+- FORCE-RLS: 15 (all tenant-owned content tables)
+- Policies: 48
+- IMP-040 tables: `tasks`, `task_dependencies`, `task_checklist_items`,
+  `task_comments`
+- Post-promotion staging row counts after hosted-probe cleanup: all four
+  task-family tables = 0 — no recurrence-generated or migration-created
+  rows introduced
 
 ## 5. Compliance Governance State
 
@@ -68,9 +72,43 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
-- Accepted implementation checkpoint: `03e999d`
+- Accepted implementation checkpoint: `be15229`
 - Deployment: Published / human browser acceptance PASS
 - No real customer data in staging
+
+## 6a. Work-Management Enforcement Facts (IMP-040 — durable)
+
+- Task lifecycle changes are RPC-only through `transition_task`; direct
+  browser `tasks.status`/`waiting_reason` writes are closed (column-pinned
+  grants + write guard).
+- Dependency graph mutations are controlled commands
+  (`add_task_dependency` / `remove_task_dependency`); direct table mutation
+  is closed; a manager command requires BOTH tasks in scope; acyclicity is
+  race-safe (firm-scoped transaction advisory lock + recursive check).
+- Dependency SELECT requires BOTH endpoint tasks visible (API-ERR-02 /
+  RLS-A-03 — either-endpoint visibility was rejected as an
+  endpoint-identity leak and is regression-pinned).
+- Task four-eyes (RLS-4EY-03): instance-linked tasks inherit it from the
+  ComplianceType; reviewer-only `submitted → approved/returned` has NO
+  privileged-rank bypass; `returned` creates its reviewer comment
+  atomically with the transition.
+- Comments are append/retract semantics only (immutable body/author/task,
+  author-only retraction, no edit/delete).
+- Same-JWT membership suspension/removal is enforced on the next request
+  through live membership lookup (DEC-J) — verified locally and on hosted
+  staging.
+- Audit remains layered: Layer A for ordinary writes, Layer B for
+  controlled commands (no double logging; security-significant denials
+  audited per AUD-FAIL-01).
+- IMP-040 did NOT implement task/My Work UI (TEST-E2E-07 → IMP-042),
+  recurrence, or event publication (→ IMP-050).
+- Hosted-probe process note: the IMP-040 hosted verification used
+  disposable synthetic auth users created through the privileged CLI SQL
+  path because public signup is intentionally disabled; all were removed
+  and no existing identity/MFA was touched. This was a one-off, NOT a new
+  standard path — future hosted probes must use a supported authorized
+  test-user provisioning mechanism or request human provisioning; if
+  unavailable, STOP. Do not normalize direct auth-schema insertion.
 
 ## 7. Permanent Architecture Boundaries
 
@@ -109,7 +147,15 @@ Remaining formal R0 packages:
   IMP-050 review item.
 - Recurrence generator belongs to IMP-050.
 - Domain-event publication for ComplianceInstance remains deferred per
-  the approved automation contract (IMP-050 / AUTO-OQ-02).
+  the approved automation contract (IMP-050 / AUTO-OQ-02); the same
+  deferral covers `task.created` / `task.assigned` / `task.completed`
+  publication (contract names only after IMP-040).
+- Advisor follow-ups (non-IMP-040, pre-existing; do not treat as
+  blockers): Supabase `auth_leaked_password_protection` WARN (platform
+  Auth config — ops decision); performance advisors
+  (`auth_rls_initplan`, `multiple_permissive_policies`) on the IMP-030
+  tables `compliance_types` / `compliance_rule_versions` — none on
+  IMP-040 tables.
 
 ## 10. Fresh Session Bootstrap
 
