@@ -1,7 +1,7 @@
 # 07 — API Contract (Application Data Access)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-01…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.)
+- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-02…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01. API-OQ-01 resolved 2026-09-05 — R0 `review_items.type` vocabulary frozen, SCH-17 CHECK.)
 
 ## Purpose
 
@@ -260,8 +260,8 @@ REPLACE / DEMO-ONLY (API-INV-01).
 
 | Function | Current purpose | Class | Target production responsibility |
 |---|---|---|---|
-| `approveReviewItem` | Overlay review approval | EVOLVE | Review-decision RPC: records `decided_by_membership_id`, `decision_rationale`, four-eyes enforced (RLS-RVW-01, RLS-4EY-01/02); audited (AUD-CAT-01) |
-| `returnReviewItem` | Overlay return with comment | EVOLVE | Same RPC with `returned` + mandatory rationale/comment (DM-SM-06) |
+| `approveReviewItem` | Overlay review approval | EVOLVE | `decide_review_item` RPC with `p_decision='approved'` (API-R0-RVW): records `decided_by_membership_id`, mandatory `decision_rationale`, self-decision prohibited (RLS-4EY-04); audited (AUD-CAT-01) |
+| `returnReviewItem` | Overlay return with comment | EVOLVE | `decide_review_item` RPC with `p_decision='returned'` + mandatory rationale; atomic linked-task `returned` + one immutable SCH-16 comment when `task_id` is non-null (DM-SM-06) |
 | `acknowledgeAlert` | Overlay alert ack | EVOLVE | Alert status RPC (RLS-ALR-01; manager+); audited |
 | `resolveAlert` | Overlay alert resolve | EVOLVE | Alert resolve RPC with `resolution_type='manual'` (DM-OQ-05); audited |
 | `sendReminder` | Simulated reminder toast | DEMO-ONLY in R0 | Reminder engine is Release 1 (DEC-T exclusion); R0 UI hides or no-ops the action in Supabase mode |
@@ -435,12 +435,94 @@ authorization/not-found semantics and API-SEC-* function security.
   cycle rejection with firm-scoped transaction serialization
   (TEST-SCH-18/19/20). Checklist toggles optimistic (API-MUT-02);
   comments append-only (RLS-TCM-01).
-- **API-R0-RVW — review queue.** Queue read per role (submitter sees own;
-  partner/manager see firm/team queue, RLS-RVW-01); decision RPC
-  (API-ARCH-04, idempotent per API-MUT-03); realtime per API-RT-01. Review
-  **categories are stable keys + display labels in the contract**; the
-  production vocabulary is **not** frozen to the fixture's display strings
-  — see API-OQ-01 (SCH-OQ-02).
+- **API-R0-RVW — review queue (IMP-041 contract closure 2026-09-05).** Queue
+  read per role (RLS-RVW-01: super_admin/partner firm-wide; manager scoped
+  portfolio/direct-linked-task; senior/article own submissions; billing/anon
+  none); realtime per API-RT-01. Review **categories are stable keys +
+  display labels**; the R0 `type` vocabulary is frozen to exactly
+  `gst_reconciliation`, `tds_return`, `itr_computation`,
+  `financial_statements`, `audit_workpaper` (API-OQ-01 RESOLVED; SCH-17
+  CHECK). Two controlled Layer-B commands (API-ARCH-04), never raw table
+  writes:
+  - `submit_review_item(...)` — business inputs exactly: `client_id`,
+    `task_id` (nullable), `compliance_instance_id` (nullable), `type`,
+    `title`, `note` (nullable), `priority`, `sla_due_at` (nullable).
+    Server-derived (never caller-supplied): `firm_id`,
+    `submitted_by_membership_id`, `submitted_at`, actor/audit identity;
+    caller may never supply `decided_by_membership_id`, `decided_at`,
+    `status`, `decision_rationale`, `ai_output_id`, or `source='ai'` (R0 is
+    human-sourced only). The command validates caller scope (RLS-RVW-01) and
+    same-firm subject relationships before creating the row. **Subject
+    derivation (linked subject wins authoritatively, SCH-17 invariants —
+    the IMP-040 server-derived/validated subject-binding pattern):** if
+    `task_id` is supplied, the task is resolved inside the authoritative
+    active firm/scope and `client_id` is server-derived from the task — if
+    `compliance_instance_id` is also supplied, the task MUST reference
+    exactly that instance; else if `compliance_instance_id` is supplied,
+    the instance is resolved and `client_id` is server-derived from it;
+    else explicit `client_id` is required and the caller's normal
+    submission scope for that client is validated. A caller-supplied
+    `client_id` alongside a linked task/instance is at most a convenience
+    assertion — a mismatch is rejected (`validation`); it can never
+    override the linked subject. **No mutation_key on submit** — API-MUT-03
+    names review decisions and instance/task transitions, not submission.
+  - `decide_review_item(p_review_item_id uuid, p_decision text,
+    p_rationale text, p_mutation_key text default null) returns jsonb` —
+    `p_decision` ∈ `approved`/`returned`/`escalated`/`dismissed`; transitions
+    `pending` → decision only; no decision from a terminal state. A
+    non-empty, non-whitespace `p_rationale` is mandatory for **all four**
+    decisions; `decided_by_membership_id`/`decided_at` are server-derived.
+    Four-eyes: decider's live membership ≠ `submitted_by_membership_id`, no
+    rank bypass (RLS-4EY-04). **Returned coupling (DM-SM-06):** when
+    `task_id` is non-null, a `returned` decision atomically transitions the
+    linked task to `returned` and creates exactly one immutable SCH-16 task
+    comment carrying the rationale, attributed to the decision actor; with
+    `task_id` NULL the item becomes `returned` with its rationale and no
+    task side effects. No task state change is implied by `approved`,
+    `escalated`, or `dismissed`. **Task-return authority is NOT bypassed
+    (cross-domain hardening 2026-09-05):** a task-linked `returned` decision
+    requires the actor to satisfy BOTH the ReviewItem decision authorization
+    (RLS-RVW-01, RLS-4EY-04) AND the linked task's `submitted → returned`
+    authority under the IMP-040 contract (RLS-TSK-01 scope; where the task
+    is four-eyes-required, the assigned-reviewer requirement of RLS-4EY-03
+    remains authoritative) — super_admin/partner/manager rank does NOT
+    bypass the task's assigned reviewer, and ReviewItem four-eyes
+    (decider ≠ item submitter) does NOT replace Task four-eyes
+    (reviewer ≠ assignee); both apply where applicable. **Legal-state
+    precondition:** the linked task must be in a state from which DM-SM-05
+    legally permits the transition to `returned`; if not, the item stays
+    `pending`, the task is unchanged, no comment is created, no success
+    audit is written, and the caller receives the established
+    `conflict`/`validation` result — the command never forces task state.
+    **Orchestration:** `decide_review_item` orchestrates one atomic
+    transaction — authorize ReviewItem → validate ReviewItem self-review →
+    resolve linked task → validate the same actor's task-return authority →
+    validate task lifecycle legality → transition item `pending → returned`
+    → transition task → create the single immutable comment → write Layer-B
+    audit → commit; any failure rolls back ALL; trigger + command
+    double-audit is avoided via the established skip-flag convention.
+    **No-leak across the link:** ReviewItem authorization precedes any
+    disclosure of linked-task state or transition legality (a caller
+    unauthorized for the item gets the identical API-ERR-02 `not_found`);
+    an authorized decider whose linked task fails return authority/legality
+    receives the standard authorized `conflict`/`validation` surface; the
+    SCH-17 subject-binding invariants guarantee the linked task is never a
+    foreign or inconsistent subject.
+  - Both commands authorize BEFORE exposing existence, current status,
+    decision vocabulary/legality, rationale requirements, or mutation/replay
+    state: an unauthorized existing item and a nonexistent id return the
+    identical API-ERR-02 `not_found` surface (the established controlled
+    task-command convention). Rejections map per API-ERR-03/04 with
+    machine-readable reason codes.
+  - **Idempotency (API-MUT-03, made explicit):** a retried
+    `decide_review_item` with the same valid mutation key returns the
+    original result without double-deciding, double-auditing, or duplicating
+    the returned-task comment; retry safety is state-based (not value-bound),
+    per the established controlled-command convention. **Authorization is
+    evaluated BEFORE replay state** — a replay probe never reveals that an
+    out-of-scope item exists. Decisions render pending until the server
+    confirms (API-MUT-02); server result wins (API-MUT-01); actor stamping is
+    server-side (API-MUT-04).
 - **API-R0-ALR — alerts.** List/read (RLS-ALR-01); acknowledge/snooze/
   resolve RPCs; alert-rule administration RPCs restricted per RLS-ARL-01
   with AAL2 (RLS-AAL-01); realtime per API-RT-01.
@@ -498,7 +580,7 @@ authorization/not-found semantics and API-SEC-* function security.
 
 | ID | Question | Owner | Status |
 |---|---|---|---|
-| API-OQ-01 (= SCH-OQ-02) | Production `review_items.type` vocabulary. The PRD provides no authoritative taxonomy; demo strings (`GST Reconciliation`, `TDS`, `ITR`, `Financial Statements`, `Audit Workpaper`) are **not** frozen as production values. The contract uses stable category keys + labels; final vocabulary is resolved **before schema-migration implementation** (with `06` if a CHECK list needs amending). | requester + product | **Open — deliberately unresolved** |
+| API-OQ-01 (= SCH-OQ-02) | Production `review_items.type` vocabulary. The PRD provides no authoritative taxonomy; demo strings (`GST Reconciliation`, `TDS`, `ITR`, `Financial Statements`, `Audit Workpaper`) are **not** frozen as production values. The contract uses stable category keys + labels; final vocabulary is resolved **before schema-migration implementation** (with `06` if a CHECK list needs amending). | requester + product | **Resolved 2026-09-05 (IMP-041 contract closure):** R0 vocabulary frozen to exactly `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` — stable machine keys enforced by the SCH-17 CHECK; display labels are presentation metadata and may change without changing the stored key |
 | API-OQ-02 | Cursor vs offset pagination per board; exact page-size defaults per surface. | implementation | Open — convention fixed (API-CONV-02), per-surface values set during implementation |
 | API-OQ-03 | Whether the Command Centre aggregate contract is one composite RPC or per-section views (performance-driven). | harness gate | Open — measured on representative volume |
 | API-OQ-04 (= SCH-OQ-03) | Persistence semantics of re-inviting a removed membership (new row vs status flip). The API already separates invite-new / resend-pending / reactivate-removed (API-R0-FRM); storage semantics stay open. | requester + schema/harness review | **Open** |
@@ -528,7 +610,7 @@ authorization/not-found semantics and API-SEC-* function security.
   explicit authorization, and TEST-RLS-* verification (API-SEC-*).
 - API-ACC-08: Membership administration distinguishes invite-new /
   resend-pending / reactivate-removed (API-R0-FRM); review-type vocabulary
-  remains an explicit open question (API-OQ-01).
+  is resolved and frozen for R0 (API-OQ-01 resolved 2026-09-05, SCH-17).
 
 ## Consequence of Change
 

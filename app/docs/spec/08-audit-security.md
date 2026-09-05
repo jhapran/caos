@@ -88,11 +88,12 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
   logout, password reset); MFA enrolment/challenge/recovery; membership
   invite/role-change/suspend/remove; firm settings and alert-rule changes;
   compliance profile approval; compliance-instance state transitions;
-  task status transitions and reassignment; review decisions (with
-  rationale); alert acknowledge/snooze/resolve (including auto-resolution,
-  DM-OQ-05); engagement status changes; client status changes (incl.
-  offboarding); **compliance rule-version lifecycle (AUD-CRV-01)**;
-  break-glass session open/close and every action inside one;
+  task status transitions and reassignment; review-item submission; review
+  decisions (with rationale); alert acknowledge/snooze/resolve (including
+  auto-resolution, DM-OQ-05); engagement status changes; client status
+  changes (incl. offboarding); **compliance rule-version lifecycle
+  (AUD-CRV-01)**; break-glass session open/close and every action inside
+  one;
   data export/delete operations; retention maintenance executions
   (AUD-RET-02); (deferred releases add: document URL issuance, portal logins,
   reminder sends, AI decisions).
@@ -146,6 +147,36 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
 - Task event **publication** is not part of audit and not part of IMP-040:
   `task.created` / `task.assigned` / `task.completed` publication remains
   deferred to the AUTO-OQ-02 mechanism (IMP-050) — see `09`.
+
+### 7c. Review-item audit partition (IMP-041 contract closure 2026-09-05)
+
+- **Layer B (controlled commands, atomic mutation + audit):**
+  `submit_review_item` and `decide_review_item` (RLS-RVW-01, API-R0-RVW)
+  perform the mutation and its audit write in one transaction; actor
+  identity is server-derived via the trusted audit-context mechanism
+  (AUD-CTX-01) — no browser-controlled actor stamps. Audit action names:
+  `review_item.submitted`, `review_item.decided`, `review_item.submit_denied`,
+  `review_item.decide_denied`. The decision audit row records the rationale
+  and the old/new decision fields; for a task-linked `returned` decision the
+  atomic task transition and the single immutable SCH-16 reviewer comment are
+  audited within the same transaction (no separate caller-visible steps).
+- **Layer A:** ordinary review-item table writes are not a supported path —
+  submission and decision are Layer-B commands (RLS-RVW-01); any residual
+  permitted non-decision writes receive baseline trigger capture with old/new
+  snapshots (review_items HIGH, SCH-17). Layer-B commands suppress the Layer-A
+  row-trigger via the established skip-flag convention (`app.audit_skip_trigger`)
+  so one controlled command never double-logs across layers.
+- **Denials:** unauthorized probes on either command follow the approved
+  API-ERR-02 / AUD-FAIL-01 posture — an existing but invisible item is audited
+  server-side as a security-significant denial, a nonexistent id gets no
+  invented audit row, and neither leaks through the caller response.
+- **Replay:** an idempotent mutation-key retry (API-MUT-03) returns the
+  original result and writes **no** second audit row.
+- **Fail closed:** if the audit write fails, the submission/decision fails
+  (AUD-PRIN-03, AUD-CTX-05) — no partial decision persistence (DM-SM-06).
+- Review event **publication** is not part of audit and not part of IMP-041:
+  `review.submitted` / `review.completed` publication remains deferred to the
+  AUTO-OQ-02 mechanism (IMP-050) — see `09`.
 
 ### 8. Immutable audit-log requirements (invariants)
 
@@ -402,6 +433,7 @@ Layer C → option C.
 - **TEST-AUD-09:** actor-model invariants (AUD-ACT-05): system/service rows never carry a human `actor_user_id`; support rows always carry actor + session.
 - **TEST-AUD-10:** retention maintenance executes only via the privileged path, follows the recorded policy, and writes its own audit event (AUD-RET-02).
 - **TEST-AUD-11 (Batch 4 security closure):** rule-version lifecycle events (create, draft change, activation, supersede/deprecate, domain-approval status change) produce audit rows with actor, firm context, old/new values, and approval-state transition (AUD-CRV-01/02); denied activation attempts are recorded as security-significant denials (AUD-FAIL-01); system/service writes to rule versions carry non-human actor identity (AUD-CRV-03).
+- **TEST-AUD-12 (IMP-041 contract closure 2026-09-05):** review-item audit partition (§7c) — `submit_review_item` and `decide_review_item` each write exactly one Layer-B audit row (`review_item.submitted` / `review_item.decided`) with server-derived actor, firm context, and old/new decision fields including rationale; a task-linked `returned` decision audits the decision, task transition, and reviewer comment within one transaction; no Layer-A/Layer-B double logging; mutation-key retry writes no second row; existing-but-invisible denials are audited (`review_item.submit_denied` / `review_item.decide_denied`) while a nonexistent id produces no fabricated audit row; audit failure aborts the command (fail-closed).
 
 ## Assumptions
 

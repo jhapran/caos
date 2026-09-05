@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-01…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
 
 ## Purpose
 
@@ -1004,29 +1004,43 @@ separate explicit implementation instruction.
 **IMP-041 — Review queue**
 
 - **Purpose:** `review_items` (SCH-17) with the review lifecycle
-  (submitted → approved/returned), four-eyes support, and review history.
-- **Requirement IDs:** DM-15, DM-SM-05, SCH-17, SCH-10
-  (`four_eyes_required` flag on compliance_types, `06`), RLS-RVW-01.
-- **TEST-* IDs:** TEST-RLS-*, TEST-API-*, TEST-E2E-08.
+  (pending → approved/returned/escalated/dismissed, DM-SM-06), four-eyes
+  support, and review history.
+- **Requirement IDs:** DM-15, DM-SM-06, SCH-17, SCH-10
+  (`four_eyes_required` flag on compliance_types, `06`), RLS-RVW-01,
+  RLS-4EY-04.
+- **TEST-* IDs:** TEST-RLS-RVW-01…16, TEST-SCH-21…25, TEST-API-11…15,
+  TEST-AUD-03, TEST-AUD-12, TEST-E2E-08.
 - **Dependencies:** IMP-040.
-- **Allowed scope:** migrations, policies, adapter functions; review
-  submitted/completed events.
-- **Non-goals:** final production review-type vocabulary is **not** frozen
-  here — storage uses category keys with the vocabulary resolved before
-  this package's schema migration is finalized (API-OQ-01 = SCH-OQ-02);
-  demo strings are not the production taxonomy.
-- **Expected files/areas:** `supabase/migrations/`, `src/data/`.
-- **Entry criteria:** IMP-040 green; API-OQ-01 vocabulary decision
-  recorded (requester input).
-- **Acceptance criteria:** review submit/decision E2E green; returned
-  items surface in My Work "Returned".
+- **Allowed scope:** migrations, policies, controlled commands
+  (`submit_review_item`, `decide_review_item`), adapter functions; wiring
+  the existing Review Queue UI to `@/data`; `review.submitted` /
+  `review.completed` event **contract names only** — no publication
+  infrastructure (AUTO-OQ-02 remains with IMP-050, `09` IMP-041 partition
+  note).
+- **Non-goals:** AI-sourced items and any `ai_outputs` FK (SCH-27 deferred;
+  R0 rows are human-sourced, `ai_output_id IS NULL`); automatic escalation
+  routing (`escalated` is terminal, DM-SM-06); a review-history table
+  (decision facts live on `review_items`; reviewer narrative via SCH-16
+  task_comments; mutation history via audit_log); team/team-membership
+  models (manager scope is portfolio/direct-task per RLS-RVW-01); My Work
+  (IMP-042).
+- **Expected files/areas:** `supabase/migrations/`, `src/data/`, existing
+  Review Queue page wiring, `e2e/` (TEST-E2E-08).
+- **Entry criteria:** IMP-040 green; API-OQ-01 vocabulary decision —
+  **RESOLVED 2026-09-05** (R0 keys: `gst_reconciliation`, `tds_return`,
+  `itr_computation`, `financial_statements`, `audit_workpaper`).
+- **Acceptance criteria:** review submit/decision E2E green (TEST-E2E-08,
+  owned here); returned items surface in My Work "Returned" (surface owned
+  by IMP-042).
 - **Verification:** CI-equivalent + TEST-E2E-08.
 - **Exit criteria:** review queue functional with audit coverage.
 - **Human approval:** no.
 - **Git checkpoint:** `feat: review queue`.
 - **Rollback concern:** standard.
-- **Open/provisional dependency:** API-OQ-01 (blocks this package's
-  schema finalization; latest safe decision point: here).
+- **Open/provisional dependency:** none for this package — API-OQ-01
+  resolved 2026-09-05; AUTO-OQ-02 (event publication mechanism) remains
+  downstream with IMP-050.
 
 ---
 
@@ -1393,7 +1407,7 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | AUD-OQ-01 | `08` | Open — retention values are engineering placeholders | No (build); **Yes** (production retention config) | Production retention/archive configuration | IMP-072 (policy/legal confirmation) |
 | AUD-OQ-02 | `08` | **Resolved 2026-09-01 — layered A+B+C audit-context propagation (IMP-005 spike + human review)** | No (resolved) | — (IMP-013 proceeds on the resolved mechanism) | Resolved at IMP-005 (Harness Gate) |
 | RLS-OQ-04 | `05` | Open — deferred | No | Release 1 client-visible document flagging only | Release 1 specs |
-| API-OQ-01 (= SCH-OQ-02) | `07` | Open | **Yes** (one schema) | `review_items.type` production vocabulary | IMP-041 schema finalization (requester input) |
+| API-OQ-01 (= SCH-OQ-02) | `07` | **Resolved 2026-09-05 — R0 vocabulary frozen (`gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper`; SCH-17 CHECK)** | No (resolved) | — (IMP-041 proceeds on the frozen vocabulary) | Resolved at IMP-041 contract closure (requester input) |
 | API-OQ-02 | `07` | Open — convention fixed | No | Per-surface pagination values only | During each surface's package |
 | API-OQ-03 | `07` | Open | No | Composite RPC vs per-section views shape | IMP-060 (measured) |
 | API-OQ-04 (= SCH-OQ-03) | `07` | Open | No | Re-invite persistence semantics (API separates the three operations already) | IMP-010/011 membership implementation |

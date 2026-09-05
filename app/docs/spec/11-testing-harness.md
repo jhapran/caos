@@ -71,7 +71,8 @@ roles.
   | TEST-RLS-4EY-01 (`05` §14) | TEST-RLS-4EY-01 (four-eyes RPC rejects self-approval) |
   | TEST-RLS-SUP-01 (`05` §14) | TEST-RLS-SUP-01 (break-glass audit trail + expiry) |
   | TEST-RLS-CRV-01…13 (`05` §14) | TEST-RLS-CRV-01…13 (rule versions; 12/13 added by the 2026-09-03 rule-governance closure) |
-  | TEST-AUD-01…11 (`08` §20) | Each ID defined by its `08` enumeration and binding here: TEST-AUD-01, TEST-AUD-02, TEST-AUD-03, TEST-AUD-04, TEST-AUD-05, TEST-AUD-06, TEST-AUD-07, TEST-AUD-08, TEST-AUD-09, TEST-AUD-10, TEST-AUD-11 |
+  | TEST-RLS-RVW-* (`06` SCH-17, `05` RLS-RVW-01) | TEST-RLS-RVW-01…16 defined below (IMP-041 contract closure 2026-09-05) |
+  | TEST-AUD-01…12 (`08` §20) | Each ID defined by its `08` enumeration and binding here: TEST-AUD-01, TEST-AUD-02, TEST-AUD-03, TEST-AUD-04, TEST-AUD-05, TEST-AUD-06, TEST-AUD-07, TEST-AUD-08, TEST-AUD-09, TEST-AUD-10, TEST-AUD-11, TEST-AUD-12 |
   | TEST-AUTO-01…10 (`09`) | Each ID defined below (TEST-AUTO-01…TEST-AUTO-10), extended by TEST-AUTO-11/12 here |
   | TEST-MIG-01…05 (`10` phases) | Each phase-gate check defined by `10` and binding here: TEST-MIG-01, TEST-MIG-02, TEST-MIG-03, TEST-MIG-04, TEST-MIG-05; extended by TEST-MIG-06…15 below |
   | TEST-SCH-01 (`06` SCH-14) | TEST-SCH family, acyclicity case |
@@ -120,6 +121,39 @@ roles.
 - **TEST-RLS-MAT-03:** Audit history is readable only by
   partner/super_admin (RLS-AUD-01); support-access history visibility per
   AUD-SUP-03.
+
+## Review-item RLS case set (TEST-RLS-RVW-*, IMP-041 contract closure 2026-09-05)
+
+- **TEST-RLS-RVW-01…10:** the ten standard `05` §14 verification cases
+  executed against `review_items` via the TEST-RLS-GEN harness
+  (cross-tenant isolation, suspended/removed membership, multi-firm context,
+  per TEST-RLS-GEN-03).
+- **TEST-RLS-RVW-11 — role visibility.** super_admin/partner: firm-wide
+  queue + detail; manager: only the resolved scope (RLS-RVW-01);
+  senior/article: only own submissions; billing: denied (RLS-STF-05); anon:
+  denied.
+- **TEST-RLS-RVW-12 — manager scope boundary.** In-portfolio client item:
+  visible/decidable; item whose linked task names the manager as current
+  assignee or reviewer (RLS-TSK-01): visible/decidable; unlinked
+  out-of-portfolio item: omitted; submit/decide outside scope: denied. No
+  team/subordinate traversal exists (§11 note ‡). An inconsistent
+  task/client combination grants no scope — the manager cannot gain
+  ReviewItem access through a mismatched subject link (SCH-17 subject
+  binding, TEST-SCH-25).
+- **TEST-RLS-RVW-13 — self-decision prohibition (RLS-4EY-04).** manager,
+  partner, and super_admin each cannot decide an item their own membership
+  submitted — no privileged-rank bypass; the comparison is decider live
+  membership vs `submitted_by_membership_id`.
+- **TEST-RLS-RVW-14 — live membership freshness.** A suspended or removed
+  membership loses submit/decide on the next request with the same JWT
+  (RLS-MECH-01).
+- **TEST-RLS-RVW-15 — direct decision writes closed.** Browser direct UPDATE
+  of `status`/`decided_by_membership_id`/`decided_at`/`decision_rationale` is
+  denied for every role; decisions exist only via `decide_review_item`;
+  submission only via `submit_review_item`.
+- **TEST-RLS-RVW-16 — senior/article scope.** Submission allowed only for
+  work inside current assigned-work scope; reads limited to own submissions;
+  decide denied.
 
 ## DEC-J technical spike (Harness Gate — COMPLETE: executed 2026-08-31; decision approved 2026-09-01, IMP-004)
 
@@ -306,6 +340,33 @@ record:
   concurrent `A → B` / `B → A` additions: at most one commits; the
   committed graph remains acyclic; firm-scoped transaction advisory lock +
   recursive cycle validation + insert are atomic (SCH-14, RLS-TSK-02).
+- **TEST-SCH-21 (IMP-041 contract closure 2026-09-05):** `review_items`
+  structure — columns, PK, nullability/defaults, `status` and `source`
+  CHECK vocabularies, exact frozen `type` CHECK (`gst_reconciliation`,
+  `tds_return`, `itr_computation`, `financial_statements`,
+  `audit_workpaper` — API-OQ-01 resolved), and the SCH-17 queue indexes
+  (SCH-17).
+- **TEST-SCH-22 (IMP-041 contract closure 2026-09-05):** composite same-firm
+  FKs on `review_items` reject cross-firm client/task/compliance-instance/
+  submitter/decider references (SCH-17, SCH-FK-01…03, SCH-RESP-03).
+- **TEST-SCH-23 (IMP-041 contract closure 2026-09-05):** R0 source/AI
+  invariant — `source='human'` requires `ai_output_id IS NULL`; the
+  submission path accepts only `source='human'`; no FK to the deferred
+  `ai_outputs` (SCH-27) ships in R0 (SCH-17).
+- **TEST-SCH-24 (IMP-041 contract closure 2026-09-05):** terminal-decision
+  field invariant — `status` ∈ {approved, returned, escalated, dismissed}
+  requires `decided_by_membership_id` + `decided_at` + non-empty
+  `decision_rationale`; `pending` rows carry no decision fields (DM-SM-06,
+  SCH-17).
+- **TEST-SCH-25 (IMP-041 cross-domain hardening 2026-09-05):** ReviewItem
+  subject binding (SCH-17) — a valid task-linked item is accepted with
+  `client_id` equal to the task's client; a forged/mismatching task client
+  cannot persist; a valid instance-linked item is accepted with `client_id`
+  equal to the instance's client; a forged/mismatching instance client
+  cannot persist; consistent task + instance links are accepted only when
+  the task references exactly that instance — a same-client-different-
+  instance combination is rejected; an ad-hoc client-only item is accepted;
+  no inconsistent combination may persist.
 
 ## Automation tests (TEST-AUTO-*)
 
@@ -383,6 +444,42 @@ instance, one event). Extensions:
   flows pass with subscriptions disabled.
 - **TEST-API-10:** realtime tenant isolation under RLS (API-RT-07);
   failure falls back to polling with no contract change.
+- **TEST-API-11 (IMP-041 contract closure 2026-09-05):**
+  `decide_review_item` authorization-before-disclosure — an
+  unauthorized/out-of-scope existing item and a nonexistent id return the
+  identical `not_found` surface; no existence, status, legality,
+  vocabulary, rationale-requirement, or replay oracle (API-ERR-02,
+  RLS-RVW-01).
+- **TEST-API-12 (IMP-041 contract closure 2026-09-05):**
+  `decide_review_item` mutation-key retry safety (API-MUT-03) — a retried
+  decision with the same valid key returns the original result; no
+  double-decide, no second audit row, no duplicate returned-task comment;
+  authorization is evaluated BEFORE replay state.
+- **TEST-API-13 (IMP-041 contract closure 2026-09-05):**
+  `submit_review_item` server-derived fields are unforgeable (`firm_id`,
+  `submitted_by_membership_id`, `submitted_at`, actor/audit identity);
+  caller-supplied `status`, decision fields, `ai_output_id`, or
+  `source='ai'` are rejected; same-firm subject relationships and caller
+  scope are validated before the row is created (RLS-RVW-01, SCH-17).
+  Subject derivation follows the linked-subject-wins order (task →
+  instance → explicit client): caller `client_id` can never contradict or
+  override a linked task/instance — a mismatch is rejected.
+- **TEST-API-14 (IMP-041 contract closure 2026-09-05):** `returned`
+  atomicity (DM-SM-06) — with `task_id` non-null, a `returned` decision
+  transitions the linked task to `returned` and creates exactly one
+  immutable SCH-16 comment carrying the rationale, attributed to the
+  decision actor, in one transaction; the actor must additionally satisfy
+  the task's `submitted → returned` authority (RLS-TSK-01; RLS-4EY-03
+  assigned reviewer where the task is four-eyes-required — no rank bypass
+  via `decide_review_item`); the task must be in a DM-SM-05 state that
+  legally permits `→ returned`; failure at any step rolls back ReviewItem,
+  task, and comment and writes no success audit; with `task_id` NULL there
+  are no task side effects.
+- **TEST-API-15 (IMP-041 contract closure 2026-09-05):** decision legality
+  — `pending → approved | returned | escalated | dismissed` only; terminal
+  states reject further decisions; non-empty non-whitespace rationale is
+  mandatory for all four outcomes; rejections map to `conflict`/
+  `validation` with machine-readable reason codes (API-ERR-04).
 
 ## Security family (TEST-SEC-*)
 
@@ -409,7 +506,10 @@ instance, one event). Extensions:
    reason) — **owned by IMP-042 (Alerts & My Work) as downstream UI
    acceptance**; IMP-040 owns the backend/data-adapter/API behavior this
    flow exercises and carries no UI scope;
-8. **TEST-E2E-08** review submit + decision (approve and return);
+8. **TEST-E2E-08** review submit + decision (approve and return) —
+   **owned by IMP-041 (Review queue)**, which wires the existing Review
+   Queue UI to `@/data` and owns this flow's UI acceptance; IMP-042 owns
+   only the downstream My Work "Returned" surface the flow feeds;
 9. **TEST-E2E-09** My Work buckets render (Today/This Week/Waiting/
    Returned);
 10. **TEST-E2E-10** deadlines + Command Centre render live data;

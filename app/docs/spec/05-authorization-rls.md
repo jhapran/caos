@@ -152,6 +152,17 @@ applicable relationship. No rule in this document may assume
   comment, created atomically with the transition as an immutable SCH-16
   comment. Ad-hoc tasks (no ComplianceInstance, hence no ComplianceType)
   are NOT four-eyes-required by default.
+- **RLS-4EY-04 (review-item four-eyes; IMP-041 contract closure
+  2026-09-05):** every human R0 review-item decision enforces
+  `decider <> submitter` at the write path (`decide_review_item`, RLS-RVW-01):
+  the decision actor's **live FirmMembership** MUST differ from
+  `review_items.submitted_by_membership_id`. This is a ReviewItem-level rule
+  on **every** human decision — it does NOT depend on the compliance type's
+  `four_eyes_required` flag, role rank, or any caller-supplied flag, and it
+  does NOT reuse the task assignee/reviewer comparison (RLS-4EY-03): the
+  authoritative comparison is decider membership vs submitter membership.
+  No privileged-rank bypass: super_admin, partner, and manager cannot decide
+  an item they submitted themselves. Server-side only (RLS-4EY-02).
 
 ### 8a. Step-up authentication (AAL2) defaults — RLS-OQ-01 RESOLVED directionally
 
@@ -163,7 +174,12 @@ applicable relationship. No rule in this document may assume
   administration — including activation, RLS-CRV-03).
 - **RLS-AAL-02:** Step-up is **not** required for ordinary operational
   updates (routine task or compliance status changes, comments, checklist
-  completion, assignment within one's authority).
+  completion, assignment within one's authority). **Review-item submission
+  and review decisions (`submit_review_item` / `decide_review_item`,
+  RLS-RVW-01) are ordinary operational workflow actions** — they require no
+  additional step-up solely because they are review operations (R0 closure
+  2026-09-05); normal staff authentication/MFA policy (AUTH-10) continues to
+  apply.
 - **RLS-AAL-03:** The exact re-authentication freshness window is an
   implementation-validated value (harness gate / `13`), not fixed here.
 
@@ -197,7 +213,7 @@ Legend: ✔ full · ◐ scoped (see note) · ✖ denied · — n/a
 | Compliance profiles / instances | ✔ | ✔ | ◐ portfolio | ◐ assigned † | ✖ |
 | Tasks / checklist / dependencies | ✔ | ✔ | ◐ assign + supervise | ◐ assigned | ✖ |
 | Task comments / internal notes | ✔ | ✔ | ◐ | ◐ assigned work | ✖ |
-| Review items | ✔ | ✔ decide | ◐ decide (team) | submit only | ✖ |
+| Review items | ✔ decide ‡ | ✔ decide ‡ | ◐ decide (scoped ‡) | submit only ‡ | ✖ |
 | Alerts / alert rules | ✔ / rules read-write | ✔ / rules read-write | alerts ◐ / rules **read-only** | alerts ◐ / rules ✖ | ✖ |
 | Firm revenue / billing aggregates | ✔ | ✔ | ✖ | ✖ | ✔ (billing only) |
 | Invoices (deferred) | ✔ | ✔ | ✖ | ✖ | ✔ |
@@ -218,6 +234,23 @@ proposal workflow is introduced.
 † Matrix note (compliance profiles / instances, Senior/Article "◐ assigned"):
 instance state transitions occur via the transition RPC only, per RLS-CIN-01
 — senior/article have no direct table writes on compliance_instances.
+
+‡ Matrix note (Review items, R0 closure 2026-09-05): the former Manager cell
+"◐ decide (team)" referenced a team concept that is **deferred and unspecified
+in R0** (RLS-STF-03, RLS-A-02, RLS-OQ-02). R0 introduces **no**
+team-membership hierarchy, no subordinate traversal, and no team table. The
+resolved manager scope (RLS-RVW-01): a manager may read/decide a review item
+when (a) the item's client is in the manager's existing RLS-STF-03 portfolio,
+OR (b) `task_id` is non-null and the linked task is currently directly
+assigned to that manager or names that manager as reviewer per the IMP-040
+task-scope rules (RLS-TSK-01); an unlinked item is portfolio-scope only.
+Manager submit scope equals manager read/decide scope. Senior/article may
+submit only for work already inside their current assigned-work scope and may
+read only their own submissions; they may never decide. Super_admin and
+partner read/submit/decide firm-wide. **No role may decide an item it
+submitted** (RLS-4EY-04 — decider's live FirmMembership must differ from
+`submitted_by_membership_id`, no privileged-rank bypass). Billing, anon, and
+the client portal have no review-item access.
 
 ## 12. Table-level RLS intent (family IDs referenced by `06`)
 
@@ -307,7 +340,37 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
   - Ad-hoc task creation (supersedes the former "any staff for own clients" wording): super_admin/partner — any client in the active firm; manager — portfolio clients only; senior/article — only for a client ALREADY in current assigned-work scope (via an existing assigned ComplianceInstance or existing Task per this RLS model), the newly created ad-hoc task must initially assign the creator's own membership, and creation must NOT bootstrap access to an otherwise invisible client; billing — denied; anon — denied. Client-table RLS is not broadened to make task creation convenient.
 - **RLS-TSK-02** task_dependencies (IMP-040 closure 2026-09-04): direct browser mutation closed; graph changes only via the controlled commands `add_task_dependency` / `remove_task_dependency`. Authorization: super_admin/partner — firm-wide; manager — BOTH referenced tasks must be inside manager-authorized task scope (RLS-TSK-01); senior/article — denied; billing — denied; anon — denied. Both tasks must be same-firm via the composite references (SCH-14); no same-client-only rule beyond existing approved SCH rules. The add path is race-safe by construction: firm-scoped transaction advisory lock, then recursive cycle validation, then insert — one atomic commit (TEST-SCH-20).
 - **RLS-TCM-01** task_comments: read per task scoping; insert by any staff with task access; no update except `retracted` by author; no delete.
-- **RLS-RVW-01** review_items: submitters see own; reviewers (partner/manager per matrix) see firm/team queue; decisions via decision RPC (records decider/rationale); billing denied.
+- **RLS-RVW-01** review_items (R0 contract closure 2026-09-05): queue/detail
+  visibility — super_admin/partner firm-wide; manager scoped to portfolio
+  clients (RLS-STF-03) OR items whose linked task is currently assigned to /
+  reviewed by the manager's live membership (RLS-TSK-01; unlinked items are
+  portfolio-only) — the deferred "team" concept is NOT a scope (§11 note ‡);
+  senior/article see only their own submissions; billing denied (RLS-STF-05);
+  anon denied; client portal never readable (RLS-POR-03). Submission only via
+  the controlled Layer-B command `submit_review_item` (API-R0-RVW):
+  super_admin/partner any client in the firm; manager/senior/article only
+  inside their authorized scope above; scope and same-firm subject
+  relationships are validated before the row is created. Decisions only via
+  the controlled Layer-B command `decide_review_item` (records
+  decider/rationale atomically; API-R0-RVW): super_admin/partner firm-wide;
+  manager within scope; senior/article/billing/anon denied; **self-decision
+  prohibited for every role** (RLS-4EY-04). Browser direct UPDATE of `status`
+  and all decision fields is CLOSED. Both commands authorize BEFORE exposing
+  existence, current status, legal decision vocabulary, transition legality,
+  rationale requirements, or mutation/replay state — an unauthorized
+  existing item and a nonexistent id return the identical API-ERR-02
+  `not_found` surface. Live membership lookup governs every check
+  (RLS-MECH-01): a suspended/removed membership loses submit/decide on the
+  next request with the same JWT. **Task-linked `returned` composition
+  (cross-domain hardening 2026-09-05):** a `returned` decision on a
+  task-linked item additionally requires the same actor to hold the linked
+  task's `submitted → returned` authority (RLS-TSK-01 scope; RLS-4EY-03
+  assigned-reviewer requirement where the task is four-eyes-required) —
+  no privileged-rank bypass via `decide_review_item`, and ReviewItem
+  four-eyes (RLS-4EY-04) does not replace Task four-eyes; the task must be
+  in a DM-SM-05 state that legally permits `→ returned`, otherwise the
+  whole operation rolls back. Subject binding per SCH-17 guarantees the
+  linked task/instance is never a foreign or mismatched subject.
 - **RLS-ALR-01** alerts: read partner/manager/admin (+ senior/article for alerts on assigned work); acknowledge/snooze manager+; resolve per rule config (RLS-4EY n/a).
 - **RLS-ARL-01** alert_rules (RLS-OQ-03 RESOLVED): read: super_admin, partner,
   manager (read-only); write: super_admin and partner only; all other roles

@@ -222,7 +222,7 @@ now so the schema is forward-compatible, built in a later release.
 - **Ownership:** Tenant-owned; belongs to a Client; usually linked to a Task or ComplianceInstance.
 - **Relationships:** N—1 Task (nullable); N—1 submitted-by / decided-by (FirmMembership); optional N—1 AIOutput (when AI-sourced); evidence links to documents (deferred with documents).
 - **Lifecycle:** see DM-SM-06.
-- **Invariants:** Both AI output and human decision are stored (PRD §83). SLA/waiting time is derived from timestamps. Reviewer ≠ submitter where four-eyes applies.
+- **Invariants:** Both AI output and human decision are stored (PRD §83). SLA/waiting time is derived from timestamps. **Decider ≠ submitter on every human R0 decision** (RLS-4EY-04): the deciding membership must differ from the submitting membership, independent of role rank.
 - **Tenant boundary:** `firm_id` required.
 - **R0 status:** R0 (human-sourced review items with real persistence). **Deferred:** AI-sourced items, confidence thresholds, evidence linking to documents.
 
@@ -345,9 +345,25 @@ done → (reopen, audit-logged) | cancelled (from any non-terminal state)
 ```
 pending → approved | returned | escalated | dismissed
 ```
-- `returned`: routes work back to the preparer (task transitions to `returned`).
-- `escalated`: re-assigns decision to a higher role; remains pending-decision for audit purposes until decided.
-- All terminal decisions record decider, timestamp, and rationale (PRD §46).
+- `returned`: routes work back to the preparer — when `task_id` is non-null,
+  the linked task transitions to `returned` and exactly one immutable reviewer
+  comment (SCH-16) carrying the rationale is created, atomically with the
+  decision (API-R0-RVW). The decision does NOT bypass task authorization: the
+  same actor must hold the task's `submitted → returned` authority (RLS-TSK-01;
+  RLS-4EY-03 assigned reviewer where the task is four-eyes-required), and the
+  task must be in a DM-SM-05 state that legally permits `→ returned` —
+  otherwise the entire decision rolls back (item stays `pending`, task
+  unchanged, no comment, no success audit). An unlinked item becomes
+  `returned` with its stored rationale and no task side effects.
+- `escalated`: a **terminal** R0 outcome meaning "manual/higher-level
+  follow-up required" (R0 closure 2026-09-05). IMP-041 performs **no**
+  automatic escalation routing: no higher-reviewer assignment, no successor
+  item, no reopen, no team-routing record. Automatic escalation routing is
+  deferred.
+- `dismissed`: a terminal decision; no linked-task state change is implied.
+- All terminal decisions record decider, timestamp, and a **mandatory
+  non-empty rationale** (PRD §46) — atomically; no decision persists
+  partially. No decision is possible from a terminal state.
 
 ---
 

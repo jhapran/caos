@@ -93,8 +93,8 @@ Exactly 14 domain events — completed, meaningful business facts:
 | `task.created` | task create path (API-R0-TSK) | Task exists (instance-linked or ad-hoc, DEC-H) | My Work derivation; audit |
 | `task.assigned` | assignment RPC | Assignee membership set/changed | notification-ready fact (notifications deferred, SCH-26); audit |
 | `task.completed` | task transition RPC | Task reached `done` | instance progress; audit |
-| `review.submitted` | review submit path | Work entered the queue | reviewer queue (realtime, API-RT-01); audit |
-| `review.completed` | review decision RPC | Approve/return/escalate/dismiss decided (DM-SM-06) | submitter visibility; audit (decision + rationale, AUD-CAT-01) |
+| `review.submitted` | `submit_review_item` (API-R0-RVW) | Work entered the queue | reviewer queue (realtime, API-RT-01); audit |
+| `review.completed` | `decide_review_item` (API-R0-RVW) | Approve/return/escalate/dismiss decided (DM-SM-06) | submitter visibility; audit (decision + rationale, AUD-CAT-01) |
 | `alert.created` | alert evaluation job or manual raise | A risk signal became active | alert surfaces (realtime, API-RT-01); audit |
 | `alert.resolved` | resolve RPC or auto-resolution job | Alert resolved (`resolution_type` manual/auto, DM-OQ-05) | alert surfaces; audit (auto-resolution always logged) |
 | `membership.changed` | membership administration RPCs | Invite/role/suspend/remove (RLS-AAL-01) | authz freshness (DEC-J mechanism); audit |
@@ -116,6 +116,14 @@ Exactly 14 domain events — completed, meaningful business facts:
   trigger may be created for task events in IMP-040. Publication is wired
   only once the approved AUTO-OQ-02 mechanism exists (IMP-050), under this
   event contract.
+- **`review.submitted` / `review.completed` publication note (IMP-041
+  partition, contract closure 2026-09-05):** these remain approved
+  event-contract names in the catalogue above, but IMP-041 owns mutation +
+  audit only — it does NOT publish them. Audit capture (Layer B, `08` §7c)
+  is NOT domain-event publication; no outbox, event bus, webhook publisher,
+  queue, background delivery worker, or event trigger may be created for
+  review events in IMP-041. Publication is wired only once the approved
+  AUTO-OQ-02 mechanism exists (IMP-050), under this event contract.
 
 ## Scheduler / internal-signal catalogue (Release 0)
 
