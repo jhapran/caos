@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-040 (see the status block below and
+hosted staging through IMP-041 (see the status block below and
 `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,14 +25,14 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-040; the Supabase track
+Implementation packages have landed through IMP-041; the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
 document future behavior as if it exists. When a section below describes
 target state, it says so explicitly.
 
-**Release-0 implementation status (2026-09-05):** the Harness Gate is PASS
-(19/19), IMP-010 has landed (`supabase/migrations/` carries the production
+**Release-0 implementation status (2026-09-06):** the Harness Gate is PASS
+(20/20), IMP-010 has landed (`supabase/migrations/` carries the production
 tenant core: `firms`, `profiles`, `firm_memberships`, SCH-01…03), and
 IMP-011 (staff authentication) is COMPLETE: a dual-mode auth adapter behind
 `@/data` (`src/data/auth/`), staff auth pages, authentication-level route
@@ -198,18 +198,60 @@ flat fixture module `src/data/tasks.ts` shadows the folder, so the barrel
 wires `./tasks/index` explicitly). No task/My Work UI, no recurrence,
 no event publication in this package (TEST-E2E-07 → IMP-042; generator
 and events → IMP-050). Coverage: 22 schema + 51 RLS + 17 audit + 16
-provider integration tests and 32 unit tests.
+provider integration tests and 32 unit tests. IMP-041
+(review queue) is COMPLETE and CLOSED (primary implementation
+checkpoint `636beed` `feat: review queue`; final accepted corrective
+checkpoint `e857e59` `fix: use review queue polling fallback`; hosted
+staging promoted and verified; Netlify staging published; human
+staging/browser acceptance PASS 2026-09-06): `review_items` (SCH-17 —
+R0 type vocabulary frozen by API-OQ-01: `gst_reconciliation`,
+`tds_return`, `itr_computation`, `financial_statements`,
+`audit_workpaper`; lifecycle `pending → approved / returned /
+escalated / dismissed` per DM-SM-06), RLS enabled AND forced with the
+single scoped SELECT policy `review_items_select_scoped`
+(super_admin/partner firm-wide; manager portfolio + direct task
+assignee/reviewer; senior/article own submissions; billing none).
+Browser table grants are SELECT-only — every write goes through the
+Layer-B definer commands `submit_review_item` / `decide_review_item`
+(authorization BEFORE disclosure per API-ERR-02: existing-but-hidden
+and nonexistent items return one identical `not_found`; authorization
+precedes vocabulary/lifecycle/rationale/replay evaluation; state-based
+mutation-key idempotency returns `already_applied`, never an error).
+Four-eyes (RLS-4EY-04): the decider's live membership must differ from
+the submitter's — no rank bypass; a task-linked `returned` decision
+additionally requires the assigned Task reviewer (intersection with
+the IMP-040 task review authority), and the linked return is atomic:
+ReviewItem `returned` + Task `returned` + exactly one immutable
+TaskComment (body = rationale) + `review_item.decided` and
+`task.transition` audit in one transaction — an illegal Task state
+rolls the whole operation back. The provider-neutral `reviewService`
+sits behind `@/data` (`src/data/review/`); the Review Queue UI is
+data-backed in Supabase mode (senior/article submit against assigned
+work only — no client enumeration; decision controls are
+role-truthful). Queue freshness (API-RT-01/03/05) uses the APPROVED
+API-RT-07 POLLING FALLBACK: authenticated postgres_changes cannot
+carry the R0 `x-active-firm` request-header context through Realtime's
+per-row RLS evaluation (executable differential harness proof,
+2026-09-06), so `subscribeReviewQueue` polls every 15 seconds
+(implementation parameter `REVIEW_QUEUE_POLL_INTERVAL_MS`, NOT a
+product SLA) — each tick is a bare invalidation and the authoritative
+state is always re-read through `listReviewItems` under RLS. There is
+NO Review Queue postgres_changes dependency and NO realtime-publication
+migration. Domain-event publication (`review.submitted` /
+`review.completed`) remains deferred to IMP-050 and is NOT the same
+thing as this polling fallback.
 
-Release-0 state through IMP-040 (CLOSED 2026-09-05): 17 / 27 formal R0
+Release-0 state through IMP-041 (CLOSED 2026-09-06): 18 / 27 formal R0
 packages complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030,
-IMP-031, IMP-040; ≈ 63.0%); migrations run through
-`20260906000000_tasks_dependencies_checklists_comments.sql` (hosted
-ledger 8/8); 18 application public
-tables (RLS enabled on all 18, FORCE RLS on the 15 tenant-owned content
-tables, 48 policies); Harness Gate green (19/19 phases). Next package:
-IMP-041 — Review queue (NOT STARTED — begins only with a fresh contract
+IMP-031, IMP-040, IMP-041; ≈ 66.7%); migrations run through
+`20260907000000_review_items.sql` (hosted
+ledger 9/9); 19 application public
+tables (RLS enabled on all 19, FORCE RLS on the 16 tenant-owned content
+tables, 49 policies); Harness Gate green (20/20 phases). Next package:
+IMP-042 — Alerts & My Work (NOT STARTED — begins only with a fresh contract
 extraction and an explicit implementation instruction; entry criterion
-API-OQ-01 review-item vocabulary decision per `12-release-0-plan.md`).
+per `12-release-0-plan.md`: R0-E persistence green — satisfied by
+IMP-040/041).
 
 Authoritative sources:
 
@@ -461,7 +503,8 @@ Current fixture modules:
 
 Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton;
 IMP-020 client hierarchy; IMP-021 engagements; IMP-022 client360; IMP-030
-compliance rules; IMP-031 compliance instances; IMP-040 tasks):
+compliance rules; IMP-031 compliance instances; IMP-040 tasks; IMP-041
+review):
 
 - `source.ts` — THE single data-source selection boundary: `getDataSource()`
   (cached, fail-closed) and `validateStartupConfig()` (called once by
@@ -492,11 +535,14 @@ compliance rules; IMP-031 compliance instances; IMP-040 tasks):
   under RLS + the `list_client_identities()` RPC; the selector in
   `clientHierarchyService.ts` picks once via `getDataSource()`.
 - `engagements/`, `client360/`, `complianceRules/`, `complianceInstances/`,
-  `tasks/` — the same five-file domain convention (`types.ts` +
+  `tasks/`, `review/` — the same five-file domain convention (`types.ts` +
   `fixture.ts` + `supabase.ts` + `<domain>Service.ts` + `index.ts`):
   a provider-neutral service contract, a demo bridge fixture adapter, and
   a plain-PostgREST-under-RLS Supabase adapter whose privileged operations
   go through the Layer-B RPCs (never direct guarded-column writes).
+  `review/`'s `subscribeReviewQueue` is the provider-neutral freshness
+  subscription; the Supabase implementation is the API-RT-07 polling
+  fallback (see the IMP-041 status paragraph above).
   NOTE the `tasks/` naming hazard: the legacy flat fixture module
   `src/data/tasks.ts` shadows the folder — import the service via the
   barrel (`@/data`), never via `@/data/tasks`.

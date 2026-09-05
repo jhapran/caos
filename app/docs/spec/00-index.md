@@ -7,9 +7,9 @@
 - **Harness Gate:** PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verification from a fresh detached worktree: 14/14 phases green)
 - **Harness Engineering phase (IMP-000…IMP-005):** COMPLETE
 - **Next phase:** Release-0 implementation (per `12-release-0-plan.md`) — STARTED 2026-09-01
-- **Current package:** none in flight — IMP-040 Tasks, dependencies, checklists, comments is CLOSED (implementation checkpoint `be15229`; hosted staging promoted and verified; Netlify staging published; human staging acceptance PASS 2026-09-05)
-- **Completed packages (17 / 27):** IMP-000…IMP-005 harness engineering (COMPLETE — Harness Gate PASS, commit `305d133`); IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`); IMP-011 staff authentication (COMPLETE — checkpoint `8ea9c4a`); IMP-012 foundational RLS (COMPLETE — checkpoint `7f5c7b6`); IMP-013 audit foundation (COMPLETE — checkpoint `3ee1e6d`); IMP-014 data-source adapter skeleton (COMPLETE — checkpoint `3fed76a`); IMP-020 client hierarchy persistence (COMPLETE — checkpoint `1d7bbb1`); IMP-021 engagements (COMPLETE — checkpoint `c38c758`); IMP-022 Client 360 live wiring (COMPLETE — checkpoint `6b58769`); IMP-030 compliance types & rule versions (COMPLETE — checkpoint `00ad7c2`); IMP-031 compliance profiles & instances (COMPLETE/CLOSED — checkpoint `03e999d`, staging acceptance PASS 2026-09-04); IMP-040 tasks, dependencies, checklists & comments (COMPLETE/CLOSED — checkpoint `be15229`, staging acceptance PASS 2026-09-05)
-- **Next package:** IMP-041 — Review queue (NOT STARTED — awaits the explicit implementation prompt; entry criterion per `12-release-0-plan.md`: API-OQ-01 review-item vocabulary decision — **RESOLVED 2026-09-05** at IMP-041 contract closure)
+- **Current package:** none in flight — IMP-041 Review queue is CLOSED (primary implementation checkpoint `636beed`; final accepted corrective checkpoint `e857e59` — API-RT-07 polling fallback; hosted staging promoted and verified; Netlify staging published; human staging/browser acceptance PASS 2026-09-06)
+- **Completed packages (18 / 27):** IMP-000…IMP-005 harness engineering (COMPLETE — Harness Gate PASS, commit `305d133`); IMP-010 tenant core schema (COMPLETE — checkpoint `c913b9d`); IMP-011 staff authentication (COMPLETE — checkpoint `8ea9c4a`); IMP-012 foundational RLS (COMPLETE — checkpoint `7f5c7b6`); IMP-013 audit foundation (COMPLETE — checkpoint `3ee1e6d`); IMP-014 data-source adapter skeleton (COMPLETE — checkpoint `3fed76a`); IMP-020 client hierarchy persistence (COMPLETE — checkpoint `1d7bbb1`); IMP-021 engagements (COMPLETE — checkpoint `c38c758`); IMP-022 Client 360 live wiring (COMPLETE — checkpoint `6b58769`); IMP-030 compliance types & rule versions (COMPLETE — checkpoint `00ad7c2`); IMP-031 compliance profiles & instances (COMPLETE/CLOSED — checkpoint `03e999d`, staging acceptance PASS 2026-09-04); IMP-040 tasks, dependencies, checklists & comments (COMPLETE/CLOSED — checkpoint `be15229`, staging acceptance PASS 2026-09-05); IMP-041 review queue (COMPLETE/CLOSED — primary checkpoint `636beed`, accepted corrective checkpoint `e857e59`, staging/browser acceptance PASS 2026-09-06)
+- **Next package:** IMP-042 — Alerts & My Work (NOT STARTED — awaits the explicit implementation prompt; entry criterion per `12-release-0-plan.md`: R0-E persistence green — satisfied by IMP-040/041)
 
 All existing OPEN / PROVISIONAL items remain governed by their documented
 future gates (see `12` Open / Provisional Dependency Matrix); this gate
@@ -41,7 +41,7 @@ documents move through review.
 | Document | Role |
 |---|---|
 | `docs/input/PRD.txt` | Authoritative product intent (v0.1, read in full) |
-| `AGENTS.md` | Current repository state (fixture demo track + Supabase Release-0 track through IMP-040) |
+| `AGENTS.md` | Current repository state (fixture demo track + Supabase Release-0 track through IMP-041) |
 | Phase 1 analysis (chat, accepted) | Working PRD-to-code analysis and gap list |
 | Phase 1.5 decisions (chat, approved with clarifications) | Architecture decisions A–T |
 

@@ -7,10 +7,13 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human staging acceptance date: 2026-09-05
-- Last CLOSED package: IMP-040 — Tasks, dependencies, checklists, comments
-- IMP-040 implementation checkpoint: `be15229` (`feat: tasks and dependencies`)
-- Git staging (`origin/staging`) contains accepted IMP-040
+- Human staging acceptance date: 2026-09-06
+- Last CLOSED package: IMP-041 — Review queue
+- IMP-041 primary implementation checkpoint: `636beed`
+  (`feat: review queue`)
+- IMP-041 final accepted corrective checkpoint: `e857e59`
+  (`fix: use review queue polling fallback` — API-RT-07)
+- Git staging (`origin/staging`) contains accepted IMP-041 at `e857e59`
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -18,43 +21,47 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (17 / 27, ≈ 63.0%):
+Completed (18 / 27, ≈ 66.7%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
 - IMP-020…IMP-022 (Core Domain)
 - IMP-030, IMP-031 (Compliance Foundation)
 - IMP-040 (Work Management — tasks/dependencies/checklists/comments)
+- IMP-041 (Work Management — review queue)
 
 Remaining formal R0 packages:
 
-- IMP-041, IMP-042 (Work Management)
+- IMP-042 (Work Management)
 - IMP-050, IMP-051 (Automation & Deadlines)
 - IMP-060, IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-040 — Tasks, dependencies, checklists, comments — CLOSED
-- Next: IMP-041 — Review queue — NOT STARTED
+- Current: IMP-041 — Review queue — CLOSED
+- Next: IMP-042 — Alerts & My Work — NOT STARTED
 - Next action: fresh-session contract extraction / reconciliation for
-  IMP-041. IMP-041 implementation is NOT authorized yet. Entry criterion
-  per `12-release-0-plan.md`: API-OQ-01 review-item vocabulary decision.
+  IMP-042. IMP-042 implementation is NOT authorized yet. Entry criterion
+  per `12-release-0-plan.md`: R0-E persistence green — satisfied by
+  IMP-040/041.
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260906000000_tasks_dependencies_checklists_comments.sql`
-- Hosted staging migration ledger: 8 migrations, local == remote through
-  `20260906000000` (8 / 8)
-- Application public tables: 18
-- RLS enabled: 18 / 18
-- FORCE-RLS: 15 (all tenant-owned content tables)
-- Policies: 48
-- IMP-040 tables: `tasks`, `task_dependencies`, `task_checklist_items`,
-  `task_comments`
-- Post-promotion staging row counts after hosted-probe cleanup: all four
-  task-family tables = 0 — no recurrence-generated or migration-created
-  rows introduced
+- Latest migration: `20260907000000_review_items.sql`
+- Hosted staging migration ledger: 9 migrations, local == remote through
+  `20260907000000` (9 / 9)
+- Application public tables: 19
+- RLS enabled: 19 / 19
+- FORCE-RLS: 16 (all tenant-owned content tables)
+- Policies: 49
+- IMP-041 table: `review_items` — single scoped SELECT policy
+  `review_items_select_scoped`
+- No realtime-publication migration exists; `supabase_realtime` publishes
+  zero public tables (not required — see §6b API-RT-07 fallback)
+- Post-promotion staging row counts after hosted/browser-probe cleanup:
+  `review_items` and all IMP-041 probe domain rows = 0 — no probe or
+  migration-created rows remain
 
 ## 5. Compliance Governance State
 
@@ -72,9 +79,24 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
-- Accepted implementation checkpoint: `be15229`
-- Deployment: Published / human browser acceptance PASS
+- Accepted implementation checkpoint: `e857e59` (deployed bundle proven
+  byte-identical to a clean local build of that Git HEAD with the staging
+  environment)
+- Deployment: Published / human browser acceptance PASS 2026-09-06
+  (including the API-RT-07 polling-fallback cross-session freshness
+  re-proof; transient test-script timing/assertion artifacts were
+  re-proven deterministically — no application defect remained)
 - No real customer data in staging
+- Dedicated staging test identities (durable testing note): the 8
+  synthetic `imp041-*` Supabase Auth users remain for future acceptance
+  gates, each with a verified TOTP factor enrolled during the IMP-041
+  browser gate through the supported UI flow. Correction to earlier
+  process reporting: an intermediate gate report claimed MFA was
+  untouched; that was inaccurate for these dedicated synthetic identities
+  (verified factors WERE enrolled on them). Protected human MFA was
+  untouched throughout. No passwords, TOTP secrets, or codes are recorded
+  in the repository. The original `stg-*` baseline identities are
+  preserved.
 
 ## 6a. Work-Management Enforcement Facts (IMP-040 — durable)
 
@@ -109,6 +131,61 @@ Remaining formal R0 packages:
   standard path — future hosted probes must use a supported authorized
   test-user provisioning mechanism or request human provisioning; if
   unavailable, STOP. Do not normalize direct auth-schema insertion.
+
+## 6b. Review-Queue Enforcement & Freshness Facts (IMP-041 — durable)
+
+- `review_items` (SCH-17) role scope (RLS-RVW-01,
+  `review_items_select_scoped`): super_admin/partner firm-wide; manager
+  portfolio + direct task assignee/reviewer; senior/article own
+  submissions; billing none; cross-firm zero.
+- Browser table grants are SELECT-only; INSERT/UPDATE/DELETE are closed.
+  All writes go through the Layer-B definer commands `submit_review_item`
+  and `decide_review_item`.
+- API-ERR-02 authorization-before-disclosure: existing-but-hidden and
+  nonexistent ReviewItems return one identical `not_found`; authorization
+  precedes vocabulary, lifecycle, rationale, and replay evaluation (no
+  existence/status/legality/replay oracle).
+- Four-eyes (RLS-4EY-04): the decider's live membership must differ from
+  the submitter's — no rank bypass (manager/partner/super_admin
+  self-decision all denied).
+- A task-linked `returned` decision additionally requires the assigned
+  Task reviewer (intersection with IMP-040 task review authority — no
+  partner/super_admin/other-manager bypass). The linked return is atomic:
+  ReviewItem `returned` + Task `returned` + exactly one immutable
+  TaskComment (body = decision rationale, correct actor) +
+  `review_item.decided` + `task.transition` audit in one transaction; an
+  illegal Task state rolls the entire operation back.
+- Linked-subject integrity: `client_id` is server-derived from the linked
+  Task/ComplianceInstance; forged client or mismatched task/instance
+  bindings are rejected.
+- Audit actions: `review_item.submitted` / `review_item.decided` /
+  `review_item.submit_denied` / `review_item.decide_denied` — server-derived
+  actor, old/new snapshots, no Layer-A/Layer-B duplication; truly
+  nonexistent objects carry no invented object audit.
+- Decisions require a non-empty rationale; terminal keyless re-decision is
+  a `conflict`; keyed state-based retry returns `already_applied` with no
+  duplicate side effects (API-MUT-03).
+- Provider-neutral `reviewService` behind `@/data` (`src/data/review/`);
+  the Review Queue UI is data-backed in Supabase mode (no fixture values,
+  no demo-role controls; senior/article submit against assigned work only,
+  no client enumeration; role-truthful decision controls).
+- Queue freshness (API-RT-01/03/05) uses the APPROVED API-RT-07 POLLING
+  FALLBACK: authenticated postgres_changes cannot carry the R0
+  `x-active-firm` request-header context through Realtime's per-row RLS
+  evaluation (executable differential harness proof, 2026-09-06).
+  `subscribeReviewQueue` polls every 15 seconds
+  (`REVIEW_QUEUE_POLL_INTERVAL_MS` — an implementation parameter, NOT a
+  product SLA); each tick is a bare invalidation and the authoritative
+  state is always re-read through `listReviewItems` under RLS.
+- In the accepted IMP-041 implementation there is NO Review Queue
+  postgres_changes dependency and NO hosted realtime-publication
+  migration. This records the current accepted staging state at IMP-041
+  closure — it is NOT a permanent architecture invariant and does not
+  constrain IMP-042 Alerts (the approved contract reserves Alerts as an
+  R0 realtime surface in its owning package). Domain-event publication
+  (`review.submitted` / `review.completed`) remains deferred to IMP-050
+  and is NOT the same thing as this polling fallback.
+- Harness Gate: 20 / 20 phases PASS.
 
 ## 7. Permanent Architecture Boundaries
 
@@ -149,13 +226,18 @@ Remaining formal R0 packages:
 - Domain-event publication for ComplianceInstance remains deferred per
   the approved automation contract (IMP-050 / AUTO-OQ-02); the same
   deferral covers `task.created` / `task.assigned` / `task.completed`
-  publication (contract names only after IMP-040).
-- Advisor follow-ups (non-IMP-040, pre-existing; do not treat as
+  (contract names only after IMP-040) and `review.submitted` /
+  `review.completed` (contract names only after IMP-041). The accepted
+  API-RT-07 Review Queue polling fallback is unrelated to event
+  publication and does not discharge this deferral.
+- Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
   Auth config — ops decision); performance advisors
   (`auth_rls_initplan`, `multiple_permissive_policies`) on the IMP-030
   tables `compliance_types` / `compliance_rule_versions` — none on
-  IMP-040 tables.
+  IMP-040/IMP-041 tables. The IMP-041 hosted advisor run (2026-09-06)
+  found 0 new ERRORs (security 0 ERROR / 21 WARN; performance 0 ERROR /
+  5 WARN — all pre-existing known findings).
 
 ## 10. Fresh Session Bootstrap
 
