@@ -52,7 +52,7 @@ export default function App() {
         <Route path="/deadlines/:id/clients" element={<ModuleGate title="Deadline clients" detail="Per-deadline client lists arrive with the Compliance Engine release."><DeadlineClients /></ModuleGate>} />
         <Route path="/compliance/:id" element={<ModuleGate title="Compliance Detail" detail="Compliance instances arrive with the Compliance Engine release."><ComplianceDetail /></ModuleGate>} />
         <Route path="/ask" element={<ModuleGate title="Ask CAOS" detail="The natural-language assistant arrives with the AI release; no provider is wired to hosted data yet."><AskCaos /></ModuleGate>} />
-        <Route path="/review" element={<ModuleGate title="Review Queue" detail="Review items are produced by the task and workflow modules, which arrive in a later release."><ReviewQueue /></ModuleGate>} />
+        <Route path="/review" element={<ReviewQueue />} />
         <Route path="/dependency" element={<ModuleGate title="Client Dependency" detail="Cross-client dependency analytics arrive with a later release."><ClientDependency /></ModuleGate>} />
         <Route path="/alerts" element={<ModuleGate title="Risk Alerts" detail="Risk alerts are raised by the Compliance Engine and risk modules, which arrive in a later release."><RiskAlerts /></ModuleGate>} />
         <Route path="/reports" element={<ModuleGate title="Reports" detail="Board-ready reports are composed from modules that arrive in later releases."><Reports /></ModuleGate>} />

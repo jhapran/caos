@@ -61,6 +61,16 @@
  * three owner-only trigger functions (the tasks write guard, the comment
  * immutability guard, the checklist who/when stamper).
  *
+ * IMP-041 changes reflected here (PASS B): review_items (SCH-17) carries the
+ * final RLS-RVW-01 policy set (one scoped-select policy: super_admin/partner
+ * firm-wide, manager portfolio-or-linked-task, senior/article own
+ * submissions), table-level SELECT for authenticated with NO browser write
+ * grant (submission/decision are the Layer-B commands
+ * submit_review_item(uuid,uuid,uuid,text,text,text,text,timestamptz) and
+ * decide_review_item(uuid,text,text,text), granted to authenticated only),
+ * and one owner-only definer trigger function (the subject-binding /
+ * single-writer write guard).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -70,8 +80,8 @@ import { FIRM_A, psql, userId } from '../helpers.mjs';
 
 const rows = (sql) => psql(sql).trim().split('\n').filter(Boolean).sort();
 
-describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', () => {
-  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance + task-family tables', () => {
+describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02)', () => {
+  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance + task-family + review-item tables', () => {
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`),
@@ -90,6 +100,7 @@ describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', 
       'legal_entities',
       'profiles',
       'registrations',
+      'review_items',
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -113,6 +124,8 @@ describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', 
     // profiles/instances are tenant-owned content, forced the same way.
     // IMP-040's four task-family tables are tenant-owned content, forced the
     // same way (zero policies in PASS A = fail-closed for browser roles).
+    // IMP-041's review_items is tenant-owned content, forced the same
+    // way (PASS B: one scoped-select policy; writes stay command-owned).
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`),
@@ -128,6 +141,7 @@ describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', 
       'engagements',
       'legal_entities',
       'registrations',
+      'review_items',
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -153,6 +167,9 @@ describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', 
     // select-only (graph writes are command-owned); task_checklist_items
     // select/insert/update/delete via parent-task scope; task_comments
     // select + author-pinned insert + author retract-only update.
+    // IMP-041 PASS B adds one review_items policy (RLS-RVW-01): scoped
+    // select only — submission and decisions are Layer-B commands, so no
+    // insert/update/delete policy exists.
     expect(
       rows(`select tablename || ':' || policyname || ':' || cmd from pg_policies where schemaname = 'public'`),
     ).toEqual(
@@ -194,6 +211,8 @@ describe('IMP-012/013/020/021/030/031/040 catalog — RLS state (RLS-PRIN-02)', 
         'registrations:registrations_insert_manager_plus:INSERT',
         'registrations:registrations_select_scoped:SELECT',
         'registrations:registrations_update_manager_plus:UPDATE',
+        // IMP-041 PASS B review queue (RLS-RVW-01).
+        'review_items:review_items_select_scoped:SELECT',
         // IMP-040 PASS B task family.
         'task_checklist_items:task_checklist_items_delete_via_task:DELETE',
         'task_checklist_items:task_checklist_items_insert_via_task:INSERT',
@@ -236,6 +255,9 @@ const AUTHENTICATED_RPCS = [
   'transition_task(uuid,text,text,text,text)',
   'add_task_dependency(uuid,uuid,text,text)',
   'remove_task_dependency(uuid,uuid,text)',
+  // IMP-041: Layer-B review-queue commands (API-R0-RVW, RLS-RVW-01).
+  'submit_review_item(uuid,uuid,uuid,text,text,text,text,timestamp with time zone)',
+  'decide_review_item(uuid,text,text,text)',
 ];
 const SERVICE_ONLY_FNS = [
   'write_audit_event_server(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text)',
@@ -288,6 +310,11 @@ const IMP040_TRIGGER_FNS = [
 // tasks itself — the DEC-J definer pattern (active_membership_role
 // precedent) to avoid RLS self-recursion; authenticated-executable.
 const IMP040_HELPERS = ['task_client_in_assigned_scope(uuid,uuid)'];
+// IMP-041 function inventory: the two Layer-B commands join
+// AUTHENTICATED_RPCS above; the subject-binding / single-writer write guard
+// is an owner-only definer trigger function (invoked by the trigger, never
+// by application roles).
+const IMP041_TRIGGER_FNS = ['review_items_guard_write()'];
 
 describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
@@ -307,6 +334,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP031_FNS,
       ...IMP040_TRIGGER_FNS,
       ...IMP040_HELPERS,
+      ...IMP041_TRIGGER_FNS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
@@ -349,6 +377,10 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       'firms:SELECT',
       'legal_entities:SELECT',
       'registrations:SELECT',
+      // IMP-041 PASS B: review_items SELECT only (RLS does the row
+      // filtering); submission/decision writes are Layer-B commands — there
+      // is deliberately no INSERT/UPDATE/DELETE grant (API-ARCH-04).
+      'review_items:SELECT',
       // IMP-040 PASS B: task-family SELECT (RLS does the row filtering) +
       // the one table-level DELETE (checklist lines, governed by the
       // parent-task DELETE policy — no other task-family delete exists).
@@ -735,6 +767,28 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
         'registrations:UPDATE:status',
         'registrations:UPDATE:valid_from',
         'registrations:UPDATE:valid_to',
+        // IMP-041 PASS B review_items — SELECT covers all readable columns;
+        // NO insert/update/delete column grant exists (command-owned writes).
+        'review_items:SELECT:ai_output_id',
+        'review_items:SELECT:client_id',
+        'review_items:SELECT:compliance_instance_id',
+        'review_items:SELECT:created_at',
+        'review_items:SELECT:decided_at',
+        'review_items:SELECT:decided_by_membership_id',
+        'review_items:SELECT:decision_rationale',
+        'review_items:SELECT:firm_id',
+        'review_items:SELECT:id',
+        'review_items:SELECT:note',
+        'review_items:SELECT:priority',
+        'review_items:SELECT:sla_due_at',
+        'review_items:SELECT:source',
+        'review_items:SELECT:status',
+        'review_items:SELECT:submitted_at',
+        'review_items:SELECT:submitted_by_membership_id',
+        'review_items:SELECT:task_id',
+        'review_items:SELECT:title',
+        'review_items:SELECT:type',
+        'review_items:SELECT:updated_at',
         // IMP-040 PASS B task family — SELECT covers readable columns on all
         // four tables. tasks INSERT is exactly the caller-supplied set (no
         // id/created_at/updated_at, no status — forced default 'open',
@@ -833,13 +887,13 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
     for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS, ...IMP040_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP041_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS, ...IMP041_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -859,6 +913,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP031_FNS,
       ...IMP040_TRIGGER_FNS,
       ...IMP040_HELPERS,
+      ...IMP041_TRIGGER_FNS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
@@ -883,7 +938,8 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     "'approve_client_compliance_profile', 'transition_compliance_instance', " +
     "'ccp_guard_write', 'cin_guard_write', 'cin_validate_assignments', 'compliance_scope_validate', " +
     "'transition_task', 'add_task_dependency', 'remove_task_dependency', 'task_client_in_assigned_scope', " +
-    "'tasks_guard_write', 'task_comments_guard_update', 'task_checklist_items_stamp_done'";
+    "'tasks_guard_write', 'task_comments_guard_update', 'task_checklist_items_stamp_done', " +
+    "'review_items_guard_write', 'submit_review_item', 'decide_review_item'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -908,7 +964,11 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     // tasks inside the INSERT policy — the DEC-J helper pattern);
     // task_comments_guard_update (pure OLD/NEW) and
     // task_checklist_items_stamp_done (pure NEW mutation + auth.uid()) are
-    // INVOKER.
+    // INVOKER. IMP-041 PASS A: review_items_guard_write is definer (it reads
+    // tasks / compliance_instances under FORCE RLS). IMP-041 PASS B: both
+    // Layer-B review commands are definer (status/decision/submission
+    // columns carry no browser grant; the single-writer marker admits only
+    // the command path).
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
@@ -928,6 +988,7 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'compliance_scope_validate',
       'compliance_types_enforce_governance_inheritance',
       'crv_prepare_insert',
+      'decide_review_item',
       'engagements_validate_responsibility',
       'invite_member',
       'list_client_identities',
@@ -935,7 +996,9 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'mirror_login_history',
       'remove_membership',
       'remove_task_dependency',
+      'review_items_guard_write',
       'shares_active_firm_with',
+      'submit_review_item',
       'suspend_membership',
       'task_client_in_assigned_scope',
       'tasks_guard_write',

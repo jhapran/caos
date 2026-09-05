@@ -53,6 +53,14 @@ vi.mock('@/data', async (importOriginal) => {
       ],
     },
     getActiveFirm: () => 'f-1',
+    // IMP-041: the review badge is service-backed in both modes; this stub
+    // stands in for the RLS-filtered production read (empty queue → no
+    // badge), proving no FIXTURE count can leak into the supabase shell.
+    reviewService: {
+      mode: mock.mode,
+      listReviewItems: async () => [],
+      subscribeReviewQueue: () => () => {},
+    },
   };
 });
 

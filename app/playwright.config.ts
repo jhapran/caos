@@ -13,7 +13,9 @@ import { defineConfig } from '@playwright/test';
  *                never points at hosted Supabase.
  *
  * Business-flow E2E coverage (TEST-E2E-01…12 in docs/spec/11-testing-harness.md)
- * lands with the IMP packages that own each flow.
+ * lands with the IMP packages that own each flow; so far:
+ *   client360    — IMP-022, TEST-E2E-03…05 (client → entity → registration)
+ *   review-queue — IMP-041, TEST-E2E-08 (review submit → approve → return)
  *
  * Browser binaries are intentionally NOT installed by IMP-001 — run
  * `npx playwright install chromium` before first use (Harness Gate / CI).
@@ -66,6 +68,15 @@ export default defineConfig({
             // IMP-022: TEST-E2E-03…05 (client → entity → registration).
             name: 'client360',
             testMatch: 'client360.spec.ts',
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
+          {
+            // IMP-041: TEST-E2E-08 (review submit → approve → return).
+            // Longer expect window: the fresh 3100 dev server cold-transforms
+            // the route on first navigation.
+            name: 'review-queue',
+            testMatch: 'review-queue.spec.ts',
+            expect: { timeout: 30_000 },
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },
         ]

@@ -170,6 +170,11 @@ async function main() {
   currentPhase = 'client360-integration';
   run('client360-integration', 'npm run test:client360');
 
+  // IMP-041: review-queue command contract (TEST-API-11…15 against the real
+  // stack; review_items schema/RLS/audit coverage runs in the phases above).
+  currentPhase = 'review-integration';
+  run('review-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/review');
+
   currentPhase = 'build';
   run('build', 'npm run build');
 
@@ -229,10 +234,10 @@ async function main() {
        where table_schema = 'public' and (table_name like 'hgate%' or table_name like 'decj%' or table_name like 'audctx%')`,
     ).trim();
     if (stray) throw new Error(`stray harness/spike tables remain: ${stray}`);
-    // IMP-010 + IMP-013 + IMP-020 + IMP-021 + IMP-030 + IMP-031 + IMP-040:
-    // production schema now exists. The gate distinguishes the EXPECTED
-    // committed-migration tables from anything unexpected; the forbidden
-    // temporary-object check above is unchanged.
+    // IMP-010 + IMP-013 + IMP-020 + IMP-021 + IMP-030 + IMP-031 + IMP-040 +
+    // IMP-041: production schema now exists. The gate distinguishes the
+    // EXPECTED committed-migration tables from anything unexpected; the
+    // forbidden temporary-object check above is unchanged.
     const expectedTables = [
       'audit_log', // SCH-20 (IMP-013)
       'client_compliance_profiles', // SCH-11 (IMP-031)
@@ -248,6 +253,7 @@ async function main() {
       'legal_entities', // SCH-05 (IMP-020)
       'profiles', // SCH-02 (IMP-010)
       'registrations', // SCH-07 (IMP-020)
+      'review_items', // SCH-17 (IMP-041 PASS A)
       'task_checklist_items', // SCH-15 (IMP-040)
       'task_comments', // SCH-16 (IMP-040)
       'task_dependencies', // SCH-14 (IMP-040)
@@ -260,15 +266,15 @@ async function main() {
     const actual = appTables ? appTables.split(',') : [];
     if (actual.join(',') !== expectedTables.join(',')) {
       throw new Error(
-        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031/040 migrations)`,
+        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031/040/041 migrations)`,
       );
     }
-    // IMP-012/013/020/021/030/031/040: production RLS is part of the expected
-    // posture — the gate fails on RLS absence/regression. The tenant-owned
-    // content tables (audit_log + the five client-hierarchy tables +
-    // engagements + the two compliance-rule tables + the two
-    // compliance-profile/instance tables + the four task-family tables) are
-    // additionally FORCED
+    // IMP-012/013/020/021/030/031/040/041: production RLS is part of the
+    // expected posture — the gate fails on RLS absence/regression. The
+    // tenant-owned content tables (audit_log + the five client-hierarchy
+    // tables + engagements + the two compliance-rule tables + the two
+    // compliance-profile/instance tables + the four task-family tables +
+    // review_items) are additionally FORCED
     // (RLS-PRIN-02); the tenant core stays unforced per the IMP-012
     // documented exception (helper recursion + owner-run maintenance).
     const rlsTables = psql(
@@ -277,7 +283,7 @@ async function main() {
        where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`,
     ).trim();
     if (rlsTables !== expectedTables.join(',')) {
-      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031/040)`);
+      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031/040/041)`);
     }
     const expectedForced = [
       'audit_log',
@@ -291,6 +297,7 @@ async function main() {
       'engagements',
       'legal_entities',
       'registrations',
+      'review_items',
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -302,7 +309,7 @@ async function main() {
        where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`,
     ).trim();
     if (forcedTables !== expectedForced.join(',')) {
-      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031/040; tenant core unforced per IMP-012 exception)`);
+      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031/040/041; tenant core unforced per IMP-012 exception)`);
     }
     const expectedPolicies = [
       'audit_log:audit_select_partner_admin',
@@ -342,6 +349,7 @@ async function main() {
       'registrations:registrations_insert_manager_plus',
       'registrations:registrations_select_scoped',
       'registrations:registrations_update_manager_plus',
+      'review_items:review_items_select_scoped',
       'task_checklist_items:task_checklist_items_delete_via_task',
       'task_checklist_items:task_checklist_items_insert_via_task',
       'task_checklist_items:task_checklist_items_select_via_task',
@@ -359,10 +367,10 @@ async function main() {
        from pg_policies where schemaname = 'public'`,
     ).trim();
     if (policies !== expectedPolicies.join(',')) {
-      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040)`);
+      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040/041)`);
     }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
-    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family (committed IMP-010/013/020/021/030/031/040 migrations); RLS posture verified (RLS on all 18, FORCE on the 15 tenant-owned content tables, 48 expected policies); 16 deterministic identities verified';
+    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family + review_items (committed IMP-010/013/020/021/030/031/040/041 migrations); RLS posture verified (RLS on all 19, FORCE on the 16 tenant-owned content tables, 49 expected policies); 16 deterministic identities verified';
   });
 
   currentPhase = 'secret-scan';

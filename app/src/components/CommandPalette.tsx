@@ -21,6 +21,7 @@ const KIND_ICONS = {
  */
 const SUPABASE_NAV: SearchHit[] = [
   { kind: 'page', id: 'nav-clients', label: 'Clients', sub: 'Hosted client portfolio', href: '/clients' },
+  { kind: 'page', id: 'nav-review', label: 'Review Queue', sub: 'Hosted review queue', href: '/review' },
 ];
 
 function supabaseNavHits(query: string): SearchHit[] {

@@ -126,6 +126,25 @@ export type {
   TransitionTaskResult,
   UpdateTaskInput,
 } from './tasks/index';
+// --- IMP-041: review queue (API-R0-RVW) --------------------------------------
+// SAME NAMING HAZARD as tasks: the extensionless specifier './review'
+// resolves to the LEGACY flat fixture module src/data/review.ts (kept
+// exported unchanged in the fixture block below). The IMP-041 domain folder
+// src/data/review/ is therefore wired through its explicit sub-barrel path
+// './review/index'.
+export { reviewService } from './review/index';
+export type {
+  DecideReviewItemInput,
+  DecideReviewItemResult,
+  ReviewDecision,
+  ReviewItemRecord,
+  ReviewItemSource,
+  ReviewItemStatus,
+  ReviewItemType,
+  ReviewQueueFilter,
+  ReviewService,
+  SubmitReviewItemInput,
+} from './review/index';
 // --- IMP-022: Client 360 composite read (API-R0-CLI, DM-X-02) ----------------
 export { client360Service } from './client360';
 export type {

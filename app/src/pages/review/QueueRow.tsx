@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { DEMO_TODAY, getClient, ownerOf } from '@/data';
-import type { ReviewItem } from '@/data';
+import { DEMO_TODAY } from '@/data';
+import type { ReviewItemRecord } from '@/data';
 import { cn } from '@/lib/utils';
 import { REVIEW_TYPE_META, pseudoRiskScore } from './meta';
 
-export function waitingDays(item: ReviewItem): number {
+export function waitingDays(item: ReviewItemRecord): number {
   return Math.max(0, differenceInCalendarDays(DEMO_TODAY, parseISO(item.submittedAt)));
 }
 
@@ -16,20 +16,27 @@ function waitDot(days: number): string {
   return 'bg-success';
 }
 
-/** One review-queue row: type chip, title, submitter caption, risk + waiting badge. */
+/** One review-queue row: type chip, title, submitter caption, waiting badge.
+ *  Names are resolved by the page through @/data services — the row never
+ *  touches fixture/provider data itself. The mono risk chip is demo-only
+ *  presentation (no such field exists on SCH-17). */
 export default function QueueRow({
   item,
   index,
   selected,
   onSelect,
+  clientName,
+  submitterName,
+  demo,
 }: {
-  item: ReviewItem;
+  item: ReviewItemRecord;
   index: number;
   selected: boolean;
   onSelect: () => void;
+  clientName: string;
+  submitterName: string;
+  demo: boolean;
 }) {
-  const client = getClient(item.clientId);
-  const submitter = ownerOf(item.submittedBy);
   const days = waitingDays(item);
   const score = pseudoRiskScore(item.id);
   const Icon = REVIEW_TYPE_META[item.type].icon;
@@ -60,24 +67,26 @@ export default function QueueRow({
       {/* Title + caption */}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[14px] leading-5 font-semibold text-ink">
-          {item.title} — {client?.name ?? 'Unknown client'} <span className="font-normal text-ink-3">({item.period})</span>
+          {item.title} — {clientName}
         </span>
         <span className="mt-0.5 block truncate text-[12px] leading-4 text-ink-3">
-          Prepared by {submitter.name} · submitted {days === 0 ? 'today' : `${days}d ago`} · {item.note}
+          Prepared by {submitterName} · submitted {days === 0 ? 'today' : `${days}d ago`}{item.note ? ` · ${item.note}` : ''}
         </span>
       </span>
 
-      {/* Risk chip + waiting badge + chevron */}
+      {/* Risk chip (demo only) + waiting badge + chevron */}
       <span className="flex shrink-0 items-center gap-2">
-        <span
-          className={cn(
-            'rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium tnum',
-            score >= 70 ? 'bg-critical-soft text-critical' : score >= 50 ? 'bg-warning-soft text-warning-strong' : 'bg-success-soft text-success',
-          )}
-          title="CAOS risk score"
-        >
-          {score}
-        </span>
+        {demo && (
+          <span
+            className={cn(
+              'rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium tnum',
+              score >= 70 ? 'bg-critical-soft text-critical' : score >= 50 ? 'bg-warning-soft text-warning-strong' : 'bg-success-soft text-success',
+            )}
+            title="CAOS risk score"
+          >
+            {score}
+          </span>
+        )}
         <span
           className={cn(
             'rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold tnum',

@@ -26,6 +26,7 @@ import {
 import { useDemoStore } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { useShellIdentity } from '@/hooks/useShellIdentity';
+import { useReviewPendingCount } from '@/hooks/useReviewQueue';
 import { DEPENDENCY_TOTALS, FIRM } from '@/data';
 import { cn } from '@/lib/utils';
 
@@ -53,20 +54,24 @@ const ROLE_LABELS: Record<string, string> = {
  * icon rail below xl, overlay drawer on mobile.
  */
 export default function Navbar({ mobileOpen, onCloseMobile }: { mobileOpen: boolean; onCloseMobile: () => void }) {
-  const { reviewPendingCount, activeAlertCount, resetDemo } = useDemoStore();
+  const { activeAlertCount, resetDemo } = useDemoStore();
   const { service } = useAuth();
   const identity = useShellIdentity();
   const navigate = useNavigate();
   // Supabase mode never renders fixture counts/records as live data; the
   // demo badges and seeded firm/user card are fixture-mode presentation.
   const fixture = service.mode === 'fixture';
+  // IMP-041: the review badge is service-backed in BOTH modes (API-RT-01
+  // count surface — RLS-filtered pending count, kept fresh by the queue
+  // invalidation subscription). Other badges stay fixture-only.
+  const reviewPending = useReviewPendingCount();
 
   const items: NavItem[] = [
     { to: '/brief', label: 'Morning Brief', icon: Sunrise },
     { to: '/command', label: 'Command Centre', icon: Gauge },
     { to: '/clients', label: 'Clients', icon: Users },
     { to: '/deadlines', label: 'Deadlines', icon: CalendarClock },
-    { to: '/review', label: 'Review Queue', icon: FileBarChart2, badge: fixture ? { value: reviewPendingCount, tone: 'gold' } : undefined },
+    { to: '/review', label: 'Review Queue', icon: FileBarChart2, badge: reviewPending !== null && reviewPending > 0 ? { value: reviewPending, tone: 'gold' } : undefined },
     { to: '/dependency', label: 'Client Dependency', icon: Link2, badge: fixture ? { value: DEPENDENCY_TOTALS.clients, tone: 'neutral' } : undefined },
     { to: '/alerts', label: 'Risk Alerts', icon: TriangleAlert, badge: fixture ? { value: activeAlertCount, tone: 'critical' } : undefined },
     { to: '/ask', label: 'Ask CAOS', icon: Sparkles, violet: true },

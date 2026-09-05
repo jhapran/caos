@@ -19,6 +19,7 @@ vi.mock('@supabase/supabase-js', () => ({
 import { authService } from '@/data/auth/authService';
 import { client360Service } from '@/data/client360/client360Service';
 import { engagementService } from '@/data/engagements/engagementService';
+import { reviewService } from '@/data/review/reviewService';
 import { taskService } from '@/data/tasks/taskService';
 import { tenancyService } from '@/data/tenancy/tenancyService';
 
@@ -55,6 +56,13 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
     expect(taskService.mode).toBe('fixture');
     await taskService.listTasks();
     await taskService.getTaskDetail('task-abc-gstr1-filing');
+    // IMP-041: the review-queue fixture adapter is on the same guarantee —
+    // including the subscription surface, which is a LOCAL listener in
+    // fixture mode (API-RT-04) and must never open a Supabase channel.
+    expect(reviewService.mode).toBe('fixture');
+    await reviewService.listReviewItems();
+    const unsubscribe = reviewService.subscribeReviewQueue(() => {});
+    unsubscribe();
 
     expect(createClientSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
