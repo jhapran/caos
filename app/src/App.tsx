@@ -10,6 +10,7 @@ import DeadlineClients from './pages/DeadlineClients';
 import ComplianceDetail from './pages/ComplianceDetail';
 import AskCaos from './pages/AskCaos';
 import ReviewQueue from './pages/ReviewQueue';
+import MyWork from './pages/MyWork';
 import ClientsPage from './pages/clients/ClientsPage';
 import Client360Page from './pages/clients/Client360Page';
 import ClientDependency from './pages/ClientDependency';
@@ -53,6 +54,9 @@ export default function App() {
         <Route path="/compliance/:id" element={<ModuleGate title="Compliance Detail" detail="Compliance instances arrive with the Compliance Engine release."><ComplianceDetail /></ModuleGate>} />
         <Route path="/ask" element={<ModuleGate title="Ask CAOS" detail="The natural-language assistant arrives with the AI release; no provider is wired to hosted data yet."><AskCaos /></ModuleGate>} />
         <Route path="/review" element={<ReviewQueue />} />
+        {/* IMP-042 — My Work is wired to live data (DEC-L / API-R0-MWK);
+            deliberately NOT behind ModuleGate. */}
+        <Route path="/my-work" element={<MyWork />} />
         <Route path="/dependency" element={<ModuleGate title="Client Dependency" detail="Cross-client dependency analytics arrive with a later release."><ClientDependency /></ModuleGate>} />
         <Route path="/alerts" element={<ModuleGate title="Risk Alerts" detail="Risk alerts are raised by the Compliance Engine and risk modules, which arrive in a later release."><RiskAlerts /></ModuleGate>} />
         <Route path="/reports" element={<ModuleGate title="Reports" detail="Board-ready reports are composed from modules that arrive in later releases."><Reports /></ModuleGate>} />

@@ -329,7 +329,7 @@ describe('structure — PKs, uniques, indexes', () => {
     );
   });
 
-  it('audit triggers exist on all hierarchy tables + engagements + compliance rules + compliance profiles/instances + the IMP-040 task family + IMP-041 review_items (Layer A, AUD-CAT-01)', () => {
+  it('audit triggers exist on all hierarchy tables + engagements + compliance rules + compliance profiles/instances + the IMP-040 task family + IMP-041 review_items + the IMP-042 alerts family (Layer A, AUD-CAT-01)', () => {
     const triggers = psql(
       `select string_agg(tgrelid::regclass::text, ',' order by tgrelid::regclass::text)
        from pg_trigger where not tgisinternal and tgname ~ '_audit_row$'`,
@@ -338,9 +338,12 @@ describe('structure — PKs, uniques, indexes', () => {
     // closed, so the Layer-B add/remove/denied commands own its audit trail.
     // review_items is present (IMP-041): the Layer-A row trigger gives
     // operator-side traceability, while the Layer-B submit/decide commands
-    // own the authoritative review audit via the skip flag.
+    // own the authoritative review audit via the skip flag. alerts and
+    // alert_rules are present (IMP-042) on the same skip-flag convention —
+    // the Layer-B transition/administration commands own the authoritative
+    // audit; residual operator/service writes get baseline capture.
     expect(triggers).toBe(
-      'client_compliance_profiles,client_relationships,clients,compliance_instances,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations,review_items,task_checklist_items,task_comments,tasks',
+      'alert_rules,alerts,client_compliance_profiles,client_relationships,clients,compliance_instances,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations,review_items,task_checklist_items,task_comments,tasks',
     );
   });
 });

@@ -68,7 +68,7 @@ afterAll(() => {
 });
 
 describe('structure — tables, columns, PKs', () => {
-  it('exactly the IMP-010 tenant-core tables + IMP-013 audit_log + IMP-020 client hierarchy + IMP-021 engagements + IMP-030 compliance rules + IMP-031 profiles/instances + IMP-040 task family + IMP-041 review_items exist in public', () => {
+  it('exactly the IMP-010 tenant-core tables + IMP-013 audit_log + IMP-020 client hierarchy + IMP-021 engagements + IMP-030 compliance rules + IMP-031 profiles/instances + IMP-040 task family + IMP-041 review_items + IMP-042 alerts family exist in public', () => {
     // Scoped to production objects: temporary harness/spike tables
     // (hgate_/decj_/audctx_) are managed by their own suites and by the
     // gate cleanliness phase; they may coexist during a combined run.
@@ -79,15 +79,16 @@ describe('structure — tables, columns, PKs', () => {
     // IMP-031 added client_compliance_profiles (SCH-11) +
     // compliance_instances (SCH-12); IMP-040 PASS A added the task family
     // (SCH-13…16: tasks, task_dependencies, task_checklist_items,
-    // task_comments); IMP-041 PASS A added review_items (SCH-17). No other
-    // tables may appear.
+    // task_comments); IMP-041 PASS A added review_items (SCH-17); IMP-042
+    // added alert_rules (SCH-19) + alerts (SCH-18). No other tables may
+    // appear.
     const tables = psql(
       `select string_agg(table_name, ',' order by table_name) from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
          and table_name not like 'hgate%' and table_name not like 'decj%' and table_name not like 'audctx%'`,
     ).trim();
     expect(tables).toBe(
-      'audit_log,client_compliance_profiles,client_relationships,clients,compliance_instances,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations,review_items,task_checklist_items,task_comments,task_dependencies,tasks',
+      'alert_rules,alerts,audit_log,client_compliance_profiles,client_relationships,clients,compliance_instances,compliance_rule_versions,compliance_types,contacts,engagements,firm_memberships,firms,legal_entities,profiles,registrations,review_items,task_checklist_items,task_comments,task_dependencies,tasks',
     );
   });
 

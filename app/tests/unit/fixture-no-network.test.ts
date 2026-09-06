@@ -17,8 +17,10 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 import { authService } from '@/data/auth/authService';
+import { alertsService } from '@/data/alerts/alertsService';
 import { client360Service } from '@/data/client360/client360Service';
 import { engagementService } from '@/data/engagements/engagementService';
+import { myworkService } from '@/data/mywork/myworkService';
 import { reviewService } from '@/data/review/reviewService';
 import { taskService } from '@/data/tasks/taskService';
 import { tenancyService } from '@/data/tenancy/tenancyService';
@@ -63,6 +65,16 @@ describe('fixture mode — no network, no Supabase (MIG-DS-06)', () => {
     await reviewService.listReviewItems();
     const unsubscribe = reviewService.subscribeReviewQueue(() => {});
     unsubscribe();
+    // IMP-042: the alerts and My Work fixture adapters are on the same
+    // guarantee — including subscribeAlerts, a LOCAL listener in fixture
+    // mode (API-RT-04) that must never open a Supabase channel.
+    expect(alertsService.mode).toBe('fixture');
+    await alertsService.listAlerts();
+    await alertsService.listAlertRules();
+    const unsubscribeAlerts = alertsService.subscribeAlerts(() => {});
+    unsubscribeAlerts();
+    expect(myworkService.mode).toBe('fixture');
+    await myworkService.getMyWork();
 
     expect(createClientSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();

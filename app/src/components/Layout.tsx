@@ -12,7 +12,7 @@ import ToastViewport from './Toast';
 import { useDemoStore } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { useShellIdentity } from '@/hooks/useShellIdentity';
-import { FIRM } from '@/data';
+import { alertsService, FIRM } from '@/data';
 
 const ROUTE_LABELS: Record<string, string> = {
   brief: 'Morning Brief',
@@ -22,6 +22,7 @@ const ROUTE_LABELS: Record<string, string> = {
   compliance: 'Compliance Detail',
   ask: 'Ask CAOS',
   review: 'Review Queue',
+  'my-work': 'My Work',
   dependency: 'Client Dependency',
   alerts: 'Risk Alerts',
   reports: 'Reports',
@@ -57,6 +58,37 @@ export default function Layout() {
   // signed-in identity and the real current date, and never fabricates
   // operational counts before the owning modules land.
   const fixture = service.mode === 'fixture';
+
+  // IMP-042 — alert bell badge (API-R0-ALR / API-RT-01). Fixture mode keeps
+  // the demo-store overlay count EXACTLY as before (API-RT-04). In Supabase
+  // mode the badge reads the RLS-filtered active count through
+  // alertsService.listAlerts and stays fresh via the subscribeAlerts
+  // invalidation subscription (the approved API-RT-07 polling fallback —
+  // bare invalidation → authoritative re-read, never payload data). A failed
+  // read renders no badge (truthful unknown), never a fabricated zero.
+  const [liveAlertCount, setLiveAlertCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (fixture) return;
+    let active = true;
+    const read = () => {
+      void alertsService
+        .listAlerts({ status: 'active' })
+        .then((rows) => {
+          if (active) setLiveAlertCount(rows.length);
+        })
+        .catch(() => {
+          if (active) setLiveAlertCount(null);
+        });
+    };
+    read();
+    const unsubscribe = alertsService.subscribeAlerts(read);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [fixture]);
+
+  const badgeCount = fixture ? activeAlertCount : liveAlertCount;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -126,12 +158,12 @@ export default function Layout() {
             type="button"
             onClick={() => navigate('/alerts')}
             className="relative rounded-lg p-2 text-ink-2 transition-colors hover:bg-paper-deep"
-            aria-label={fixture ? `${activeAlertCount} active alerts` : 'Risk alerts'}
+            aria-label={badgeCount !== null ? `${badgeCount} active alerts` : 'Risk alerts'}
           >
             <Bell className="h-[18px] w-[18px]" />
-            {fixture && activeAlertCount > 0 && (
+            {badgeCount !== null && badgeCount > 0 && (
               <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical font-mono text-[9px] font-semibold text-white tnum">
-                {activeAlertCount}
+                {badgeCount}
               </span>
             )}
           </button>

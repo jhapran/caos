@@ -71,6 +71,19 @@
  * and one owner-only definer trigger function (the subject-binding /
  * single-writer write guard).
  *
+ * IMP-042 changes reflected here: alert_rules (SCH-19) + alerts (SCH-18)
+ * exist with RLS enabled AND forced, one scoped-select policy each
+ * (RLS-ALR-01: super_admin/partner/manager firm-wide + senior/article
+ * assigned-work-only; RLS-ARL-01: super_admin/partner/manager read),
+ * table-level SELECT for authenticated with NO browser write grant on
+ * either table (status movement is the Layer-B commands
+ * acknowledge_alert(uuid,text) / snooze_alert(uuid,timestamptz,text) /
+ * resolve_alert(uuid,text); rule administration is the AAL2-gated
+ * create_alert_rule(text,text,text,jsonb,boolean,boolean,boolean) /
+ * update_alert_rule(uuid,text,text,jsonb,boolean,boolean,boolean) — all
+ * granted to authenticated only), and one owner-only definer trigger
+ * function (the alerts single-writer write guard).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -81,11 +94,13 @@ import { FIRM_A, psql, userId } from '../helpers.mjs';
 const rows = (sql) => psql(sql).trim().split('\n').filter(Boolean).sort();
 
 describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02)', () => {
-  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance + task-family + review-item tables', () => {
+  it('RLS is enabled on exactly the tenant-core + audit + client-hierarchy + engagement + compliance-rule + profile/instance + task-family + review-item + alerts-family tables', () => {
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`),
     ).toEqual([
+      'alert_rules',
+      'alerts',
       'audit_log',
       'client_compliance_profiles',
       'client_relationships',
@@ -126,10 +141,14 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
     // same way (zero policies in PASS A = fail-closed for browser roles).
     // IMP-041's review_items is tenant-owned content, forced the same
     // way (PASS B: one scoped-select policy; writes stay command-owned).
+    // IMP-042's alerts + alert_rules are tenant-owned content, forced the
+    // same way (one scoped-select policy each; ALL writes command-owned).
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`),
     ).toEqual([
+      'alert_rules',
+      'alerts',
       'audit_log',
       'client_compliance_profiles',
       'client_relationships',
@@ -170,10 +189,17 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
     // IMP-041 PASS B adds one review_items policy (RLS-RVW-01): scoped
     // select only — submission and decisions are Layer-B commands, so no
     // insert/update/delete policy exists.
+    // IMP-042 adds two alerts-family policies: alerts_select_scoped
+    // (RLS-ALR-01 — manager+ firm-wide, senior/article assigned-work-only)
+    // and alert_rules_select_scoped (RLS-ARL-01 — super_admin/partner/
+    // manager read); every write on both tables is Layer-B command-owned,
+    // so no insert/update/delete policy exists.
     expect(
       rows(`select tablename || ':' || policyname || ':' || cmd from pg_policies where schemaname = 'public'`),
     ).toEqual(
       [
+        'alert_rules:alert_rules_select_scoped:SELECT',
+        'alerts:alerts_select_scoped:SELECT',
         'audit_log:audit_select_partner_admin:SELECT',
         'client_compliance_profiles:ccp_insert_manager_plus:INSERT',
         'client_compliance_profiles:ccp_select_scoped:SELECT',
@@ -255,6 +281,14 @@ const AUTHENTICATED_RPCS = [
   'transition_task(uuid,text,text,text,text)',
   'add_task_dependency(uuid,uuid,text,text)',
   'remove_task_dependency(uuid,uuid,text)',
+  // IMP-042: Layer-B alert transition commands (API-R0-ALR, RLS-ALR-01)
+  // and the AAL2-gated alert-rule administration commands (RLS-ARL-01,
+  // RLS-AAL-01).
+  'acknowledge_alert(uuid,text)',
+  'snooze_alert(uuid,timestamp with time zone,text)',
+  'resolve_alert(uuid,text)',
+  'create_alert_rule(text,text,text,jsonb,boolean,boolean,boolean)',
+  'update_alert_rule(uuid,text,text,jsonb,boolean,boolean,boolean)',
   // IMP-041: Layer-B review-queue commands (API-R0-RVW, RLS-RVW-01).
   'submit_review_item(uuid,uuid,uuid,text,text,text,text,timestamp with time zone)',
   'decide_review_item(uuid,text,text,text)',
@@ -315,6 +349,12 @@ const IMP040_HELPERS = ['task_client_in_assigned_scope(uuid,uuid)'];
 // is an owner-only definer trigger function (invoked by the trigger, never
 // by application roles).
 const IMP041_TRIGGER_FNS = ['review_items_guard_write()'];
+// IMP-042 function inventory: the five Layer-B commands join
+// AUTHENTICATED_RPCS above; the alerts single-writer write guard is an
+// owner-only definer trigger function (invoked by the trigger, never by
+// application roles). alert_rules carries NO guard — its browser write
+// surface is empty and its only writers are the two AAL2-gated commands.
+const IMP042_TRIGGER_FNS = ['alerts_guard_write()'];
 
 describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
@@ -335,6 +375,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP040_TRIGGER_FNS,
       ...IMP040_HELPERS,
       ...IMP041_TRIGGER_FNS,
+      ...IMP042_TRIGGER_FNS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
@@ -364,6 +405,11 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
             from information_schema.role_table_grants
             where table_schema = 'public' and grantee = 'authenticated'`),
     ).toEqual([
+      // IMP-042: alerts + alert_rules SELECT only (RLS does the row
+      // filtering); ALL writes are Layer-B commands — there is deliberately
+      // no INSERT/UPDATE/DELETE grant on either table (API-ARCH-04).
+      'alert_rules:SELECT',
+      'alerts:SELECT',
       'audit_log:SELECT',
       'client_compliance_profiles:SELECT',
       'client_relationships:SELECT',
@@ -402,6 +448,39 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
             where table_schema = 'public' and grantee = 'authenticated'`),
     ).toEqual(
       [
+        // IMP-042 alerts family — SELECT covers all readable columns on
+        // both tables; NO insert/update/delete column grant exists
+        // (command-owned writes).
+        'alert_rules:SELECT:auto_resolve',
+        'alert_rules:SELECT:config',
+        'alert_rules:SELECT:created_at',
+        'alert_rules:SELECT:enabled',
+        'alert_rules:SELECT:firm_id',
+        'alert_rules:SELECT:id',
+        'alert_rules:SELECT:name',
+        'alert_rules:SELECT:requires_explicit_ack',
+        'alert_rules:SELECT:rule_key',
+        'alert_rules:SELECT:severity',
+        'alert_rules:SELECT:updated_at',
+        'alerts:SELECT:acknowledged_at',
+        'alerts:SELECT:acknowledged_by',
+        'alerts:SELECT:affected',
+        'alerts:SELECT:alert_rule_id',
+        'alerts:SELECT:client_id',
+        'alerts:SELECT:compliance_instance_id',
+        'alerts:SELECT:created_at',
+        'alerts:SELECT:detail',
+        'alerts:SELECT:firm_id',
+        'alerts:SELECT:id',
+        'alerts:SELECT:raised_at',
+        'alerts:SELECT:resolution_type',
+        'alerts:SELECT:resolved_at',
+        'alerts:SELECT:resolved_by',
+        'alerts:SELECT:severity',
+        'alerts:SELECT:snoozed_until',
+        'alerts:SELECT:status',
+        'alerts:SELECT:title',
+        'alerts:SELECT:updated_at',
         'audit_log:SELECT:action',
         'audit_log:SELECT:actor_type',
         'audit_log:SELECT:actor_user_id',
@@ -887,13 +966,13 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
     for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS, ...IMP040_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP041_TRIGGER_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS, ...IMP041_TRIGGER_FNS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -914,6 +993,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP040_TRIGGER_FNS,
       ...IMP040_HELPERS,
       ...IMP041_TRIGGER_FNS,
+      ...IMP042_TRIGGER_FNS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
@@ -939,7 +1019,9 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     "'ccp_guard_write', 'cin_guard_write', 'cin_validate_assignments', 'compliance_scope_validate', " +
     "'transition_task', 'add_task_dependency', 'remove_task_dependency', 'task_client_in_assigned_scope', " +
     "'tasks_guard_write', 'task_comments_guard_update', 'task_checklist_items_stamp_done', " +
-    "'review_items_guard_write', 'submit_review_item', 'decide_review_item'";
+    "'review_items_guard_write', 'submit_review_item', 'decide_review_item', " +
+    "'alerts_guard_write', 'acknowledge_alert', 'snooze_alert', 'resolve_alert', " +
+    "'create_alert_rule', 'update_alert_rule'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -968,15 +1050,21 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     // tasks / compliance_instances under FORCE RLS). IMP-041 PASS B: both
     // Layer-B review commands are definer (status/decision/submission
     // columns carry no browser grant; the single-writer marker admits only
-    // the command path).
+    // the command path). IMP-042: all five Layer-B alerts-family commands are
+    // definer (both tables carry SELECT-only browser grants; the
+    // single-writer marker admits only the transition-command path) and
+    // alerts_guard_write is definer (enforcement independent of caller RLS
+    // visibility under FORCE RLS).
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
       'accept_invitation',
+      'acknowledge_alert',
       'activate_compliance_rule_version',
       'active_membership_id',
       'active_membership_role',
       'add_task_dependency',
+      'alerts_guard_write',
       'approve_client_compliance_profile',
       'audit_trg_row',
       'audit_write',
@@ -987,6 +1075,7 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'clients_validate_responsibility',
       'compliance_scope_validate',
       'compliance_types_enforce_governance_inheritance',
+      'create_alert_rule',
       'crv_prepare_insert',
       'decide_review_item',
       'engagements_validate_responsibility',
@@ -996,14 +1085,17 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'mirror_login_history',
       'remove_membership',
       'remove_task_dependency',
+      'resolve_alert',
       'review_items_guard_write',
       'shares_active_firm_with',
+      'snooze_alert',
       'submit_review_item',
       'suspend_membership',
       'task_client_in_assigned_scope',
       'tasks_guard_write',
       'transition_compliance_instance',
       'transition_task',
+      'update_alert_rule',
       'write_audit_event',
       'write_audit_event_server',
     ]);

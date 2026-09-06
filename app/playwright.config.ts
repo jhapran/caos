@@ -16,6 +16,8 @@ import { defineConfig } from '@playwright/test';
  * lands with the IMP packages that own each flow; so far:
  *   client360    — IMP-022, TEST-E2E-03…05 (client → entity → registration)
  *   review-queue — IMP-041, TEST-E2E-08 (review submit → approve → return)
+ *   my-work      — IMP-042, TEST-E2E-07 (task assignment + update) and
+ *                  TEST-E2E-09 (My Work buckets render)
  *
  * Browser binaries are intentionally NOT installed by IMP-001 — run
  * `npx playwright install chromium` before first use (Harness Gate / CI).
@@ -76,6 +78,16 @@ export default defineConfig({
             // the route on first navigation.
             name: 'review-queue',
             testMatch: 'review-queue.spec.ts',
+            expect: { timeout: 30_000 },
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
+          {
+            // IMP-042: TEST-E2E-07 (task assignment + update) and
+            // TEST-E2E-09 (My Work buckets). Same 3100 supabase-mode server;
+            // the spec owns a private firm (a4200000-…) so project-parallel
+            // runs never race review-queue (FIRM_B) or client360 (FIRM_A).
+            name: 'my-work',
+            testMatch: 'my-work.spec.ts',
             expect: { timeout: 30_000 },
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },

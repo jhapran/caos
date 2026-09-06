@@ -154,6 +154,41 @@ export type {
   Client360View,
   StaffRef,
 } from './client360';
+// --- IMP-042: alerts (API-R0-ALR) ---------------------------------------------
+// SAME NAMING HAZARD as tasks/review: the extensionless specifier './alerts'
+// resolves to the LEGACY flat fixture module src/data/alerts.ts (kept exported
+// unchanged in the fixture block below). The IMP-042 domain folder
+// src/data/alerts/ is therefore wired through its explicit sub-barrel path
+// './alerts/index'.
+export { alertsService } from './alerts/index';
+export type {
+  AlertListFilter,
+  AlertRecord,
+  AlertResolutionType,
+  AlertRuleRecord,
+  AlertsService,
+  AlertSeverityKey,
+  AlertStatus,
+  AlertTransitionResult,
+  CreateAlertRuleInput,
+  UpdateAlertRuleInput,
+} from './alerts/index';
+// --- IMP-042: My Work (API-R0-MWK, DEC-L) --------------------------------------
+// No naming hazard (no legacy flat mywork module) — plain folder specifier,
+// the client360 convention.
+export { myworkService } from './mywork';
+export {
+  buildMyWorkBuckets,
+  isoWeekEndDate,
+  kolkataBusinessDate,
+  STANDALONE_RETURNED_NEXT_ACTION,
+} from './mywork';
+export type {
+  MyWorkBuckets,
+  MyWorkItem,
+  MyWorkItemKind,
+  MyWorkService,
+} from './mywork';
 export { tenancyService } from './tenancy';
 export type {
   FirmMembershipView,
