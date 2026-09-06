@@ -11,7 +11,9 @@
 - Last CLOSED package: IMP-042 — Alerts & My Work
 - IMP-042 implementation checkpoint: `1f3db3e`
   (`feat: alerts and my work`)
-- Git staging (`origin/staging`) contains accepted IMP-042 at `1f3db3e`
+- IMP-042 closure checkpoint: `e5937ac`
+  (`docs: close IMP-042`)
+- `origin/staging` contains the accepted IMP-042 closure checkpoint
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
