@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-041 (see the status block below and
+hosted staging through IMP-042 (see the status block below and
 `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,7 +25,7 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-041; the Supabase track
+Implementation packages have landed through IMP-042; the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
 document future behavior as if it exists. When a section below describes
@@ -239,19 +239,55 @@ state is always re-read through `listReviewItems` under RLS. There is
 NO Review Queue postgres_changes dependency and NO realtime-publication
 migration. Domain-event publication (`review.submitted` /
 `review.completed`) remains deferred to IMP-050 and is NOT the same
-thing as this polling fallback.
+thing as this polling fallback. IMP-042
+(alerts & My Work) is COMPLETE and CLOSED (implementation
+checkpoint `1f3db3e`; hosted staging promoted and verified —
+authenticated 60-check probe PASS 60/60 with cohort-only synthetic
+identities; Netlify staging proven byte-identical; human browser
+acceptance PASS 2026-09-07, 44/44): `alerts` (SCH-18 — firm risk
+signals with hybrid resolution, DM-22; status vocabulary
+active/acknowledged/snoozed/resolved; the human-ruled manual transition
+matrix is enforced ONLY by the Layer-B commands; senior/article read
+granularity is exact-instance per the human-ruled pre-checkpoint
+correction, RLS-ALR-01) and `alert_rules` (SCH-19 — per-firm
+configuration, UNIQUE (firm_id, rule_key), NO seed rows/thresholds — D3
+ruling, AUTO-OQ-04 stays open), both RLS enabled AND forced with single
+scoped SELECT policies; browser table grants are SELECT-only — status
+moves go only through `acknowledge_alert` / `snooze_alert` /
+`resolve_alert` (manager+, no AAL2 per RLS-AAL-02; state-based
+mutation-key idempotency; authorization-before-disclosure API-ERR-02
+with byte-identical hidden/nonexistent denial bodies) and rule
+administration only through `create_alert_rule` / `update_alert_rule`
+(super_admin/partner + AAL2 step-up, RLS-AAL-01; manager read-only).
+Snooze expiry is a READ derivation (TEST-API-18) — IMP-042 writes no
+expiry (scheduler is IMP-051); `resolution_type='auto'` is
+evaluator-reserved. My Work (`/my-work`, live) composes plain
+RLS-protected task/review reads behind `myworkService`
+(`src/data/mywork/` — DEC-L buckets Today/This Week/Waiting/Returned,
+single-bucket precedence, explicit next_action, personal scope; NO
+aggregate definer RPC, DM-X-02 precedent). The alert bell badge reads
+the RLS-filtered active count and stays fresh via the approved API-RT-07
+polling fallback (bare invalidation + authoritative re-read; interval is
+an implementation parameter, not an SLA; known zero renders "0 active
+alerts" with no badge, a failed read renders no badge — never a
+fabricated zero). The existing `/alerts` page stays behind ModuleGate
+(D1 ruling — NOT live-wired). Alert
+generation/evaluation/dedupe/auto-resolution remain deferred to IMP-051;
+event publication (`alert.raised`/`alert.resolved`) to IMP-050
+(AUTO-OQ-02). Coverage: TEST-SCH-26…29, TEST-RLS-ALR-*/ARL-*,
+TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
-Release-0 state through IMP-041 (CLOSED 2026-09-06): 18 / 27 formal R0
+Release-0 state through IMP-042 (CLOSED 2026-09-07): 19 / 27 formal R0
 packages complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030,
-IMP-031, IMP-040, IMP-041; ≈ 66.7%); migrations run through
-`20260907000000_review_items.sql` (hosted
-ledger 9/9); 19 application public
-tables (RLS enabled on all 19, FORCE RLS on the 16 tenant-owned content
-tables, 49 policies); Harness Gate green (20/20 phases). Next package:
-IMP-042 — Alerts & My Work (NOT STARTED — begins only with a fresh contract
-extraction and an explicit implementation instruction; entry criterion
-per `12-release-0-plan.md`: R0-E persistence green — satisfied by
-IMP-040/041).
+IMP-031, IMP-040, IMP-041, IMP-042; 70.37%); migrations run through
+`20260908000000_alerts.sql` (hosted ledger 10/10); 21 application public
+tables (RLS enabled on all 21, FORCE RLS on the 18 tenant-owned content
+tables, 51 policies); Harness Gate green (22/22 phases). Next package:
+IMP-050 — Recurrence generation & scheduler signals (NOT STARTED —
+begins only with a fresh contract extraction and an explicit
+implementation instruction; entry criteria per `12-release-0-plan.md`:
+R0-D green — satisfied — AND AUTO-OQ-01/02 technical validation recorded
+in `09` — NOT yet resolved).
 
 Authoritative sources:
 
@@ -504,7 +540,7 @@ Current fixture modules:
 Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton;
 IMP-020 client hierarchy; IMP-021 engagements; IMP-022 client360; IMP-030
 compliance rules; IMP-031 compliance instances; IMP-040 tasks; IMP-041
-review):
+review; IMP-042 alerts + mywork):
 
 - `source.ts` — THE single data-source selection boundary: `getDataSource()`
   (cached, fail-closed) and `validateStartupConfig()` (called once by
@@ -535,14 +571,18 @@ review):
   under RLS + the `list_client_identities()` RPC; the selector in
   `clientHierarchyService.ts` picks once via `getDataSource()`.
 - `engagements/`, `client360/`, `complianceRules/`, `complianceInstances/`,
-  `tasks/`, `review/` — the same five-file domain convention (`types.ts` +
+  `tasks/`, `review/`, `alerts/`, `mywork/` — the same five-file domain
+  convention (`types.ts` +
   `fixture.ts` + `supabase.ts` + `<domain>Service.ts` + `index.ts`):
   a provider-neutral service contract, a demo bridge fixture adapter, and
   a plain-PostgREST-under-RLS Supabase adapter whose privileged operations
   go through the Layer-B RPCs (never direct guarded-column writes).
   `review/`'s `subscribeReviewQueue` is the provider-neutral freshness
   subscription; the Supabase implementation is the API-RT-07 polling
-  fallback (see the IMP-041 status paragraph above).
+  fallback (see the IMP-041 status paragraph above). `alerts/`'s
+  `subscribeAlerts` is the same approved fallback for the bell badge (D2
+  ruling; see the IMP-042 status paragraph). `mywork/` is read-only by
+  contract (API-R0-MWK) — no write surface at all.
   NOTE the `tasks/` naming hazard: the legacy flat fixture module
   `src/data/tasks.ts` shadows the folder — import the service via the
   barrel (`@/data`), never via `@/data/tasks`.

@@ -7,13 +7,11 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human staging acceptance date: 2026-09-06
-- Last CLOSED package: IMP-041 — Review queue
-- IMP-041 primary implementation checkpoint: `636beed`
-  (`feat: review queue`)
-- IMP-041 final accepted corrective checkpoint: `e857e59`
-  (`fix: use review queue polling fallback` — API-RT-07)
-- Git staging (`origin/staging`) contains accepted IMP-041 at `e857e59`
+- Human staging acceptance date: 2026-09-07
+- Last CLOSED package: IMP-042 — Alerts & My Work
+- IMP-042 implementation checkpoint: `1f3db3e`
+  (`feat: alerts and my work`)
+- Git staging (`origin/staging`) contains accepted IMP-042 at `1f3db3e`
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -21,7 +19,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (18 / 27, ≈ 66.7%):
+Completed (19 / 27, 70.37%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -29,39 +27,44 @@ Completed (18 / 27, ≈ 66.7%):
 - IMP-030, IMP-031 (Compliance Foundation)
 - IMP-040 (Work Management — tasks/dependencies/checklists/comments)
 - IMP-041 (Work Management — review queue)
+- IMP-042 (Work Management — alerts & My Work)
 
 Remaining formal R0 packages:
 
-- IMP-042 (Work Management)
 - IMP-050, IMP-051 (Automation & Deadlines)
 - IMP-060, IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-041 — Review queue — CLOSED
-- Next: IMP-042 — Alerts & My Work — NOT STARTED
+- Current: IMP-042 — Alerts & My Work — CLOSED
+- Next: IMP-050 — Recurrence generation & scheduler signals — NOT STARTED
 - Next action: fresh-session contract extraction / reconciliation for
-  IMP-042. IMP-042 implementation is NOT authorized yet. Entry criterion
-  per `12-release-0-plan.md`: R0-E persistence green — satisfied by
-  IMP-040/041.
+  IMP-050. IMP-050 implementation is NOT authorized yet. Entry criteria
+  per `12-release-0-plan.md`: R0-D green — satisfied; AUTO-OQ-01/02
+  technical validation (final scheduler mechanism + event-publication
+  mechanism) with results recorded in `09` — NOT yet resolved.
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260907000000_review_items.sql`
-- Hosted staging migration ledger: 9 migrations, local == remote through
-  `20260907000000` (9 / 9)
-- Application public tables: 19
-- RLS enabled: 19 / 19
-- FORCE-RLS: 16 (all tenant-owned content tables)
-- Policies: 49
-- IMP-041 table: `review_items` — single scoped SELECT policy
-  `review_items_select_scoped`
+- Latest migration: `20260908000000_alerts.sql`
+- Hosted staging migration ledger: 10 migrations, local == remote through
+  `20260908000000` (10 / 10)
+- Application public tables: 21
+- RLS enabled: 21 / 21
+- FORCE-RLS: 18 (all tenant-owned content tables)
+- Policies: 51
+- IMP-042 tables: `alerts` (policy `alerts_select_scoped`) and
+  `alert_rules` (policy `alert_rules_select_scoped`) — single scoped
+  SELECT policies; every write goes through the Layer-B definer commands
 - No realtime-publication migration exists; `supabase_realtime` publishes
-  zero public tables (not required — see §6b API-RT-07 fallback)
-- Post-promotion staging row counts after hosted/browser-probe cleanup:
-  `review_items` and all IMP-041 probe domain rows = 0 — no probe or
-  migration-created rows remain
+  zero public tables (the IMP-042 alert bell uses the approved API-RT-07
+  polling fallback — D2 ruling; see §6b/§6c)
+- Post-promotion staging row counts after hosted/browser fixture
+  teardown: `alerts`, `alert_rules`, and all IMP-042 probe/browser
+  fixture rows = 0 — no probe, fixture, or migration-created rows remain;
+  immutable audit_log evidence retained (final browser teardown reported
+  audit_rows_retained = 62)
 
 ## 5. Compliance Governance State
 
@@ -79,13 +82,15 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
-- Accepted implementation checkpoint: `e857e59` (deployed bundle proven
+- Accepted implementation checkpoint: `1f3db3e` (deployed bundle proven
   byte-identical to a clean local build of that Git HEAD with the staging
   environment)
-- Deployment: Published / human browser acceptance PASS 2026-09-06
-  (including the API-RT-07 polling-fallback cross-session freshness
-  re-proof; transient test-script timing/assertion artifacts were
-  re-proven deterministically — no application defect remained)
+- Deployment: Published / human browser acceptance PASS 2026-09-07
+  (44/44 browser-gate checks: role-scoped My Work per persona, TEST-E2E-07
+  task transition + authorized manager reassignment, TEST-E2E-09
+  four-bucket rendering, alert bell RLS visibility incl. truthful known
+  zero, API-RT-07 polling invalidation without reload, /alerts ModuleGate
+  preservation, network/console isolation)
 - No real customer data in staging
 - Dedicated staging test identities (durable testing note): the 8
   synthetic `imp041-*` Supabase Auth users remain for future acceptance
@@ -187,6 +192,82 @@ Remaining formal R0 packages:
   and is NOT the same thing as this polling fallback.
 - Harness Gate: 20 / 20 phases PASS.
 
+## 6c. Alerts & My Work Enforcement Facts (IMP-042 — durable)
+
+- `alerts` (SCH-18) / `alert_rules` (SCH-19): RLS enabled AND forced;
+  single scoped SELECT policies (`alerts_select_scoped` /
+  `alert_rules_select_scoped`); browser table grants are SELECT-only —
+  no browser INSERT/UPDATE/DELETE exists on either table.
+- Alert read scope (RLS-ALR-01): super_admin/partner/manager firm-wide;
+  senior/article assigned-work alerts at EXACT-INSTANCE granularity
+  (human-ruled at IMP-042 pre-checkpoint correction 2026-09-06):
+  instance-linked requires the caller's live membership as
+  assignee/reviewer of THAT instance or of an existing task tied to it;
+  client-level (instance NULL, client set) requires assigned work on that
+  client; a both-NULL alert is invisible to senior/article; billing none;
+  cross-firm zero.
+- Alert status moves are command-only via `acknowledge_alert` /
+  `snooze_alert` / `resolve_alert` (manager+, NO AAL2 per RLS-AAL-02).
+  The human-ruled SCH-18 manual transition matrix: acknowledge from
+  active/snoozed (clears the open snooze; a prior acknowledgement's
+  stamps are preserved); snooze from any non-resolved state with a
+  strictly-future `snoozed_until`; resolve from
+  active/acknowledged/snoozed with `resolution_type='manual'`; the
+  explicit-ack gate (a linked rule with `requires_explicit_ack=true`
+  requires a prior acknowledgement before resolve); `resolved` is
+  terminal — no reopen. `resolution_type='auto'` is reserved for the
+  IMP-051 evaluator; no R0 command can write it. State-based mutation-key
+  idempotency: replays return `already_applied` with no re-stamp and no
+  second audit (API-MUT-03).
+- API-ERR-02 authorization-before-disclosure: unauthorized-existing and
+  nonexistent alerts return one identical `not_found` body (proven
+  byte-identical on hosted staging); existing-but-invisible probes are
+  audited as denials (AUD-FAIL-01); nonexistent ids are un-audited.
+- Alert-rule administration (RLS-ARL-01 + RLS-AAL-01):
+  `create_alert_rule` / `update_alert_rule` require a live same-firm
+  super_admin/partner membership AND an AAL2 session; manager is
+  read-only (denied `unauthorized`); SCH-19 `(firm_id, rule_key)`
+  uniqueness surfaces as a `conflict` and is audited as a denial.
+- Snooze expiry is a READ derivation only (SCH-18): IMP-042 performs NO
+  expiry writes and there is no scheduler; a persisted `snoozed` row past
+  `snoozed_until` reads adapter-side as `acknowledged` (when
+  `acknowledged_at IS NOT NULL`) else `active` (TEST-API-18).
+- Alert generation/evaluation/dedupe/auto-resolution is NOT implemented
+  (IMP-051); NO alert-rule seed rows or thresholds exist (D3 ruling —
+  AUTO-OQ-04 stays open); `alert.raised`/`alert.resolved` publication is
+  deferred to IMP-050 (AUTO-OQ-02).
+- My Work (`/my-work`, live in Supabase mode): DEC-L personal scope — an
+  item is the caller's when their live ACTIVE membership is the task's
+  assignee or reviewer; standalone returned ReviewItems surface only for
+  their own submitter with the contract next_action "Address reviewer
+  feedback"; a task-linked returned item claims its canonical task and is
+  never double-surfaced. Billing/non-staff receive the empty contract
+  (never an error — API-ERR-02 collection semantics). Buckets
+  Today/This Week/Waiting/Returned with single-bucket precedence
+  (Returned → Waiting → Today → This Week) against the real Asia/Kolkata
+  business date (TEN-22). Read architecture: plain RLS reads composed
+  behind `@/data` (`src/data/mywork/`) — NO aggregate SECURITY DEFINER
+  RPC (DM-X-02 precedent). Task status changes from My Work go through
+  `transition_task` only; reassignment is offered manager+ and enforced
+  server-side within portfolio scope (RLS-TSK-01) — an out-of-portfolio
+  manager update is denied (browser-observed 403 during the IMP-042 gate,
+  then re-proven green with a portfolio-authorized fixture).
+- The existing `/alerts` page remains behind ModuleGate (D1 ruling) — NOT
+  live-wired in IMP-042. The alert bell badge reads the RLS-filtered
+  active count through `alertsService.listAlerts`; freshness via
+  `subscribeAlerts` (the approved API-RT-07 polling fallback — bare
+  invalidation + authoritative re-read under RLS; the interval is an
+  implementation parameter, NOT a product SLA). A zero visible count is a
+  truthful known zero ("0 active alerts", no badge bubble); a failed read
+  renders no badge (truthful unknown) — never a fabricated zero.
+- Hosted/browser proof (2026-09-06/07): authenticated 60-check probe PASS
+  60/60 with cohort-only synthetic identities (one probe-oracle miscount
+  — `alert_rule.create_denied` expectation — was corrected and re-proven;
+  test-oracle defect, NOT an implementation defect); browser acceptance
+  PASS 44/44. All synthetic probe/browser fixtures torn down; immutable
+  audit_log evidence retained.
+- Harness Gate: 22 / 22 phases PASS.
+
 ## 7. Permanent Architecture Boundaries
 
 - Data flow: React → `@/data` → fixture OR Supabase adapter. No direct
@@ -226,10 +307,18 @@ Remaining formal R0 packages:
 - Domain-event publication for ComplianceInstance remains deferred per
   the approved automation contract (IMP-050 / AUTO-OQ-02); the same
   deferral covers `task.created` / `task.assigned` / `task.completed`
-  (contract names only after IMP-040) and `review.submitted` /
-  `review.completed` (contract names only after IMP-041). The accepted
-  API-RT-07 Review Queue polling fallback is unrelated to event
-  publication and does not discharge this deferral.
+  (contract names only after IMP-040), `review.submitted` /
+  `review.completed` (contract names only after IMP-041), and
+  `alert.raised` / `alert.resolved` (contract names only after IMP-042).
+  The accepted API-RT-07 Review Queue polling fallback is unrelated to
+  event publication and does not discharge this deferral; the IMP-042
+  alert badge uses the same approved fallback (D2 ruling).
+- AUTO-OQ-04 (which alert rules ship enabled / default thresholds)
+  remains OPEN — IMP-042 shipped NO alert-rule seeds (D3 ruling);
+  product input is needed before seed enablement (IMP-051).
+- Alert generation/evaluation/dedupe/auto-resolution and the snooze-expiry
+  scheduler belong to IMP-051; IMP-042 shipped persistence, manual
+  transitions, and the My Work surface only.
 - Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
   Auth config — ops decision); performance advisors
