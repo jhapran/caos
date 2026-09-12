@@ -8,6 +8,7 @@
  *   → lint → unit/component tests → Auth integration → RLS integration
  *   → schema integration → audit integration → client-hierarchy adapter contract
  *   → engagement adapter contract → Client 360 composite contract
+ *   → review/alerts/My Work integration → automation (IMP-050) integration
  *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
@@ -185,6 +186,12 @@ async function main() {
   currentPhase = 'mywork-integration';
   run('mywork-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/mywork');
 
+  // IMP-050: automation contract (TEST-AUTO-01…12 + TEST-RLS-EVO-01/SJR-01/
+  // SDL-01 grant closure against the real stack; recurrence generation,
+  // scheduler registrations, outbox drain/retry/dead-letter, recovery).
+  currentPhase = 'automation-integration';
+  run('automation-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/automation');
+
   currentPhase = 'build';
   run('build', 'npm run build');
 
@@ -245,7 +252,7 @@ async function main() {
     ).trim();
     if (stray) throw new Error(`stray harness/spike tables remain: ${stray}`);
     // IMP-010 + IMP-013 + IMP-020 + IMP-021 + IMP-030 + IMP-031 + IMP-040 +
-    // IMP-041 + IMP-042: production schema now exists. The gate distinguishes the
+    // IMP-041 + IMP-042 + IMP-050: production schema now exists. The gate distinguishes the
     // EXPECTED committed-migration tables from anything unexpected; the
     // forbidden temporary-object check above is unchanged.
     const expectedTables = [
@@ -260,12 +267,15 @@ async function main() {
       'compliance_types', // SCH-10 (IMP-030)
       'contacts', // SCH-08 (IMP-020)
       'engagements', // SCH-09 (IMP-021)
+      'event_outbox', // SCH-33 (IMP-050)
       'firm_memberships', // SCH-03 (IMP-010)
       'firms', // SCH-01 (IMP-010)
       'legal_entities', // SCH-05 (IMP-020)
       'profiles', // SCH-02 (IMP-010)
       'registrations', // SCH-07 (IMP-020)
       'review_items', // SCH-17 (IMP-041 PASS A)
+      'scheduler_dead_letters', // SCH-35 (IMP-050)
+      'scheduler_job_runs', // SCH-34 (IMP-050)
       'task_checklist_items', // SCH-15 (IMP-040)
       'task_comments', // SCH-16 (IMP-040)
       'task_dependencies', // SCH-14 (IMP-040)
@@ -278,24 +288,27 @@ async function main() {
     const actual = appTables ? appTables.split(',') : [];
     if (actual.join(',') !== expectedTables.join(',')) {
       throw new Error(
-        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031/040/041/042 migrations)`,
+        `public tables are [${actual.join(',')}], expected exactly [${expectedTables.join(',')}] (committed IMP-010/013/020/021/030/031/040/041/042/050 migrations)`,
       );
     }
-    // IMP-012/013/020/021/030/031/040/041/042: production RLS is part of the
+    // IMP-012/013/020/021/030/031/040/041/042/050: production RLS is part of the
     // expected posture — the gate fails on RLS absence/regression. The
     // tenant-owned content tables (audit_log + the five client-hierarchy
     // tables + engagements + the two compliance-rule tables + the two
     // compliance-profile/instance tables + the four task-family tables +
-    // review_items + alerts + alert_rules) are additionally FORCED
+    // review_items + alerts + alert_rules + event_outbox +
+    // scheduler_dead_letters) are additionally FORCED
     // (RLS-PRIN-02); the tenant core stays unforced per the IMP-012
-    // documented exception (helper recursion + owner-run maintenance).
+    // documented exception (helper recursion + owner-run maintenance), and
+    // scheduler_job_runs (SCH-34) stays enabled-but-unforced per the
+    // IMP-050 Ruling R8 posture (system-scoped, not tenant-owned).
     const rlsTables = psql(
       `select coalesce(string_agg(c.relname, ',' order by c.relname), '')
        from pg_class c join pg_namespace n on n.oid = c.relnamespace
        where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity`,
     ).trim();
     if (rlsTables !== expectedTables.join(',')) {
-      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031/040/041/042)`);
+      throw new Error(`tables with RLS enabled are [${rlsTables}], expected [${expectedTables.join(',')}] (IMP-012/013/020/021/030/031/040/041/042/050)`);
     }
     const expectedForced = [
       'alert_rules',
@@ -309,9 +322,11 @@ async function main() {
       'compliance_types',
       'contacts',
       'engagements',
+      'event_outbox', // SCH-33 (IMP-050; forced — Ruling R8)
       'legal_entities',
       'registrations',
       'review_items',
+      'scheduler_dead_letters', // SCH-35 (IMP-050; forced — Ruling R8)
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -323,7 +338,7 @@ async function main() {
        where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`,
     ).trim();
     if (forcedTables !== expectedForced.join(',')) {
-      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031/040/041/042; tenant core unforced per IMP-012 exception)`);
+      throw new Error(`tables with FORCE RLS are [${forcedTables}], expected [${expectedForced.join(',')}] (IMP-013/020/021/030/031/040/041/042/050; tenant core unforced per IMP-012 exception; SCH-34 enabled-not-forced per Ruling R8)`);
     }
     const expectedPolicies = [
       'alert_rules:alert_rules_select_scoped',
@@ -383,10 +398,10 @@ async function main() {
        from pg_policies where schemaname = 'public'`,
     ).trim();
     if (policies !== expectedPolicies.join(',')) {
-      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040/041/042)`);
+      throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040/041/042; IMP-050 SCH-33/34/35 are zero-policy zero-browser-grant postures — Ruling R8 keeps the count at 51)`);
     }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
-    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family + review_items + alerts/alert_rules (committed IMP-010/013/020/021/030/031/040/041/042 migrations); RLS posture verified (RLS on all 21, FORCE on the 18 tenant-owned content tables, 51 expected policies); 16 deterministic identities verified';
+    return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family + review_items + alerts/alert_rules + event_outbox/scheduler_job_runs/scheduler_dead_letters (committed IMP-010/013/020/021/030/031/040/041/042/050 migrations); RLS posture verified (RLS on all 24, FORCE on 20 — SCH-33/SCH-35 forced, SCH-34 enabled-not-forced per Ruling R8 — 51 expected policies, zero browser grants on the automation records); 16 deterministic identities verified';
   });
 
   currentPhase = 'secret-scan';

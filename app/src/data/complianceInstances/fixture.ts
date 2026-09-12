@@ -539,7 +539,9 @@ export const fixtureComplianceInstances: ComplianceInstancesService = {
     found.approvedBy = FIXTURE_CALLER.userId;
     found.approvedAt = now();
     found.updatedAt = now();
-    // C5 ruling: approval creates ZERO instances (materialization is IMP-050).
+    // Demo-only track: the fixture adapter never runs recurrence — the
+    // production Supabase path materializes the current period at
+    // activation (IMP-050, AUTO-REC-01a).
     return copyProfile(found);
   },
 
@@ -772,7 +774,9 @@ export const fixtureComplianceInstances: ComplianceInstancesService = {
     if (input.toState === 'filed') found.filedAt = now();
     if (input.toState === 'closed') found.closedAt = now();
     found.updatedAt = now();
-    // IMP-050 boundary: NO successor instance is spawned here.
+    // Demo-only track: no successor is spawned in fixture mode — the
+    // production Supabase path materializes + links the successor on
+    // closure (IMP-050, AUTO-REC-01b).
     return {
       status: 'transitioned',
       fromState: PIPELINE[fromIdx],

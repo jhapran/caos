@@ -254,9 +254,10 @@ export interface ComplianceInstancesService {
   /**
    * Controlled Layer-B approval command (NOT an ordinary update): proposed
    * → active, stamping approvedBy/approvedAt (DM-11, RLS-CCP-01). Manager+
-   * in scope; NO AAL2 step-up (business approval, RLS-AAL-02). Approving
-   * creates ZERO compliance instances — materialization is the IMP-050
-   * recurrence generator (C5 ruling, AUTO-REC-01).
+   * in scope; NO AAL2 step-up (business approval, RLS-AAL-02). In Supabase
+   * mode the server additionally materializes the CURRENT period
+   * immediately at activation (IMP-050, AUTO-REC-01a); the demo fixture
+   * adapter does not run recurrence (demo-only track).
    */
   approveComplianceProfile(profileId: string): Promise<ComplianceProfileRecord>;
 
@@ -277,7 +278,9 @@ export interface ComplianceInstancesService {
    * matrix plus the four-eyes overlay (RLS-4EY-01/02: exits from
    * internal_review other than the regression are performed by the
    * assigned reviewer — no rank bypass). filedAt/closedAt are stamped on
-   * → filed / → closed. No successor instance is spawned (IMP-050).
+   * → filed / → closed. In Supabase mode, reaching closed makes the server
+   * materialize + link the successor instance immediately (IMP-050,
+   * AUTO-REC-01b); the demo fixture adapter does not run recurrence.
    */
   transitionInstance(
     instanceId: string,

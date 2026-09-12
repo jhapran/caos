@@ -84,6 +84,24 @@
  * granted to authenticated only), and one owner-only definer trigger
  * function (the alerts single-writer write guard).
  *
+ * IMP-050 changes reflected here: event_outbox (SCH-33) +
+ * scheduler_dead_letters (SCH-35) exist with RLS enabled AND forced,
+ * scheduler_job_runs (SCH-34) with RLS enabled NOT forced (Ruling R8 —
+ * system-scoped, not tenant-owned); all three carry ZERO policies (the
+ * 51-policy inventory is deliberately unchanged — RLS-EVO-01/SJR-01/
+ * SDL-01 are zero-browser-grant postures, not permissive policies) and
+ * zero table grants for anon/authenticated/service_role. The function
+ * inventory gains the three write guards (evo_guard_update,
+ * sjr_guard_update, sdl_guard_write — INVOKER like the
+ * crv_guard_update precedent), the outbox writer/producer trigger
+ * (publish_domain_event, event_publish_trg), the recurrence machinery
+ * (recurrence_period_anchor/label/due_date/lookahead_days,
+ * recurrence_insert_instance, generate_profile_instances,
+ * generate_successor_instance, evaluate_recurrence), the drain
+ * (drain_event_outbox), and cron registration (register_scheduler_jobs)
+ * — all owner-only; requeue_dead_letter(uuid,text) joins the
+ * service-role-only class (AUTO-RPL-02, RLS-SVC-01).
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -110,12 +128,15 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
       'compliance_types',
       'contacts',
       'engagements',
+      'event_outbox',
       'firm_memberships',
       'firms',
       'legal_entities',
       'profiles',
       'registrations',
       'review_items',
+      'scheduler_dead_letters',
+      'scheduler_job_runs',
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -143,6 +164,9 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
     // way (PASS B: one scoped-select policy; writes stay command-owned).
     // IMP-042's alerts + alert_rules are tenant-owned content, forced the
     // same way (one scoped-select policy each; ALL writes command-owned).
+    // IMP-050: event_outbox (SCH-33) and scheduler_dead_letters (SCH-35)
+    // are forced (Ruling R8); scheduler_job_runs (SCH-34) stays enabled but
+    // NOT forced — system-scoped, not tenant-owned.
     expect(
       rows(`select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relforcerowsecurity`),
@@ -158,9 +182,11 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
       'compliance_types',
       'contacts',
       'engagements',
+      'event_outbox',
       'legal_entities',
       'registrations',
       'review_items',
+      'scheduler_dead_letters',
       'task_checklist_items',
       'task_comments',
       'task_dependencies',
@@ -194,6 +220,10 @@ describe('IMP-012/013/020/021/030/031/040/041 catalog — RLS state (RLS-PRIN-02
     // and alert_rules_select_scoped (RLS-ARL-01 — super_admin/partner/
     // manager read); every write on both tables is Layer-B command-owned,
     // so no insert/update/delete policy exists.
+    // IMP-050 adds NO policies: event_outbox (SCH-33), scheduler_job_runs
+    // (SCH-34) and scheduler_dead_letters (SCH-35) are zero-policy,
+    // zero-browser-grant automation records (RLS-EVO-01/SJR-01/SDL-01,
+    // Ruling R8) — the inventory stays at 51 by contract.
     expect(
       rows(`select tablename || ':' || policyname || ':' || cmd from pg_policies where schemaname = 'public'`),
     ).toEqual(
@@ -296,6 +326,9 @@ const AUTHENTICATED_RPCS = [
 const SERVICE_ONLY_FNS = [
   'write_audit_event_server(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text)',
   'mirror_login_history()',
+  // IMP-050: hardened dead-letter recovery command (AUTO-RPL-01/02,
+  // RLS-SVC-01) — EXECUTE to service_role only, never anon/authenticated.
+  'requeue_dead_letter(uuid,text)',
 ];
 const OWNER_ONLY_FNS = [
   'audit_write(uuid,text,uuid,text,text,text,jsonb,jsonb,text,uuid,uuid,text,text,timestamp with time zone)',
@@ -355,6 +388,31 @@ const IMP041_TRIGGER_FNS = ['review_items_guard_write()'];
 // application roles). alert_rules carries NO guard — its browser write
 // surface is empty and its only writers are the two AAL2-gated commands.
 const IMP042_TRIGGER_FNS = ['alerts_guard_write()'];
+// IMP-050 function inventory: requeue_dead_letter joins SERVICE_ONLY_FNS
+// above. Every other new public function is owner-only — no EXECUTE for
+// anon/authenticated/service_role/public (AUTO-SCH-03c, RLS-EVO-01/
+// SJR-01/SDL-01): the three SCH-33/34/35 write guards, the transactional
+// outbox writer + producer trigger, the recurrence helpers/core/generator,
+// the scheduler entry, the outbox drain, cron registration, and the
+// immediate-path correlation helper.
+const IMP050_FNS = [
+  'drain_event_outbox()',
+  'evaluate_recurrence()',
+  'event_publish_trg()',
+  'evo_guard_update()',
+  'generate_profile_instances(uuid,date,uuid)',
+  'generate_successor_instance(uuid,uuid)',
+  'immediate_automation_correlation()',
+  'publish_domain_event(text,uuid,jsonb)',
+  'recurrence_due_date(jsonb,date,date)',
+  'recurrence_insert_instance(client_compliance_profiles,uuid,date,date,date,uuid,uuid,uuid,uuid)',
+  'recurrence_lookahead_days(uuid)',
+  'recurrence_period_anchor(text,date)',
+  'recurrence_period_label(text,date)',
+  'register_scheduler_jobs()',
+  'sjr_guard_update()',
+  'sdl_guard_write()',
+];
 
 describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
   it('anon has no privileges on any public table or function', () => {
@@ -376,6 +434,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP040_HELPERS,
       ...IMP041_TRIGGER_FNS,
       ...IMP042_TRIGGER_FNS,
+      ...IMP050_FNS,
     ]) {
       expect(
         psql(`select has_function_privilege('anon', 'public.${fn}', 'EXECUTE')`).trim(),
@@ -966,13 +1025,13 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
     for (const fn of [...IMP012_HELPERS, ...AUTHENTICATED_RPCS, ...IMP020_HELPERS, ...IMP040_HELPERS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS]) {
+    for (const fn of [...SERVICE_ONLY_FNS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS, ...IMP050_FNS]) {
       expect(psql(`select has_function_privilege('authenticated', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     for (const fn of SERVICE_ONLY_FNS) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('t');
     }
-    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS]) {
+    for (const fn of [...AUTHENTICATED_RPCS, ...OWNER_ONLY_FNS, ...IMP020_TRIGGER_FNS, ...IMP021_TRIGGER_FNS, ...IMP030_TRIGGER_FNS, ...IMP031_FNS, ...IMP040_TRIGGER_FNS, ...IMP040_HELPERS, ...IMP041_TRIGGER_FNS, ...IMP042_TRIGGER_FNS, ...IMP050_FNS]) {
       expect(psql(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
     // IMP-020: active_membership_id is a policy helper deliberately usable
@@ -994,6 +1053,7 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       ...IMP040_HELPERS,
       ...IMP041_TRIGGER_FNS,
       ...IMP042_TRIGGER_FNS,
+      ...IMP050_FNS,
     ]) {
       expect(psql(`select has_function_privilege('public', 'public.${fn}', 'EXECUTE')`).trim()).toBe('f');
     }
@@ -1021,7 +1081,18 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     "'tasks_guard_write', 'task_comments_guard_update', 'task_checklist_items_stamp_done', " +
     "'review_items_guard_write', 'submit_review_item', 'decide_review_item', " +
     "'alerts_guard_write', 'acknowledge_alert', 'snooze_alert', 'resolve_alert', " +
-    "'create_alert_rule', 'update_alert_rule'";
+    "'create_alert_rule', 'update_alert_rule', " +
+    // IMP-050: SCH-33/34/35 write guards, the outbox writer/producer
+    // trigger, the recurrence machinery, scheduler entry, drain, cron
+    // registration, dead-letter recovery, and the immediate-path
+    // correlation helper.
+    "'evo_guard_update', 'sjr_guard_update', 'sdl_guard_write', " +
+    "'publish_domain_event', 'event_publish_trg', " +
+    "'recurrence_period_anchor', 'recurrence_period_label', 'recurrence_due_date', " +
+    "'recurrence_lookahead_days', 'recurrence_insert_instance', " +
+    "'generate_profile_instances', 'generate_successor_instance', " +
+    "'evaluate_recurrence', 'drain_event_outbox', 'register_scheduler_jobs', 'requeue_dead_letter', " +
+    "'immediate_automation_correlation'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -1054,7 +1125,14 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     // definer (both tables carry SELECT-only browser grants; the
     // single-writer marker admits only the transition-command path) and
     // alerts_guard_write is definer (enforcement independent of caller RLS
-    // visibility under FORCE RLS).
+    // visibility under FORCE RLS). IMP-050: the outbox writer/producer
+    // trigger, recurrence_lookahead_days, the generator core + entry
+    // points, the drain, cron registration, and requeue_dead_letter are
+    // definer (they write the grant-closed SCH-33/34/35 tables and derive
+    // actor/correlation server-side); the three SCH-33/34/35 write guards,
+    // the pure date-arithmetic helpers (recurrence_period_anchor/label/
+    // due_date), and immediate_automation_correlation (a pure GUC read +
+    // mint with no table access) are INVOKER (crv_guard_update precedent).
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
@@ -1078,13 +1156,23 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'create_alert_rule',
       'crv_prepare_insert',
       'decide_review_item',
+      'drain_event_outbox',
       'engagements_validate_responsibility',
+      'evaluate_recurrence',
+      'event_publish_trg',
+      'generate_profile_instances',
+      'generate_successor_instance',
       'invite_member',
       'list_client_identities',
       'list_engagement_letter_statuses',
       'mirror_login_history',
+      'publish_domain_event',
+      'recurrence_insert_instance',
+      'recurrence_lookahead_days',
+      'register_scheduler_jobs',
       'remove_membership',
       'remove_task_dependency',
+      'requeue_dead_letter',
       'resolve_alert',
       'review_items_guard_write',
       'shares_active_firm_with',
