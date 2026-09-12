@@ -42,17 +42,30 @@ Remaining formal R0 packages:
 - Current: IMP-042 — Alerts & My Work — CLOSED
 - Next: IMP-050 — Recurrence generation & scheduler signals — NOT STARTED
 - Next action: fresh-session contract extraction / reconciliation for
-  IMP-050. IMP-050 implementation is NOT authorized yet. Entry criteria
+  IMP-050. The IMP-050 architecture/spec amendment (2026-09-11,
+  uncommitted) is APPROVED — human diff review PASSED 2026-09-12.
+  IMP-050 implementation is NOT authorized yet. Entry criteria
   per `12-release-0-plan.md`: R0-D green — satisfied; AUTO-OQ-01/02
-  technical validation (final scheduler mechanism + event-publication
-  mechanism) with results recorded in `09` — NOT yet resolved.
+  technical validation with results recorded in `09` — **SATISFIED
+  2026-09-11: AUTO-OQ-01 RESOLVED (pg_cron + hardened in-database
+  scheduler/job functions; pg_net not required for R0), AUTO-OQ-02
+  RESOLVED (transactional outbox), AUTO-OQ-03 RESOLVED (90-calendar-day
+  configurable default look-ahead, Asia/Kolkata business-date basis,
+  UTC-persisted timestamps); AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS;
+  schema contracts SCH-33/34/35 recorded in `06`. Remaining gates:
+  the explicit IMP-050 implementation instruction; hosted pg_cron
+  `CREATE EXTENSION` (explicit human state-change gate) at
+  implementation time.**
 
 ## 4. Database / Migration State (accepted staging)
 
 - Latest migration: `20260908000000_alerts.sql`
 - Hosted staging migration ledger: 10 migrations, local == remote through
   `20260908000000` (10 / 10)
-- Application public tables: 21
+- Application public tables: 21 (CURRENT deployed; **TARGET after the
+  IMP-050 schema migration: 24** — SCH-33/34/35 are contract additions in
+  `06` from the IMP-050 amendment, APPROVED 2026-09-12 by human diff
+  review, with no migration yet)
 - RLS enabled: 21 / 21
 - FORCE-RLS: 18 (all tenant-owned content tables)
 - Policies: 51
@@ -94,6 +107,18 @@ Remaining formal R0 packages:
   zero, API-RT-07 polling invalidation without reload, /alerts ModuleGate
   preservation, network/console isolation)
 - No real customer data in staging
+- **Hosted pg_cron capability (2026-09-11, AUTO-SCH-02 HOSTED PASS):**
+  authorized human read-only Supabase Studio catalog queries on
+  `pyrniumcjcvagjygheyu` observed `pg_available_extensions` pg_cron
+  `default_version = 1.6.4`, `installed_version = NULL` ("Job scheduler
+  for PostgreSQL"); versions available through 1.6.4, none installed;
+  `current_setting('cron.database_name', true) = 'postgres'`. No hosted
+  state was changed. **Scoped to the actual staging project only —
+  production pg_cron availability is NOT claimed and remains a
+  pre-cutover verification.** **pg_cron is available but NOT installed; hosted
+  `CREATE EXTENSION` remains a future explicit human state-change gate.**
+  Evidence artifacts: `docs/harness/auto-sch-02-probe.md` +
+  `docs/harness/auto-sch-02-results.json`.
 - Dedicated staging test identities (durable testing note): the 8
   synthetic `imp041-*` Supabase Auth users remain for future acceptance
   gates, each with a verified TOTP factor enrolled during the IMP-041
@@ -236,8 +261,9 @@ Remaining formal R0 packages:
   `acknowledged_at IS NOT NULL`) else `active` (TEST-API-18).
 - Alert generation/evaluation/dedupe/auto-resolution is NOT implemented
   (IMP-051); NO alert-rule seed rows or thresholds exist (D3 ruling —
-  AUTO-OQ-04 stays open); `alert.raised`/`alert.resolved` publication is
-  deferred to IMP-050 (AUTO-OQ-02).
+  AUTO-OQ-04 stays open); `alert.created`/`alert.resolved` publication is
+  deferred to IMP-050 (mechanism RESOLVED 2026-09-11 — AUTO-OQ-02
+  transactional outbox, SCH-33; wiring lands with IMP-050).
 - My Work (`/my-work`, live in Supabase mode): DEC-L personal scope — an
   item is the caller's when their live ACTIVE membership is the task's
   assignee or reviewer; standalone returned ReviewItems surface only for
@@ -306,15 +332,22 @@ Remaining formal R0 packages:
 - `successor_instance_id` generator-time same-firm/cycle hardening is an
   IMP-050 review item.
 - Recurrence generator belongs to IMP-050.
-- Domain-event publication for ComplianceInstance remains deferred per
-  the approved automation contract (IMP-050 / AUTO-OQ-02); the same
-  deferral covers `task.created` / `task.assigned` / `task.completed`
-  (contract names only after IMP-040), `review.submitted` /
-  `review.completed` (contract names only after IMP-041), and
-  `alert.raised` / `alert.resolved` (contract names only after IMP-042).
+- Domain-event publication wiring remains with IMP-050; the mechanism is
+  RESOLVED 2026-09-11 (AUTO-OQ-02 — transactional outbox, SCH-33):
+  `compliance_instance.created` (IMP-031), `task.created` /
+  `task.assigned` / `task.completed` (IMP-040), `review.submitted` /
+  `review.completed` (IMP-041), and `alert.created` / `alert.resolved`
+  (IMP-042) are contract names only until IMP-050 wires publication.
   The accepted API-RT-07 Review Queue polling fallback is unrelated to
   event publication and does not discharge this deferral; the IMP-042
   alert badge uses the same approved fallback (D2 ruling).
+- **Scheduler execution-context security finding (2026-09-11, AUTO-SCH-03,
+  local probe):** pg_cron executes as `postgres` (rolsuper=false,
+  rolbypassrls=true); FORCE RLS did not constrain the cron-fired
+  SECURITY INVOKER path. Scheduler isolation must NOT rely on RLS;
+  scheduler functions enforce firm boundaries explicitly; anon/
+  authenticated have no scheduler execution capability; scheduler writes
+  carry system/service audit context + per-run correlation identity.
 - AUTO-OQ-04 (which alert rules ship enabled / default thresholds)
   remains OPEN — IMP-042 shipped NO alert-rule seeds (D3 ruling);
   product input is needed before seed enablement (IMP-051).

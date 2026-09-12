@@ -1,6 +1,6 @@
 # 05 — Authorization & RLS
 
-- **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit RLS-CRV-* family for `compliance_rule_versions`, SCH-32)
+- **Status:** Approved (architecture, Batch 3) — **Batch 4 security closure amendment approved** (explicit RLS-CRV-* family for `compliance_rule_versions`, SCH-32) — **IMP-050 architecture amendment (2026-09-11, APPROVED 2026-09-12 by human diff review):** explicit zero-browser-grant families RLS-EVO-01 / RLS-SJR-01 / RLS-SDL-01 for the automation records (SCH-33/34/35)
 - **Approval status:** Approved for architecture (Batch 3); Batch 4 security closure amendment approved (Batch 4). **DEC-J RESOLVED (2026-09-01)** by the IMP-004 Harness Gate spike + human-reviewed amendment — the Release-0 authorization mechanism is **live membership lookup** (Candidate B, RLS-MECH-01); evidence `docs/harness/dec-j-spike.md` + `docs/harness/dec-j-results.json`.
 
 ## Purpose
@@ -378,6 +378,40 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
   audited** (AUD-CAT-01) and is a security-configuration change requiring
   AAL2 step-up (RLS-AAL-01).
 - **RLS-AUD-01** audit_log: SELECT restricted to partner/super_admin of the owning firm; INSERT only via security-definer triggers/functions; UPDATE/DELETE granted to nobody (AUD-INV-*).
+- **RLS-EVO-01** event_outbox (SCH-33; IMP-050 architecture amendment
+  2026-09-11): **zero browser grants** — no SELECT/INSERT/UPDATE/DELETE
+  for `anon`/`authenticated`, and no EXECUTE on outbox/scheduler/job
+  functions for those roles (no browser access path exists). Writes are
+  **scheduler/service/server-only**: inserts occur inside the approved
+  transactional producer paths (Layer-A trigger / Layer-B definer command /
+  generator), and drain/retry/dead-letter updates occur only from the
+  scheduler/service context (RLS-SVC-02 audit-context stamping).
+  **Scheduler isolation MUST NOT rely on RLS:** the cron execution context
+  carries BYPASSRLS (AUTO-SCH-03, `09`), so RLS is evidence of nothing on
+  the scheduler path; **explicit firm-boundary enforcement in the
+  scheduler/job function logic is required**, structurally supported by
+  composite same-firm FKs (SCH-FK-01…03). **Direct scheduler-path
+  cross-firm tests are required** (TEST-AUTO-08, `11`); browser
+  grant-closure is verified by TEST-RLS-EVO-01 (§14).
+- **RLS-SJR-01** scheduler_job_runs (SCH-34; IMP-050 architecture
+  amendment 2026-09-11): the same binding posture — **zero browser
+  grants**; no anon/authenticated read/write/execute capability;
+  scheduler/service-context writes only; because the cron execution
+  context carries BYPASSRLS (AUTO-SCH-03), this table's integrity rests
+  on grant closure and explicit function logic, never on RLS.
+  Verification: TEST-RLS-SJR-01 (grant closure) + TEST-AUTO-08
+  (scheduler-path cross-firm).
+- **RLS-SDL-01** scheduler_dead_letters (SCH-35; IMP-050 architecture
+  amendment 2026-09-11): the same binding posture as RLS-EVO-01 — **zero
+  browser grants**, no anon/authenticated read/write/execute, writes only
+  from the scheduler/service context. `firm_id` is nullable and non-FK by
+  design, and in the BYPASSRLS scheduler context there is **no RLS or FK
+  structural backstop for firm attribution** — the producing function's
+  logic is normative, verified directly by TEST-AUTO-08 Firm A/B
+  isolation/attribution (never by RLS-based tests). The manual recovery
+  path (AUTO-RPL-02, `09`) is server/operator-only with no browser
+  capability. Verification: TEST-RLS-SDL-01 (grant closure) +
+  TEST-AUTO-08 (scheduler path).
 - **RLS-DOC-*/RLS-DREQ-*/RLS-RMD-*/RLS-COM-*/RLS-NTF-*/RLS-INV-*/RLS-AIO-*/RLS-INT-*/RLS-KNC-*/RLS-CPU-*** (deferred tables): intent only — tenant-scoped per §2; client-context access only per §6; full policy design lands with each feature's release spec. No deferred table ships without its RLS family being finalized first.
 
 ## 13. Storage authorization principles (deferred document work)
@@ -389,7 +423,11 @@ actor-identity fields (author, approver-of-record, acknowledger) reference
 
 ## 14. Verification requirements (forward references to `11`)
 
-For **every tenant-owned table** (SCH-04…SCH-32 as applicable), the harness
+For **every tenant-owned table** (SCH-04…SCH-35 as applicable — for the
+zero-browser-grant automation records SCH-33/34/35 the ten-case matrix
+reduces to grant-closure denial for every browser role,
+TEST-RLS-EVO-01/SJR-01/SDL-01 below, plus direct scheduler-path
+cross-firm verification via TEST-AUTO-08), the harness
 defines `TEST-RLS-<FAMILY>-01…10`:
 
 1. same-tenant authorized access succeeds
@@ -439,6 +477,17 @@ Plus (R0 closure 2026-09-03):
   remains `status='active'` for its historical window, remains readable
   per RLS-CRV-01, and instance provenance references to it stay valid
   (SCH-32 succession model, SCH-12).
+
+Plus (IMP-050 architecture amendment 2026-09-11):
+
+- **TEST-RLS-EVO-01 / TEST-RLS-SJR-01 / TEST-RLS-SDL-01 (automation
+  records — event_outbox / scheduler_job_runs / scheduler_dead_letters,
+  SCH-33/34/35):** `anon` and `authenticated` have NO read, write, or
+  execute capability on the automation records or their scheduler/job
+  functions (grant closure, RLS-EVO-01/SJR-01/SDL-01). Scheduler-path
+  cross-firm isolation/attribution is verified directly by TEST-AUTO-08
+  (`11`) — RLS-based tests are not isolation evidence in the BYPASSRLS
+  cron context (AUTO-SCH-03).
 
 ## DEC-J: JWT claims vs membership lookup — RESOLVED (live membership lookup)
 
@@ -599,7 +648,7 @@ historical record — they no longer represent the selected mechanism.
 ## Acceptance Criteria
 
 - RLS-ACC-01: All 14 mandated sections present.
-- RLS-ACC-02: Every table in `06` (SCH-01…SCH-32) is covered by exactly one
+- RLS-ACC-02: Every table in `06` (SCH-01…SCH-35) is covered by exactly one
   RLS family here; no policy is defined anywhere else.
 - RLS-ACC-03: The permission matrix covers all eight roles against clients,
   revenue, billing, workpapers-adjacent data, tasks, review items, documents,
@@ -615,6 +664,14 @@ historical record — they no longer represent the selected mechanism.
   write/administration, gated statutory activation, immutability support,
   and service-role restriction, with verification cases TEST-RLS-CRV-01…13
   (12/13 added by the 2026-09-03 rule-governance closure).
+- RLS-ACC-07 (IMP-050 architecture amendment 2026-09-11): the automation
+  records (SCH-33/34/35) have explicit named families (RLS-EVO-01,
+  RLS-SJR-01, RLS-SDL-01) normatively stating zero browser grants, no
+  anon/authenticated read/write/execute capability,
+  scheduler/service/server-only writes, the AUTO-SCH-03 constraint that
+  scheduler isolation must not rely on RLS (BYPASSRLS cron context),
+  explicit firm-boundary enforcement in function logic, and direct
+  scheduler-path cross-firm tests (TEST-AUTO-08).
 
 ## Consequence of Change
 

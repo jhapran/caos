@@ -200,7 +200,9 @@ decision is revisited at the Release 1/2 boundary.
 Working architecture: pg_cron / database jobs for DB-native cycles, invoking
 Edge Functions (e.g. via `pg_net`) when actions leave the database. Exact
 implementation is finalized in `09-automation-events.md`. Release 0 needs the
-recurrence cycle only.
+recurrence cycle only. **Finalized 2026-09-11 (AUTO-OQ-01 resolution): R0 is
+pg_cron invoking hardened in-database scheduler/job functions; pg_net is not
+required for R0 and HTTP/Edge scheduling is deferred to R1+ (`09` AUTO-SCH-01).**
 
 ### DEC-O — Audit: hybrid capture, immutable log
 
@@ -309,7 +311,7 @@ integrations.
 | ID | Question | Needed by |
 |---|---|---|
 | DEC-OQ-01 | DEC-I: which exact roles are "privileged" for mandatory MFA (partner + super_admin + billing proposed) — confirm in Batch 2 | `04-authentication.md` |
-| DEC-OQ-02 | DEC-N: is `pg_net` acceptable as the DB→Edge Function invocation mechanism, or should the spike in Batch 4 also evaluate a queue table poller? | `09-automation-events.md` |
+| DEC-OQ-02 | DEC-N: is `pg_net` acceptable as the DB→Edge Function invocation mechanism, or should the spike in Batch 4 also evaluate a queue table poller? | `09-automation-events.md` — **RESOLVED 2026-09-11 (= AUTO-OQ-01, human ruling): pg_cron invoking hardened in-database scheduler/job functions is the final R0 mechanism; pg_net not required for R0; HTTP/Edge scheduling deferred to R1+** |
 | DEC-OQ-03 | DEC-T item 24: does fixture/demo mode remain the Netlify production deploy's default data source until a later release, with Supabase mode enabled per-environment? | `10-migration-seed.md` |
 
 ## Acceptance criteria

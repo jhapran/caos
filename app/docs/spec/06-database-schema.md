@@ -1,6 +1,6 @@
 # 06 — Database Schema (Design)
 
-- **Status:** Approved (architecture, Batch 3) — **amended by the Batch 4 closure amendment** (adds SCH-32 `compliance_rule_versions` and SCH-12 recurrence-provenance fields; satisfies AUTO-XREF-01) **and the Batch 4 security closure** (SCH-32 references the explicit RLS-CRV-* family in `05`)
+- **Status:** Approved (architecture, Batch 3) — **amended by the Batch 4 closure amendment** (adds SCH-32 `compliance_rule_versions` and SCH-12 recurrence-provenance fields; satisfies AUTO-XREF-01) **and the Batch 4 security closure** (SCH-32 references the explicit RLS-CRV-* family in `05`) — **amended by the IMP-050 architecture amendment (human-ruled 2026-09-11)**: adds the automation record contracts SCH-33 `event_outbox`, SCH-34 `scheduler_job_runs`, SCH-35 `scheduler_dead_letters` (AUTO-OQ-01/02 resolutions; contract only — no migration exists yet)
 - **Approval status:** Approved for architecture (Batch 3); Batch 4 closure and security closure amendments approved (Batch 4). Note: the Registration Scope Matrix (DM-27) is approved **for architecture only** — external practicing-CA / compliance-domain sign-off remains **mandatory before production statutory-rule activation** (this approval is not professional CA certification).
 
 ## Purpose
@@ -14,16 +14,27 @@ appear here. No migration SQL is generated in Phase 2.
 
 ## Table inventory (authoritative)
 
-**Release 0: exactly 21 tables — SCH-01…SCH-20 plus SCH-32** (firms,
+**CURRENT deployed state (accepted staging, through IMP-042): exactly 21
+public application tables — SCH-01…SCH-20 plus SCH-32.**
+
+**TARGET Release-0 contract after the IMP-050 schema migration: exactly
+24 tables — SCH-01…SCH-20 plus SCH-32, SCH-33, SCH-34, SCH-35** (firms,
 profiles, firm_memberships, clients, legal_entities, client_relationships,
 registrations, contacts, engagements, compliance_types,
 client_compliance_profiles, compliance_instances, tasks, task_dependencies,
 task_checklist_items, task_comments, review_items, alerts, alert_rules,
-audit_log, **compliance_rule_versions**). SCH-32 was added by the Batch 4
+audit_log, **compliance_rule_versions**, **event_outbox**,
+**scheduler_job_runs**, **scheduler_dead_letters**). SCH-32 was added by the Batch 4
 closure amendment (rule versioning / recurrence provenance, AUTO-XREF-01);
-per the no-renumbering convention (IDX: IDs are never renumbered after
-approval) it takes the next free ID rather than renumbering the deferred
-range.
+SCH-33/34/35 were added by the IMP-050 architecture amendment
+(2026-09-11 — transactional outbox / publication record, scheduler job-run
+record, retry/dead-letter record; AUTO-OQ-01/02 resolutions). Both
+amendments follow the no-renumbering convention (IDX: IDs are never
+renumbered after approval), taking the next free IDs rather than
+renumbering the deferred range. **The 24-table count is the TARGET
+contract count, NOT current deployed state: as of this amendment
+SCH-33/34/35 are normative contracts only — no migration exists; physical
+tables land with the IMP-050 implementation package.**
 
 **Deferred: exactly 11 tables — SCH-21…SCH-31** (documents,
 document_versions, document_requests, reminder_sequences, communications,
@@ -39,6 +50,9 @@ prevention only; full design lands with each feature's release spec.
 - The responsibility-reference rule (membership vs identity).
 - Rule versioning and recurrence provenance (Batch 4 closure amendment:
   SCH-32, SCH-12 additions).
+- Automation records (IMP-050 architecture amendment, 2026-09-11: SCH-33
+  transactional outbox / publication record, SCH-34 scheduler job-run
+  record, SCH-35 retry/dead-letter record — contract level only).
 
 ## Non-goals
 
@@ -120,6 +134,17 @@ prevention only; full design lands with each feature's release spec.
   - **audit_log:** soft references only (object_id as text, actor as
     non-enforcing reference); safe and intentional — audit rows must survive
     object lifecycle and remain append-only (AUD-INV-*).
+  - **event_outbox / scheduler_job_runs / scheduler_dead_letters (SCH-33/34/35,
+    IMP-050 architecture amendment 2026-09-11):** soft references only —
+    event subjects and failed-work subjects are carried inside the minimal
+    `payload` envelope as ids (AUTO-ENV-01), never as enforcing FKs; safe
+    and intentional for the same reason as `audit_log` — publication and
+    failure records must survive the lifecycle of the objects they describe,
+    and a publication/dead-letter record must never be blocked by, or block,
+    domain-row lifecycle. Tenant isolation is carried by each row's own
+    `firm_id` where present, by the zero-browser-grant posture, and — in the
+    BYPASSRLS scheduler context — by explicit tenancy enforcement in the
+    scheduler functions (AUTO-SCH-03), never by RLS.
 - **SCH-FK-04:** Composite-FK DDL details (constraint naming, cascade
   behaviour) are implementation details verified at the harness gate; the
   architectural direction above is settled.
@@ -128,9 +153,24 @@ prevention only; full design lands with each feature's release spec.
 
 ### SCH-01 — firms
 - **Purpose:** Tenant root (DM-01). **R0.** Tenant boundary root (not tenant-owned).
-- **Columns:** `name text NOT NULL`; `frn text` (firm registration number); `city text`; `plan text NOT NULL DEFAULT 'trial'`; `settings jsonb NOT NULL DEFAULT '{}'` (reminder rules, confidence thresholds, retention policy, notification prefs); `status text NOT NULL DEFAULT 'onboarding'` CHECK in (`onboarding`,`active`,`suspended`,`deactivated`).
+- **Columns:** `name text NOT NULL`; `frn text` (firm registration number); `city text`; `plan text NOT NULL DEFAULT 'trial'`; `settings jsonb NOT NULL DEFAULT '{}'` (reminder rules, confidence thresholds, retention policy, notification prefs, `recurrence_lookahead_days` — see the settings contract below); `status text NOT NULL DEFAULT 'onboarding'` CHECK in (`onboarding`,`active`,`suspended`,`deactivated`).
 - **PK:** id. **FKs:** none.
 - **Checks/invariants:** status transitions per DM-SM-01.
+- **Settings contract (IMP-050 architecture amendment, 2026-09-11):**
+  `settings.recurrence_lookahead_days` is the R0 recurrence look-ahead
+  carrier — integer calendar days; default **90** when the key is absent
+  or null; read **server-side only** by recurrence generation
+  (AUTO-REC-02/AUTO-REC-10, `09`); Asia/Kolkata business-date semantics
+  remain normative; future firm-specific values do NOT change recurrence
+  identity or already-generated instance semantics (the SCH-12 uniqueness
+  key and provenance contract are configuration-independent). No separate
+  configuration table exists for this value. **Validation (2026-09-12):**
+  a present value MUST be a positive integer (calendar days); an invalid
+  present value (non-integer, zero, negative, or otherwise unparsable) is
+  a **configuration error** — it MUST NOT silently fall back to 90, and
+  recurrence evaluation for that firm MUST fail observably (recorded job
+  failure, AUTO-OBS-01/SCH-34) rather than generate under an unintended
+  horizon (AUTO-REC-02, `09`).
 - **Indexes:** none beyond PK (single-digit row count per deployment scale).
 - **Lifecycle:** status column; never hard-deleted.
 - **Audit sensitivity:** HIGH — status/settings/plan changes audited (AUD-*).
@@ -443,6 +483,179 @@ prevention only; full design lands with each feature's release spec.
 - **RLS:** RLS-CRV-* (explicit rule-version family defined in `05` — Batch 4 security closure: read scoping, privileged administration, gated activation, immutability support; no policy text appears here).
 - **Tests:** TEST-RLS-CRV-01…11, TEST-AUD-11, TEST-AUTO-09.
 
+### SCH-33 — event_outbox (IMP-050 architecture amendment, 2026-09-11)
+- **Purpose:** Transactional outbox / publication record — the final
+  AUTO-OQ-02 mechanism (AUTO-FLOW-03): every published domain event is
+  recorded **in the same transaction** as its domain mutation, so a
+  committed business fact is never lost to a post-write crash; the async
+  runner drains, retries, and dead-letters from this table. Also the
+  replay source for manual audited re-enqueue of dead-lettered
+  publications (AUTO-RPL-01/02 — dead-letter-gated in R0). **R0.**
+  Tenant-owned rows; platform events use the reserved NULL-firm marker
+  (AUD-EVT-03, AUTO-ENV-01). **Contract only — no migration exists until
+  the IMP-050 implementation package.**
+- **Columns:** `event_id uuid NOT NULL` (**publication/event-record
+  identity** — it identifies THIS publication row, AUTO-ENV-01; it is
+  **NOT** the consumer idempotency identity — consumer idempotency is
+  domain effect-key based per AUTO-IDM-01, `09`); `event_type text NOT
+  NULL` (exactly one of the 14 catalogue events, `09` — AUTO-EVT-01);
+  `firm_id uuid` (NULL only per the reserved platform marker);
+  `occurred_at timestamptz NOT NULL` (server-generated); `actor_type text
+  NOT NULL` CHECK in (`human`,`system`,`service`,`support`);
+  `actor_user_id uuid`; `service_name text` (job/automation identity when
+  `actor_type` is `system`/`service`, AUD-ACT-02/03); `correlation_id
+  uuid NOT NULL` (AUD-INV-06, AUTO-AUD-02); `payload jsonb NOT NULL`
+  (minimal envelope per AUTO-ENV-01 — ids and the specific facts that
+  changed, never full row dumps); `requeue_of uuid` (NULL on original
+  publications; on a manual-requeue publication, the soft reference —
+  SCH-FK-03 exception — to the ORIGINAL publication's `event_id`,
+  AUTO-RPL-01/02); delivery lifecycle: `status text NOT NULL DEFAULT
+  'pending'` CHECK in (`pending`,`delivered`,`failed`,`dead_lettered`) —
+  `delivered` semantics per AUTO-FLOW-05 (`09`): completion of all R0
+  consumers actually registered for the publication (in R0: none — a
+  drain-completion record, never an external/HTTP delivery claim); retry
+  metadata per AUTO-RET-01: `attempt_count int NOT NULL DEFAULT 0`,
+  `next_attempt_at timestamptz` (backoff schedule; backoff parameters are
+  implementation configuration, not contract), `last_error text`;
+  `created_at`, `processed_at timestamptz` (set on terminal
+  `delivered`/`dead_lettered`).
+- **PK:** id. **Unique:** `(event_id)` — one publication record per
+  `event_id`. Uniqueness guards the publication RECORD, not the domain
+  fact: a manual requeue is a NEW publication row with a NEW `event_id`
+  for the SAME domain fact, so duplicate domain effects are prevented by
+  consumer effect keys (AUTO-IDM-01), never by `event_id`.
+- **FKs:** none (soft references only — SCH-FK-03 automation-records
+  exception); subject ids live inside `payload`; `requeue_of` is likewise
+  a soft reference.
+- **Invariants:** inserts occur only inside an approved mutation path's
+  transaction (Layer-A trigger / Layer-B definer command / generator) or
+  via the hardened manual recovery path (AUTO-RPL-02, `09`); `status`
+  transitions follow `pending → delivered | failed`, `failed → pending`
+  (retry reschedule) `| dead_lettered` (attempts exhausted → SCH-35
+  record); retry of an audit-affecting event re-uses the original
+  `correlation_id` (AUTO-RET-02). **Manual requeue (dead-letter-gated,
+  AUTO-RPL-01/02):** applies ONLY to publications that have reached
+  `dead_lettered` state — `pending`/`failed` publications remain under
+  automatic retry and are never manually requeued in R0. A requeue
+  creates a NEW row
+  carrying the original envelope facts (`event_type`, `firm_id`,
+  `occurred_at`, actor fields, `payload`) UNCHANGED, a NEW `event_id`,
+  `requeue_of` = the original publication's `event_id`, and the ORIGINAL
+  `correlation_id` (the original correlation chain is preserved,
+  AUTO-RET-02) — a requeue is NOT a new domain fact and must NOT
+  duplicate domain effects (AUTO-IDM-01 effect keys). No UPDATE of
+  envelope fields (`event_id`, `event_type`, `firm_id`, `occurred_at`,
+  actor fields, `payload`, `requeue_of`) after insert — only
+  delivery-lifecycle metadata moves.
+- **Indexes:** `(status, next_attempt_at)` — the drain query;
+  `(firm_id, created_at)`; `(correlation_id)` — replay/audit tracing
+  (AUTO-RPL-01); `(requeue_of)` — requeue lineage.
+- **Firm attribution (AUTO-SCH-03 consequence):** `firm_id` is nullable
+  and non-FK by design (reserved platform marker); in the privileged
+  BYPASSRLS scheduler context there is **no RLS and no FK structural
+  backstop for firm attribution** — the producing function's logic is the
+  normative firm-attribution mechanism, and TEST-AUTO-08 directly
+  verifies Firm A/B isolation/attribution on the scheduler path (`11`).
+- **Audit sensitivity:** HIGH (publication integrity; the record itself
+  is not audit — AUD-CAT-01 audit rows remain in `audit_log`).
+- **RLS posture:** RLS enabled **and FORCED**; **zero browser grants** —
+  no SELECT/INSERT/UPDATE/DELETE for `anon`/`authenticated` — per the
+  named `05` family **RLS-EVO-01** (defined in `05` §12 by this
+  amendment). Server/scheduler write posture: inserts via the approved
+  transactional producer paths; drain/retry/dead-letter updates via the
+  scheduler/service context only (RLS-SVC-02 audit-context stamping); the
+  BYPASSRLS scheduler constraint (AUTO-SCH-03) applies — tenancy is
+  enforced explicitly in function logic, never by RLS.
+- **Retention/archival:** **intentionally unresolved — deferred
+  boundary** (SCH-OQ-07); retention values are governed by the `08`
+  retention architecture (AUD-OQ-01 OPEN — no values invented); any purge
+  follows the privileged AUD-RET-02 path only; operational landing entry
+  OPS-RET-01 (`13`). Delivered rows accumulate until that decision.
+- **Tests:** TEST-AUTO-05/06/12.
+
+### SCH-34 — scheduler_job_runs (IMP-050 architecture amendment, 2026-09-11)
+- **Purpose:** Job-run record (AUTO-OBS-01, AUTO-PRIN-04 fail-visible):
+  every scheduled run records job identity, started/finished, rows
+  affected, and failure; the operational source for scheduler
+  last-success health (OPS-HLT-01) and failure monitoring (OPS-MON-01).
+  **R0.** **System-scoped, NOT tenant-owned** — one scheduler run spans
+  firms; no `firm_id` (firm attribution of *effects* lives on the written
+  domain/audit/outbox rows, linked by `correlation_id`). Contract only —
+  no migration until IMP-050.
+- **Columns:** `job_name text NOT NULL` (the `sched.<job>.<action>`
+  signal identity, AUTO-PRIN-02 — e.g. `sched.recurrence.evaluate`);
+  `correlation_id uuid NOT NULL` (one per run, minted by the scheduler,
+  carried on the signal — AUTO-ENV-02/AUTO-AUD-02); `status text NOT NULL
+  DEFAULT 'running'` CHECK in (`running`,`succeeded`,`failed`);
+  `started_at timestamptz NOT NULL DEFAULT now()`; `finished_at
+  timestamptz`; `rows_affected int`; `error text`; `created_at`.
+- **PK:** id. **FKs:** none (system record, SCH-FK-03 exception).
+- **Invariants:** exactly one row per run attempt; a retry is a NEW run
+  row re-using the original `correlation_id` for sensitive steps
+  (AUTO-RET-02); `finished_at` and terminal `status` are set together;
+  rows are never hard-deleted in R0 (retention deferred, SCH-OQ-07 —
+  values per AUD-OQ-01, `08`; purge only via AUD-RET-02; OPS-RET-01 in
+  `13`).
+- **Indexes:** `(job_name, started_at)` — last-success-per-job derivation
+  (OPS-HLT-01); `(status, started_at)`; `(correlation_id)`.
+- **Audit sensitivity:** MEDIUM (operational integrity evidence; not a
+  substitute for `audit_log` domain audit).
+- **RLS posture:** RLS enabled; **zero browser grants** per the named
+  `05` family **RLS-SJR-01** (defined in `05` §12 by this amendment);
+  writes only from the scheduler/service context. AUTO-SCH-03 applies:
+  the BYPASSRLS execution context means this table's integrity rests on
+  grant closure and explicit function logic, not RLS.
+- **Tests:** TEST-AUTO-08, TEST-OPS-07.
+
+### SCH-35 — scheduler_dead_letters (IMP-050 architecture amendment, 2026-09-11)
+- **Purpose:** Retry/dead-letter record (AUTO-RET-01): work whose bounded
+  retries are exhausted lands here — nothing disappears silently
+  (AUTO-PRIN-04); surfaced in operations monitoring (OPS-MON-02
+  dead-letter accumulation). **R0.** Firm-scoped where the failed work
+  carries a firm (`firm_id`); NULL only per the reserved platform marker.
+  Contract only — no migration until IMP-050.
+- **Columns:** `source text NOT NULL` CHECK in (`outbox_event`,`job_step`)
+  — what exhausted; `source_id text NOT NULL` (soft reference — SCH-FK-03
+  exception); `firm_id uuid`; `correlation_id uuid`; `payload jsonb NOT
+  NULL` (the failed work item, minimal per AUTO-ENV-01); failure metadata:
+  `failure_reason text NOT NULL`, `attempt_count int NOT NULL`,
+  `first_failed_at timestamptz NOT NULL`, `last_failed_at timestamptz NOT
+  NULL`; `status text NOT NULL DEFAULT 'open'` CHECK in
+  (`open`,`requeued`) — `requeued` marks operator re-enqueue per
+  AUTO-RPL-01 via the hardened server/operator-only recovery path
+  (AUTO-RPL-02, `09`): a manual, audited operation that creates a NEW
+  SCH-33 publication row with a NEW `event_id`, `requeue_of` linkage to
+  the original publication, the original envelope facts unchanged, and
+  the original `correlation_id` preserved (AUTO-RET-02) — NOT a new
+  domain fact, no duplicate domain effects (AUTO-IDM-01); the dead-letter
+  row itself is never mutated further and never
+  hard-deleted in R0); `created_at`.
+- **PK:** id. **FKs:** none (soft references, SCH-FK-03 exception).
+- **Invariants:** append-only except the single `open → requeued`
+  transition (performed only by the AUTO-RPL-02 recovery path); a
+  dead-lettered outbox event also carries
+  `status='dead_lettered'` on its SCH-33 row (dual visibility: per-event
+  state + operational accumulation). **Resolution/replay workflow beyond
+  manual audited re-enqueue is intentionally unspecified** — formal replay
+  tooling is post-R0 (AUTO-RPL-01); retention deferred (SCH-OQ-07 —
+  values per AUD-OQ-01, `08`; purge only via AUD-RET-02; OPS-RET-01 in
+  `13`).
+- **Indexes:** `(status, created_at)`; `(firm_id, created_at)`;
+  `(correlation_id)`.
+- **Firm attribution (AUTO-SCH-03 consequence):** `firm_id` is nullable
+  and non-FK by design; in the privileged BYPASSRLS scheduler context
+  there is **no RLS and no FK structural backstop for firm
+  attribution** — the producing function's logic is the normative
+  firm-attribution mechanism, and TEST-AUTO-08 directly verifies Firm A/B
+  isolation/attribution on the scheduler path (`11`).
+- **Audit sensitivity:** MEDIUM-HIGH (failed automation may indicate
+  compliance-obligation gaps).
+- **RLS posture:** identical binding posture to SCH-33 — RLS enabled and
+  FORCED, zero browser grants, scheduler/service-context writes only,
+  AUTO-SCH-03 explicit-tenancy constraint — named `05` family
+  **RLS-SDL-01** (defined in `05` §12 by this amendment).
+- **Tests:** TEST-AUTO-06, TEST-OPS-07.
+
 ## Deferred tables (dead-end prevention only)
 
 Lightweight definitions; full design lands with their release specs. All are
@@ -527,6 +740,7 @@ fires, establishment/location/jurisdiction data lives on
 | SCH-OQ-05 | audit_log partitioning | — | **Resolved:** deferred for R0 — indexes + approved retention architecture suffice; partitioning later on measured volume |
 | SCH-OQ-06 | Does Payroll belong in the statutory ComplianceType catalogue? | — | **Resolved:** removed from the statutory catalogue for R0; payroll = operational/service/engagement workflow if needed; statutory payroll obligations remain TDS/PF/ESI/PT |
 | AUTO-XREF-01 | Recurrence rule versioning / generation provenance schema | — | **Satisfied (Batch 4 closure amendment):** SCH-32 `compliance_rule_versions` + SCH-12 provenance fields (`rule_version_id`, `generation_source`, `generated_at`, `calculated_due_date`) |
+| SCH-OQ-07 | Retention/archival policy for the automation records (SCH-33 `event_outbox`, SCH-34 `scheduler_job_runs`, SCH-35 `scheduler_dead_letters`) — delivered/dead-lettered rows accumulate until decided | `13` / ops | **Open — deferred boundary (non-blocking for IMP-050):** records are never hard-deleted in R0; retention VALUES are governed by AUD-OQ-01 (`08` — OPEN; no values invented here or in `13`); any purge follows the privileged, policy-bound, audited AUD-RET-02 path only; the operations landing/reference entry is OPS-RET-01 (`13`); the decision mirrors the SCH-OQ-05 deferral pattern |
 
 ## Acceptance Criteria
 
@@ -547,8 +761,13 @@ fires, establishment/location/jurisdiction data lives on
   scope and its sign-off status.
 - SCH-ACC-06: No table lacks an authorization classification; no sensitive
   table lacks an audit classification.
-- SCH-ACC-07: The table inventory states exact counts (21 R0 / 11 deferred)
-  matching the SCH-01…20 + SCH-32 and SCH-21…31 enumeration.
+- SCH-ACC-07: The table inventory states exact counts — CURRENT deployed
+  21 public application tables (through IMP-042) vs TARGET 24 R0 / 11
+  deferred after the IMP-050 schema migration — matching the
+  SCH-01…20 + SCH-32 + SCH-33/34/35 and SCH-21…31
+  enumeration, and records that SCH-33/34/35 are contracts pending the
+  IMP-050 migration (the 24 count is never presented as current deployed
+  state).
 - SCH-ACC-08: The composite tenant-FK strategy lists its applications and
   documents every exception with its safety rationale.
 - SCH-ACC-09: Every tenant operational-responsibility field references
@@ -561,6 +780,23 @@ fires, establishment/location/jurisdiction data lives on
   representable; the statutory activation gate is an explicit lifecycle
   invariant (SCH-32 `domain_approval_status`); the instance uniqueness key
   is unchanged so version changes cannot duplicate obligations.
+- SCH-ACC-11 (IMP-050 architecture amendment, 2026-09-11): The automation
+  records carry their full contract — SCH-33 pins publication identity
+  (`event_id` unique per publication record — NOT the consumer
+  idempotency identity, which is the AUTO-IDM-01 domain effect key), the
+  AUTO-ENV-01 envelope, correlation, requeue lineage (`requeue_of` +
+  original-correlation preservation, AUTO-RPL-01/02), the delivery
+  lifecycle with AUTO-FLOW-05 `delivered` semantics, retry/backoff
+  metadata, and the same-transaction insert invariant; SCH-34 pins
+  job-run identity, started/finished, rows-affected and failure recording
+  (AUTO-OBS-01); SCH-35 pins dead-letter failure metadata and the
+  append-only + manual-requeue lifecycle (AUTO-RET-01/AUTO-RPL-01/02);
+  all three state the zero-browser-grant named `05` families
+  (RLS-EVO-01/SJR-01/SDL-01), FORCE-RLS-where-tenant-owned,
+  explicit-tenancy (AUTO-SCH-03) posture — including the
+  no-RLS/no-FK-backstop firm-attribution rule verified by TEST-AUTO-08 —
+  and the deferred retention boundary (SCH-OQ-07, reconciled with
+  AUD-OQ-01/AUD-RET-02).
 
 ## Consequence of Change
 
@@ -576,4 +812,8 @@ sign-off recorded against DM-OQ-01. The Batch 4 closure amendment (SCH-32 +
 SCH-12 provenance) did not alter approved Batch 3 decisions; weakening
 provenance immutability (SCH-32/SCH-12 update guards) breaks historical
 interpretation (AUTO-REC-07) and TEST-AUTO-09 and requires requester
-sign-off.
+sign-off. The IMP-050 architecture amendment (SCH-33/34/35 automation
+records, 2026-09-11) likewise did not alter approved Batch 3/4 decisions;
+weakening the outbox same-transaction invariant (AUTO-FLOW-03), the
+zero-browser-grant posture, or the AUTO-SCH-03 explicit-tenancy constraint
+is a security-posture change requiring requester sign-off.

@@ -152,7 +152,9 @@ TEST-AUD-*, TEST-AUTO-*) are defined in `11-testing-harness.md`.
   `task_checklist_items`, `task_comments`, `review_items`, `alerts`,
   `alert_rules`, `audit_log`; transition/decision RPCs (API-ARCH-04,
   API-SEC-*); recurrence generator and alert evaluator (design per `09`;
-  mechanism per AUTO-OQ-01). Rule versioning / generation provenance is
+  mechanism RESOLVED 2026-09-11 per AUTO-OQ-01: pg_cron invoking hardened
+  in-database scheduler/job functions; event publication via the
+  transactional outbox, AUTO-OQ-02 / SCH-33). Rule versioning / generation provenance is
   specified in `06` (SCH-32, SCH-12 — Batch 4 closure amendment) and is
   implemented in this phase. IMP-031 fixture/staging seed compliance
   instances may use only `generation_source='manual'` or `'import'` —
@@ -367,7 +369,10 @@ category below says otherwise.
 ## Assumptions
 
 - MIG-A-01: The Supabase CLI local stack supports the full migration chain
-  offline (pg_cron availability per AUTO-SCH-02 is validated at the harness
+  offline (pg_cron availability per AUTO-SCH-02 — VALIDATED PASS
+  2026-09-11: local execution-context probe PASS; hosted availability PASS
+  via authorized human read-only Studio queries, default_version 1.6.4,
+  not installed; hosted `CREATE EXTENSION` remains a future explicit human
   gate; a local-only gap would be recorded, not worked around silently).
 - MIG-A-02: Fixture volumes (34 clients, 1,284 tasks) are representative
   enough to design seeds from; production-scale synthetic volume is

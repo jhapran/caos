@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02…04, AUTO-OQ-01…04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02…04, AUTO-OQ-04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **AUTO-OQ-01/02/03 are RESOLVED by human ruling 2026-09-11 (IMP-050 architecture amendment, recorded normatively in `09` and `06`): pg_cron + hardened in-database scheduler/job functions is the final R0 scheduler (pg_net not required for R0; HTTP/Edge scheduling deferred to R1+); the transactional outbox is the final event-publication mechanism (direct invocation rejected for R0; schema contracts SCH-33/34/35 in `06`); the recurrence look-ahead default is 90 calendar days (configurable) on an Asia/Kolkata business-date basis with UTC-persisted timestamps. AUTO-SCH-02 is recorded PASS (LOCAL/HOSTED/OVERALL); hosted pg_cron is available (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` remains a future explicit human gate.** **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
 
 ## Purpose
 
@@ -14,9 +14,13 @@ Definition of Done.
 This document **sequences** approved architecture; it does not redesign it.
 Where an approved spec leaves an item OPEN or PROVISIONAL, this plan
 preserves that status and attaches it to the gate at which it must be
-resolved. Nothing here silently resolves AUD-OQ-02, AUTO-OQ-01/02,
+resolved. Nothing here silently resolves AUD-OQ-02,
 DEC-P, or any other recorded open question. (DEC-J was resolved by the
-approved IMP-004 spike amendment, 2026-09-01 — live membership lookup.)
+approved IMP-004 spike amendment, 2026-09-01 — live membership lookup.
+AUD-OQ-02 was resolved 2026-09-01 via IMP-005. AUTO-OQ-01/02/03 were
+resolved by explicit human ruling 2026-09-11, recorded in the IMP-050
+architecture amendment in `09`/`06` — this plan reconciles that record;
+it did not resolve them.)
 
 ## Scope
 
@@ -95,9 +99,11 @@ This spec owns the `REL-*` namespace:
   before any substantial feature implementation begins.
 - **REL-PRIN-02:** Dependency order over convenience. A package starts
   only when its declared dependencies are complete and green.
-- **REL-PRIN-03:** Open stays open. A provisional mechanism (AUTO-OQ-01/02;
-  historically DEC-J and AUD-OQ-02 — both resolved 2026-09-01 through this
-  rule) is implemented only after its gate produces a
+- **REL-PRIN-03:** Open stays open. A provisional mechanism
+  (historically DEC-J and AUD-OQ-02 — both resolved 2026-09-01 through
+  this rule — and AUTO-OQ-01/02 — resolved by human ruling 2026-09-11,
+  recorded in `09`/`06`)
+  is implemented only after its gate produces a
   written decision record; interim work uses the documented provisional
   default and is marked accordingly.
 - **REL-PRIN-04:** One bounded package at a time; no silent scope
@@ -1111,23 +1117,34 @@ separate explicit implementation instruction.
   ComplianceInstance generation: deterministic recurrence identity,
   four-layer duplicate protection, provenance stamping, scheduler-signal
   processing (`sched.*` signals are not domain events, AUTO-PRIN-05).
-- **Requirement IDs:** AUTO-PRIN-01…05, AUTO-REC-01…09, AUTO-SCH-01/02,
-  AUTO-IDM-01, AUTO-FLOW-01…04, AUTO-EVT-01/02, AUTO-AUD-01/02,
-  AUTO-OBS-01; SCH-12 provenance, SCH-32.
+- **Requirement IDs:** AUTO-PRIN-01…05, AUTO-REC-01…10, AUTO-SCH-01/02/03,
+  AUTO-IDM-01, AUTO-FLOW-01…05, AUTO-RPL-01/02, AUTO-EVT-01/02,
+  AUTO-AUD-01/02, AUTO-OBS-01; SCH-01 settings carrier, SCH-12 provenance,
+  SCH-32, SCH-33/34/35.
 - **TEST-* IDs:** TEST-AUTO-01…12 (incl. concurrent-generator race,
   historical stability, event/signal separation, correlation propagation).
-- **Dependencies:** IMP-031, IMP-013; **AUTO-OQ-01/02 technical
-  validation** (final scheduler mechanism + event-publication mechanism —
-  provisional hybrid pg_cron + Edge Functions / provisional outbox per
-  `09`; validated here, not silently finalized).
+- **Dependencies:** IMP-031, IMP-013; **AUTO-OQ-01/02 — RESOLVED by human
+  ruling 2026-09-11** (final scheduler mechanism: pg_cron invoking hardened
+  in-database scheduler/job functions, pg_net not required for R0; final
+  event-publication mechanism: transactional outbox — recorded in `09`;
+  schema contracts SCH-33/34/35 recorded in `06`; validation evidence
+  AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS).
 - **Allowed scope:** generator function(s), scheduler wiring per the
-  validated mechanism, idempotency/retry/dead-letter handling.
+  validated mechanism (pg_cron + hardened in-database functions,
+  AUTO-SCH-01 final), transactional outbox publication (SCH-33),
+  idempotency/retry/dead-letter handling (SCH-34/35).
 - **Non-goals:** reminder *delivery* (AUTO-RMD-01 produces reminder-ready
   events only); no activation of statutory rules.
 - **Expected files/areas:** `supabase/` (functions, cron config),
   automation worker area.
-- **Entry criteria:** R0-D green; AUTO-OQ-01/02 resolved by validation
-  with results recorded in `09` (amendment).
+- **Entry criteria:** R0-D green; AUTO-OQ-01/02 resolved with results
+  recorded in `09` (amendment) — **SATISFIED 2026-09-11** (human rulings
+  recorded in `09`; schema contracts SCH-33/34/35 in `06`; AUTO-SCH-02
+  PASS). The IMP-050 architecture amendment diff is APPROVED (human
+  review PASSED 2026-09-12). Remaining gate before implementation: the
+  explicit IMP-050 implementation instruction, then hosted pg_cron
+  `CREATE EXTENSION` by an authorized human (explicit state-change gate —
+  availability proven, installation not yet authorized).
 - **Acceptance criteria:** double-run/race yields exactly one instance and
   one downstream event; rule edits never mutate historical instances;
   correlation IDs reach events and audit rows.
@@ -1138,8 +1155,16 @@ separate explicit implementation instruction.
 - **Git checkpoint:** `feat: recurrence generation`.
 - **Rollback concern:** generator disable-able without data loss;
   generated rows remain valid history.
-- **Open/provisional dependency:** AUTO-OQ-01, AUTO-OQ-02 (resolved at
-  this gate); AUTO-OQ-03 (look-ahead default) set here as config.
+- **Open/provisional dependency:** none remaining at this gate — AUTO-OQ-01
+  and AUTO-OQ-02 are RESOLVED (human ruling 2026-09-11, recorded in `09`);
+  AUTO-OQ-03 is RESOLVED and set here as config: 90-calendar-day
+  configurable default look-ahead (carrier
+  `firms.settings.recurrence_lookahead_days`, SCH-01 — default 90 when
+  absent/null), Asia/Kolkata business-date basis,
+  UTC-persisted timestamps (AUTO-REC-02/AUTO-REC-10). The binding
+  scheduler security constraint is AUTO-SCH-03 (BYPASSRLS cron identity —
+  explicit tenant enforcement; no anon/authenticated scheduler
+  capability).
 
 ---
 
@@ -1438,9 +1463,9 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | API-OQ-02 | `07` | Open — convention fixed | No | Per-surface pagination values only | During each surface's package |
 | API-OQ-03 | `07` | Open | No | Composite RPC vs per-section views shape | IMP-060 (measured) |
 | API-OQ-04 (= SCH-OQ-03) | `07` | Open | No | Re-invite persistence semantics (API separates the three operations already) | IMP-010/011 membership implementation |
-| AUTO-OQ-01 (= DEC-OQ-02) | `09` | Open — provisional hybrid | **Yes** (final mechanism) | Final scheduler mechanism in IMP-050 | IMP-050 entry (technical validation) |
-| AUTO-OQ-02 | `09` | Open — provisional outbox | **Yes** (final mechanism) | Event-publication implementation in IMP-050 | IMP-050 entry (technical validation) |
-| AUTO-OQ-03 | `09` | Open | No | Recurrence look-ahead default value | IMP-050 (config) |
+| AUTO-OQ-01 (= DEC-OQ-02) | `09` | **Resolved 2026-09-11 — human ruling: pg_cron + hardened in-database scheduler/job functions final for R0; pg_net not required for R0; HTTP/Edge deferred to R1+ (AUTO-SCH-01; AUTO-SCH-02 PASS)** | No (resolved) | — (IMP-050 proceeds on the resolved mechanism) | Resolved at IMP-050 architecture gate (human ruling + validation evidence) |
+| AUTO-OQ-02 | `09` | **Resolved 2026-09-11 — human ruling: transactional outbox final; direct invocation rejected for R0 (AUTO-FLOW-03; SCH-33/34/35 contracts in `06`)** | No (resolved) | — (IMP-050 proceeds on the resolved mechanism) | Resolved at IMP-050 architecture gate (human ruling) |
+| AUTO-OQ-03 | `09` | **Resolved 2026-09-11 — human ruling: 90-calendar-day configurable default; Asia/Kolkata business-date basis; UTC-persisted timestamps (AUTO-REC-02/AUTO-REC-10)** | No (resolved) | — (value set as R0 config) | Resolved at IMP-050 architecture gate (human ruling) |
 | AUTO-OQ-04 | `09` | Open | No | Default enabled alert rules + thresholds | IMP-051 seeding (product input) |
 | MIG-OQ-02 | `10` | Open | No | Deterministic-id scheme detail | IMP-003 |
 | MIG-OQ-04 | `10` | Open | No (R0 build); **Yes** (production onboarding) | Historical back-materialization depth for real clients | IMP-072 (product input) |

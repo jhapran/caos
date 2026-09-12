@@ -145,8 +145,9 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
   nonexistent object gets no invented audit row, and neither leaks through
   the caller response.
 - Task event **publication** is not part of audit and not part of IMP-040:
-  `task.created` / `task.assigned` / `task.completed` publication remains
-  deferred to the AUTO-OQ-02 mechanism (IMP-050) — see `09`.
+  `task.created` / `task.assigned` / `task.completed` publication is wired
+  at IMP-050 through the resolved transactional outbox mechanism
+  (AUTO-OQ-02 RESOLVED 2026-09-11 — SCH-33) — see `09`.
 
 ### 7c. Review-item audit partition (IMP-041 contract closure 2026-09-05)
 
@@ -175,8 +176,21 @@ The twenty mandated areas (§1–§20 below), at design level, for Release 0.
 - **Fail closed:** if the audit write fails, the submission/decision fails
   (AUD-PRIN-03, AUD-CTX-05) — no partial decision persistence (DM-SM-06).
 - Review event **publication** is not part of audit and not part of IMP-041:
-  `review.submitted` / `review.completed` publication remains deferred to the
-  AUTO-OQ-02 mechanism (IMP-050) — see `09`.
+  `review.submitted` / `review.completed` publication is wired at IMP-050
+  through the resolved transactional outbox mechanism (AUTO-OQ-02 RESOLVED
+  2026-09-11 — SCH-33) — see `09`.
+- **Scheduler-actor alignment (AUTO-SCH-03, 2026-09-11):** scheduler-originated
+  writes execute in a BYPASSRLS context, so tenant isolation there is
+  enforced explicitly by function logic, never by RLS; every such write
+  stamps `actor_type='system'`/`'service'` with `service_name` (AUD-ACT-02,
+  RLS-SVC-02) and carries the run's `correlation_id` (AUD-INV-06,
+  AUTO-AUD-02) into both `audit_log` and the SCH-33 publication record.
+  **Manual automation recovery (AUTO-RPL-02, `09`)** uses the same
+  existing taxonomy — the operator-run re-enqueue audits with
+  `actor_type='service'` + `service_name`, records the recovery reason
+  and the source publication/dead-letter identity, and preserves the
+  original correlation chain (AUTO-RET-02); no new actor type is
+  introduced.
 
 ### 8. Immutable audit-log requirements (invariants)
 

@@ -78,17 +78,32 @@ observability platform — R0 needs reliable basics, executed well.
 
 - **OPS-MON-01 — Coverage.** R0 monitoring captures: frontend runtime
   errors; server/Edge Function errors; automation failures (job-run log,
-  AUTO-OBS-01); recurrence-generation failures; **audit-write failures**
+  AUTO-OBS-01 — recorded in SCH-34 `scheduler_job_runs`, `06`);
+  recurrence-generation failures; **audit-write failures**
   (which abort the sensitive operation, AUD-INV-05 — these are always
   page-worthy); security-significant failures (AUD-FAIL-01); failed
   migrations.
 - **OPS-MON-02 — Alerting/escalation basics.** Alert on: audit-write
   failure, repeated authorization anomalies, automation dead-letter
-  accumulation, failed production migration, health-check failure.
+  accumulation (SCH-35 `scheduler_dead_letters`, `06`), failed production migration, health-check failure.
   Escalation target is the operator on duty; severity per OPS-INC-02.
 - **OPS-MON-03 — Vendor open.** The error-monitoring vendor/tool is not
   selected here (OPS-OQ-01); the requirement is the capability, not the
   product.
+- **OPS-MON-04 — Automation records as the operational source (IMP-050
+  architecture amendment, 2026-09-11).** Scheduler health, failure, and
+  recovery evidence derives from the `06` automation records: last
+  successful run per job from SCH-34; undrained/backlogged publication
+  from SCH-33 (`status`/`next_attempt_at`); exhausted retries from
+  SCH-35. Operational replay/recovery (AUTO-RPL-01) is dead-letter-gated
+  in R0: operators identify dead-lettered candidates by `correlation_id`
+  and/or time range across SCH-33/SCH-35, and the manual, audited
+  recovery operation acts on the SCH-35 dead-letter record and its source
+  SCH-33 publication, executed only through the hardened
+  server/operator-only recovery path (AUTO-RPL-02 —
+  `requeue_dead_letter`); `pending`/ordinary `failed` publications remain
+  under automatic retry and are NOT manually requeued — no automated
+  replay tooling exists in R0.
 
 ## Health / readiness
 
@@ -96,7 +111,8 @@ observability platform — R0 needs reliable basics, executed well.
   documented route); database connectivity/readiness; required
   configuration validation result (OPS-ENV-06); critical backend
   dependency status (Supabase Auth/PostgREST reachability);
-  scheduler/automation health (last successful run per job, AUTO-OBS-01);
+  scheduler/automation health (last successful run per job, AUTO-OBS-01 —
+  derived from SCH-34 `scheduler_job_runs`, `06`);
   migration-version compatibility (deployed app version vs applied
   migration version — mismatch blocks readiness).
 - **OPS-HLT-02 — No sensitive diagnostics publicly.** Health endpoints
@@ -121,6 +137,21 @@ observability platform — R0 needs reliable basics, executed well.
   append-only and compliance-relevant, restore procedures must state how
   audit continuity is preserved (restore to point-in-time including audit
   rows; no selective table restores that orphan audit context).
+
+## Retention operations (reference)
+
+- **OPS-RET-01 — Automation-record retention lands in the existing
+  retention architecture (IMP-050 architecture amendment, 2026-09-11).**
+  Retention/archival for the automation records (SCH-33 `event_outbox`,
+  SCH-34 `scheduler_job_runs`, SCH-35 `scheduler_dead_letters`, `06`;
+  SCH-OQ-07) is governed by the `08` retention architecture — **no
+  retention values are invented here or in `06`**: values remain open per
+  AUD-OQ-01 (engineering placeholders only until policy/legal/domain
+  confirmation), and any purge executes **only** via the privileged,
+  policy-bound, attributable, audited AUD-RET-02 maintenance path —
+  never as an ordinary DELETE permission. Automation records are never
+  hard-deleted in R0; the retention decision itself is tracked by
+  SCH-OQ-07 (`06`), mirroring the SCH-OQ-05 deferral pattern.
 
 ## Migration recovery (operations view of `10`)
 
@@ -277,8 +308,8 @@ measured, never assumed (AUTH-OQ-02 closure evidence for Release 0):
 
 ## Dependencies
 
-- Upstream: `03` (TEN-12…24), `05` (RLS-SVC/SUP/CRV/AAL), `06` (SCH-01
-  settings, SCH-20, SCH-32), `08` (AUD-*), `09` (AUTO-OBS/SCH), `10`
+- Upstream: `03` (TEN-12…24), `05` (RLS-SVC/SUP/CRV/AAL/EVO/SJR/SDL), `06` (SCH-01
+  settings, SCH-20, SCH-32, SCH-33/34/35), `08` (AUD-*), `09` (AUTO-OBS/SCH/RPL), `10`
   (MIG-DS/DEP/RBK/VFY), `11` (executes TEST-OPS-*).
 - Downstream: `12` (R0 plan sequences operational readiness before
   cutover).

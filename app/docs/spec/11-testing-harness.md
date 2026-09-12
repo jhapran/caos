@@ -71,6 +71,7 @@ roles.
   | TEST-RLS-4EY-01 (`05` §14) | TEST-RLS-4EY-01 (four-eyes RPC rejects self-approval) |
   | TEST-RLS-SUP-01 (`05` §14) | TEST-RLS-SUP-01 (break-glass audit trail + expiry) |
   | TEST-RLS-CRV-01…13 (`05` §14) | TEST-RLS-CRV-01…13 (rule versions; 12/13 added by the 2026-09-03 rule-governance closure) |
+  | TEST-RLS-EVO-01 / SJR-01 / SDL-01 (`05` §12/§14, IMP-050 architecture amendment 2026-09-11) | Grant closure: `anon`/`authenticated` have no read/write/execute on the SCH-33/34/35 automation records or their scheduler/job functions; scheduler-path cross-firm isolation/attribution is TEST-AUTO-08 (never RLS-based, AUTO-SCH-03) |
   | TEST-RLS-RVW-* (`06` SCH-17, `05` RLS-RVW-01) | TEST-RLS-RVW-01…16 defined below (IMP-041 contract closure 2026-09-05) |
   | TEST-AUD-01…12 (`08` §20) | Each ID defined by its `08` enumeration and binding here: TEST-AUD-01, TEST-AUD-02, TEST-AUD-03, TEST-AUD-04, TEST-AUD-05, TEST-AUD-06, TEST-AUD-07, TEST-AUD-08, TEST-AUD-09, TEST-AUD-10, TEST-AUD-11, TEST-AUD-12 |
   | TEST-AUTO-01…10 (`09`) | Each ID defined below (TEST-AUTO-01…TEST-AUTO-10), extended by TEST-AUTO-11/12 here |
@@ -376,7 +377,8 @@ layers); **TEST-AUTO-02** trigger points (activation, closure, signal);
 + audit-logged auto-resolution; **TEST-AUTO-05** consumer idempotency;
 **TEST-AUTO-06** retry/dead-letter; **TEST-AUTO-07** non-human actor model
 on automation writes; **TEST-AUTO-08** scheduler mechanism checks
-(AUTO-SCH-02); **TEST-AUTO-09** historical stability + provenance +
+(AUTO-SCH-02 — recorded PASS 2026-09-11 for availability/execution
+context; the mechanism checks execute during IMP-050); **TEST-AUTO-09** historical stability + provenance +
 activation gate; **TEST-AUTO-10** concurrent-generator race (one
 instance, one event). Extensions:
 - **TEST-AUTO-11:** domain events vs scheduler signals are separated —
@@ -385,8 +387,17 @@ instance, one event). Extensions:
 - **TEST-AUTO-12:** correlation propagation — a scheduler run's
   correlation id reaches every event and audit row it causes
   (AUTO-AUD-02).
-- AUTO-OQ-01/02 remain provisional until the corresponding validations
-  pass and are recorded.
+- AUTO-OQ-01/02/03 are RESOLVED (human ruling 2026-09-11, recorded in
+  `09`/`06`); no provisional wording remains for them.
+- **Scheduler-path isolation must be tested directly:** because the cron
+  execution identity carries BYPASSRLS (AUTO-SCH-03 — FORCE RLS did not
+  constrain the cron-fired path in the local probe), RLS-based tests are
+  NOT evidence of scheduler isolation. TEST-AUTO-08's mechanism checks
+  therefore include direct cross-firm isolation assertions against the
+  scheduler/job-function path itself (explicit-tenancy enforcement,
+  grant closure for anon/authenticated), executed under the cron
+  execution context — no new TEST IDs are allocated for this; it is part
+  of the existing TEST-AUTO-08 obligation.
 
 ## Migration tests (TEST-MIG-*)
 
@@ -629,7 +640,11 @@ claim complete production coverage for Auth, RLS, audit, or E2E.
 ## Assumptions
 
 - TEST-A-01: The Supabase CLI local stack supports the full schema,
-  pg_cron (AUTO-SCH-02), and header-GUC behaviour needed by the spikes;
+  pg_cron (AUTO-SCH-02 — VALIDATED PASS 2026-09-11: local
+  execution-context probe PASS; hosted availability PASS via authorized
+  human read-only Studio queries, default_version 1.6.4, not installed —
+  hosted `CREATE EXTENSION` remains a future explicit human gate), and
+  header-GUC behaviour needed by the spikes;
   gaps are recorded, not worked around silently (MIG-A-01).
 - TEST-A-02: Playwright runs against the local stack without external
   services (mail capture for OTP/magic links is local, e.g. Inbucket —

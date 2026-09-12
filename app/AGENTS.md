@@ -273,7 +273,7 @@ alerts" with no badge, a failed read renders no badge — never a
 fabricated zero). The existing `/alerts` page stays behind ModuleGate
 (D1 ruling — NOT live-wired). Alert
 generation/evaluation/dedupe/auto-resolution remain deferred to IMP-051;
-event publication (`alert.raised`/`alert.resolved`) to IMP-050
+event publication (`alert.created`/`alert.resolved`) to IMP-050
 (AUTO-OQ-02). Coverage: TEST-SCH-26…29, TEST-RLS-ALR-*/ARL-*,
 TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
@@ -281,13 +281,28 @@ Release-0 state through IMP-042 (CLOSED 2026-09-07): 19 / 27 formal R0
 packages complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030,
 IMP-031, IMP-040, IMP-041, IMP-042; 70.37%); migrations run through
 `20260908000000_alerts.sql` (hosted ledger 10/10); 21 application public
-tables (RLS enabled on all 21, FORCE RLS on the 18 tenant-owned content
-tables, 51 policies); Harness Gate green (22/22 phases). Next package:
+tables — CURRENT deployed (RLS enabled on all 21, FORCE RLS on the 18
+tenant-owned content tables, 51 policies); TARGET 24 after the IMP-050
+schema migration (SCH-33/34/35 are proposed contract additions of the
+IMP-050 amendment — APPROVED 2026-09-12 by human diff review, no migration yet); Harness Gate green (22/22 phases). Next package:
 IMP-050 — Recurrence generation & scheduler signals (NOT STARTED —
 begins only with a fresh contract extraction and an explicit
 implementation instruction; entry criteria per `12-release-0-plan.md`:
 R0-D green — satisfied — AND AUTO-OQ-01/02 technical validation recorded
-in `09` — NOT yet resolved).
+in `09` — **SATISFIED 2026-09-11: AUTO-OQ-01/02/03 RESOLVED by human
+ruling (pg_cron + hardened in-database scheduler/job functions;
+transactional outbox; 90-calendar-day configurable look-ahead,
+Asia/Kolkata business-date basis, UTC-persisted timestamps); AUTO-SCH-02
+PASS (LOCAL/HOSTED/OVERALL — evidence `docs/harness/auto-sch-02-probe.md`
++ `docs/harness/auto-sch-02-results.json`); automation record contracts
+SCH-33/34/35 added to `06`. The architecture/spec amendment is APPROVED
+(human diff review PASS 2026-09-12);
+implementation remains NOT authorized; hosted pg_cron is available
+(default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` is a
+future explicit human state-change gate. Binding constraint AUTO-SCH-03:
+the cron identity has BYPASSRLS — scheduler tenancy is enforced
+explicitly, never via RLS, and anon/authenticated get no scheduler
+capability**).
 
 Authoritative sources:
 

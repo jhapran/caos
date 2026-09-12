@@ -1,7 +1,7 @@
 # 09 — Automation & Events (Design)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. Open/provisional items remain as recorded: AUTO-OQ-01…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.)
+- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.) **IMP-050 architecture amendment (human-ruled 2026-09-11): AUTO-OQ-01 RESOLVED — pg_cron is the final R0 scheduler, invoking hardened in-database scheduler/job functions (pg_net not required for R0; HTTP/Edge-function scheduling deferred to R1+); AUTO-OQ-02 RESOLVED — transactional outbox is the final event-publication mechanism (direct downstream invocation rejected for R0); AUTO-OQ-03 RESOLVED — 90-calendar-day configurable default look-ahead on an Asia/Kolkata business-date basis. AUTO-SCH-02 recorded PASS (LOCAL/HOSTED/OVERALL). Open/provisional items remaining: AUTO-OQ-04 only.**
 
 ## Purpose
 
@@ -9,9 +9,10 @@ Defines the Release 0 event and automation architecture: the domain-event
 catalogue (completed business facts), the **separate** scheduler /
 internal-signal catalogue (job triggers — not business events), how events
 are produced and consumed, recurrence generation for compliance instances,
-deadline materialization, alert evaluation, and the (provisional)
-scheduled-execution mechanism. Design only — no jobs, triggers, or
-functions are implemented in Phase 2.
+deadline materialization, alert evaluation, and the scheduled-execution
+mechanism (final R0 mechanism recorded below — AUTO-OQ-01 resolved
+2026-09-11). Design only — no jobs, triggers, or functions are implemented
+in Phase 2.
 
 ## Scope
 
@@ -26,7 +27,8 @@ functions are implemented in Phase 2.
 - Reminder-ready events (recording only; sending is Release 1).
 - Interaction with the audit model (`08`) and correlation identifiers.
 - Observability requirements (handed to `13`).
-- Scheduling-mechanism comparison and provisional recommendation.
+- Scheduling-mechanism comparison and the final R0 mechanism decision
+  (AUTO-OQ-01 resolved 2026-09-11).
 - Replay considerations.
 
 ## Non-goals
@@ -35,8 +37,10 @@ functions are implemented in Phase 2.
 - No reminder *sending* (Release 1, DEC-T exclusion) — R0 records
   reminder-ready facts only.
 - No AI pipelines (DEC-C, `20-ai-services.md`).
-- No final selection of the scheduling mechanism where validation is still
-  required (AUTO-OQ-01, DEC-OQ-02).
+- No scheduling of HTTP/Edge-function invocation in R0 — the final R0
+  mechanism is pg_cron invoking hardened in-database scheduler/job
+  functions (AUTO-OQ-01 resolved 2026-09-11); HTTP/Edge scheduling is
+  deferred to R1+.
 - No RLS/policy definitions (`05`) and no physical schema (`06`); this spec
   references both by ID.
 
@@ -104,26 +108,28 @@ Exactly 14 domain events — completed, meaningful business facts:
   trigger habit.
 - **`compliance_instance.created` publication note (IMP-031 partition):**
   audit capture of manual creation (Layer A) is NOT domain-event
-  publication; the publication mechanism is AUTO-OQ-02 (open, resolved at
-  IMP-050). IMP-031 manual creation does not publish this event to any
-  bus/outbox/webhook. Once IMP-050 establishes the approved mechanism,
-  manual creation may be wired to publish under the event contract.
+  publication; the publication mechanism is the transactional outbox
+  (AUTO-OQ-02 RESOLVED 2026-09-11 — SCH-33, wired at IMP-050). IMP-031
+  manual creation does not publish this event to any
+  bus/outbox/webhook. With the approved mechanism recorded,
+  manual creation is wired to publish under the event contract at IMP-050.
 - **`task.created` / `task.assigned` / `task.completed` publication note
   (IMP-040 partition, 2026-09-04):** these remain approved event-contract
   names in the catalogue above, but IMP-040 owns mutation + audit only —
   it does NOT publish them. Audit capture (Layer A/B) is NOT domain-event
   publication; no outbox, event bus, webhook publisher, queue, or event
   trigger may be created for task events in IMP-040. Publication is wired
-  only once the approved AUTO-OQ-02 mechanism exists (IMP-050), under this
-  event contract.
+  at IMP-050 under this event contract, through the resolved transactional
+  outbox mechanism (AUTO-OQ-02 RESOLVED 2026-09-11 — SCH-33).
 - **`review.submitted` / `review.completed` publication note (IMP-041
   partition, contract closure 2026-09-05):** these remain approved
   event-contract names in the catalogue above, but IMP-041 owns mutation +
   audit only — it does NOT publish them. Audit capture (Layer B, `08` §7c)
   is NOT domain-event publication; no outbox, event bus, webhook publisher,
   queue, background delivery worker, or event trigger may be created for
-  review events in IMP-041. Publication is wired only once the approved
-  AUTO-OQ-02 mechanism exists (IMP-050), under this event contract.
+  review events in IMP-041. Publication is wired at IMP-050 under this
+  event contract, through the resolved transactional outbox mechanism
+  (AUTO-OQ-02 RESOLVED 2026-09-11 — SCH-33).
 
 ## Scheduler / internal-signal catalogue (Release 0)
 
@@ -149,15 +155,17 @@ operationally (`13`), never consumed as business facts:
 - **AUTO-FLOW-02 — Asynchronous where latency or scheduling demands.**
   Recurrence generation, alert evaluation, and login-history mirroring
   (AUD-LOGIN-01) run asynchronously on scheduler signals.
-- **AUTO-FLOW-03 — Reliable publication (requirement; implementation
-  PROVISIONAL).** Batch 4 approves the *need* for: reliable event
+- **AUTO-FLOW-03 — Reliable publication (requirement and mechanism both
+  FINAL).** Batch 4 approved the *need* for: reliable event
   publication (a committed domain event is never lost if the process
   crashes after the business write), idempotent consumers, retry tracking,
-  and correlation ids. It does **not** yet approve a specific mechanism.
-  The provisional design is a lightweight transactional outbox (a table
-  written in the same transaction as the mutation, drained by the async
-  runner); direct invocation is the alternative. **AUTO-OQ-02 remains open
-  until harness-gate technical validation.**
+  and correlation ids. **The mechanism is RESOLVED (AUTO-OQ-02, human
+  ruling 2026-09-11): the transactional outbox.** A publication record
+  (schema contract SCH-33, `06`) is written **in the same transaction** as
+  the domain mutation and drained by the async runner with retry/backoff
+  and dead-lettering (AUTO-RET-01; SCH-34/SCH-35). **Direct downstream
+  invocation is REJECTED for R0** — it cannot satisfy the no-loss
+  requirement across a process crash between mutation and invocation.
 - **AUTO-FLOW-04 — Consumer discipline.** Consumers are idempotent
   (AUTO-IDM-01), record their progress, and never mutate outside their
   owning domain (the alert job writes `alerts`, not `tasks`).
@@ -166,7 +174,28 @@ operationally (`13`), never consumed as business facts:
 
 - **AUTO-IDM-01:** Every consumer tolerates duplicate delivery: effect keys
   (e.g. recurrence's unique instance key, SCH-12; alert dedupe key,
-  AUTO-ALR-02) make re-processing a no-op.
+  AUTO-ALR-02) make re-processing a no-op. **Effect keys — not
+  `event_id` — are the consumer idempotency identity:** `event_id` is
+  publication/event-record identity (SCH-33); a manual requeue publishes
+  the SAME domain fact under a NEW `event_id` (AUTO-RPL-01/02), and
+  consumers must still not duplicate domain effects.
+- **AUTO-FLOW-05 — R0 `delivered` semantics (SCH-33 `status`).** A
+  publication reaches `delivered` when **all consumers actually
+  registered for that event publication in R0 have completed**, each
+  effect applied idempotently by domain effect key (AUTO-IDM-01). The
+  registered-consumer set derives strictly from approved consumer
+  contracts: synchronous audit capture (Layer A/B at mutation time,
+  `08`), pull-based scheduled evaluation (AUTO-ALR-01 — IMP-051 reads
+  live data on a schedule; it does not consume publications), and derived
+  read models (deadline board AUTO-DLN-01; My Work; dashboard
+  invalidation via the approved API-RT-07 polling fallback) are **not**
+  outbox consumers. **In R0 no catalogue event registers an outbox
+  consumer**, so the drain runner completes the (empty) registered set
+  and marks the publication `delivered`: `delivered` is a drain-
+  completion record for the publication, **never a claim of external/HTTP
+  delivery** (pg_net and HTTP consumers are deferred, AUTO-SCH-01).
+  Retry/backoff (AUTO-RET-01) and dead-lettering (SCH-35) govern the
+  drain step itself and bind any consumer a future amendment registers.
 - **AUTO-RET-01:** Failed async work retries with exponential backoff and a
   bounded attempt count; exhausted retries land in a dead-letter record
   surfaced in operations monitoring (`13`) — nothing disappears silently
@@ -204,8 +233,36 @@ compliance_instances (provenance: rule_version_id, generation_source,
   materialized instances is valid in the interim; no trigger/RPC-enqueued
   generation may be invented before IMP-050.
 - **AUTO-REC-02 — Look-ahead window.** The materialization lead time is
-  configuration (firm settings / due_rule metadata), not hard-coded; the
-  default value is set during implementation (AUTO-OQ-03).
+  configuration, not hard-coded; **the R0 configuration carrier is
+  `firms.settings.recurrence_lookahead_days`** (integer calendar days,
+  SCH-01 `settings` jsonb, `06`) — read **server-side only** by the
+  recurrence generator, defaulting to **90 when the key is absent or
+  null**. No separate configuration table exists for this value.
+  **Validation (2026-09-12):** a present value MUST be a positive integer
+  (calendar days); an invalid present value (non-integer, zero, negative,
+  or otherwise unparsable) is a **configuration error** — it MUST NOT
+  silently fall back to 90, and recurrence evaluation for that firm MUST
+  fail observably (recorded job failure, AUTO-OBS-01/SCH-34) rather than
+  generate under an unintended horizon.
+  **Default value RESOLVED (AUTO-OQ-03, human ruling 2026-09-11): 90
+  calendar days.** The 90-day value is the R0 default configuration value
+  only — it must not be scattered as hard-coded literals through business
+  logic, and the configuration architecture must permit future
+  firm-specific values **without changing recurrence identity or
+  generated-instance semantics** (the SCH-12 uniqueness key and provenance
+  contract are configuration-independent).
+- **AUTO-REC-10 — Business-date basis (AUTO-OQ-03, human ruling
+  2026-09-11).** The generator derives its **business date in
+  Asia/Kolkata**; the recurrence generation horizon is **inclusive through
+  business_date + 90 calendar days** (the configured look-ahead —
+  `firms.settings.recurrence_lookahead_days`, default 90 when absent/null,
+  AUTO-REC-02). All
+  date-based recurrence calculations (period derivation, horizon
+  comparison, due-rule evaluation inputs) use the Asia/Kolkata business
+  date. **Persisted timestamps remain UTC** (`timestamptz` per `06`
+  conventions); **statutory due dates must never be reinterpreted through
+  UTC date boundaries** — a due date is a business date in the Asia/Kolkata
+  calendar, not a UTC instant truncation.
 - **AUTO-REC-03 — Duplicate protection is multi-layered.** Four layers,
   each independently sufficient:
   1. **Deterministic recurrence identity:** the period calculation
@@ -332,45 +389,138 @@ compliance_instances (provenance: rule_version_id, generation_source,
 ## Observability (handed to `13`)
 
 - **AUTO-OBS-01:** Every scheduled run records: job identity, started/
-  finished, rows affected, failures, dead-letters. The job-run log and
-  alerting thresholds are operations concerns specified in `13`.
+  finished, rows affected, failures, dead-letters. The records are the
+  scheduler job-run and dead-letter contracts (SCH-34/SCH-35, `06`); the
+  alerting thresholds and operational surfacing are operations concerns
+  specified in `13`.
 
 ## Replay considerations
 
-- **AUTO-RPL-01:** Domain events are facts with stable ids; consumers are
-  idempotent, so replays are safe. R0 provides no replay tooling; if a
-  consumer bug requires reprocessing, operators re-enqueue by
-  `correlation_id`/time range from the publication record — a manual,
-  audited operation. Formal replay tooling is post-R0. Scheduler signals
-  are never "replayed" as events; re-running a job is simply firing the
-  signal again (idempotent consumers make this safe).
+- **AUTO-RPL-01:** Domain events are facts; consumers are idempotent, so
+  replays are safe. R0 provides no replay tooling; if a consumer bug
+  requires reprocessing, recovery is a manual, audited operation.
+  **Dead-letter gating (R0 ruling, 2026-09-12):** manual recovery/requeue
+  applies ONLY after a publication has reached dead-letter state (SCH-35
+  record; SCH-33 `status='dead_lettered'`). Operators may identify
+  dead-lettered candidates by `correlation_id` and/or time range across
+  the publication record (the transactional outbox, SCH-33) and the
+  dead-letter record (SCH-35, `06`), but the recovery operation itself
+  acts on the SCH-35 dead-letter record and its source SCH-33 publication
+  (AUTO-RPL-02). `pending` and ordinary `failed` publications remain
+  under automatic retry (AUTO-RET-01) and are NOT manually requeued in
+  R0. **Requeue identity semantics
+  (2026-09-11):** a manual requeue creates a **NEW SCH-33 publication row
+  with a NEW `event_id`** (`event_id` is publication/event-record
+  identity — NOT the consumer idempotency identity, which is the domain
+  effect key per AUTO-IDM-01), `requeue_of` pointing at the original
+  publication's `event_id`, the original envelope facts unchanged, and
+  the **original `correlation_id` preserved** (AUTO-RET-02). A requeue
+  does **not** represent a new domain fact and must **not** duplicate
+  domain effects — effect-key idempotency (AUTO-IDM-01) is what makes
+  re-delivery a no-op. Formal replay tooling is post-R0. Scheduler
+  signals are never "replayed" as events; re-running a job is simply
+  firing the signal again (idempotent consumers make this safe).
+- **AUTO-RPL-02 — Manual recovery path (hardened, server/operator-only;
+  2026-09-11; dead-letter-gated per AUTO-RPL-01, 2026-09-12).**
+  Re-enqueue of a dead-lettered publication
+  executes ONLY through a hardened privileged function — contract-level
+  name `requeue_dead_letter(p_dead_letter_id uuid, p_reason text)`,
+  consistent with the existing Layer-B definer-command naming
+  conventions; the final signature is an implementation detail within
+  this contract. The function acts on the SCH-35 dead-letter record and
+  its source SCH-33 publication, and MUST refuse requeue of any
+  publication that has not reached dead-letter state — `pending`/`failed`
+  publications remain under automatic retry (AUTO-RPL-01). Requirements: SECURITY DEFINER with a pinned empty
+  `search_path` and fully qualified object references per the existing
+  CAOS privileged-function hardening conventions; **no EXECUTE for
+  `anon`/`authenticated` and no browser access** — EXECUTE is confined to
+  the server/operator context (service role, RLS-SVC-01); a **recovery
+  reason is required and recorded**; the **source publication/dead-letter
+  identity is recorded** (`requeue_of` on the new SCH-33 row; the
+  `open → requeued` transition on the SCH-35 row); the **original
+  correlation chain is preserved** (AUTO-RET-02 — the new publication
+  carries the original `correlation_id`); and the recovery operation
+  itself is **audited** using the EXISTING audit actor taxonomy —
+  `actor_type='service'` with a `service_name` for the operator-run
+  server path (AUD-ACT-03, RLS-SVC-02, AUD-SVC-01); **no new actor type
+  is introduced**.
 
-## Scheduling mechanism — comparison and provisional recommendation
+## Scheduling mechanism — comparison and final R0 decision
 
 DEC-N approved a **hybrid pg_cron + Edge Functions direction**; the exact
-invocation mechanism remains provisional pending harness-gate validation
+invocation mechanism was provisional pending harness-gate validation
 (DEC-OQ-02: is `pg_net` acceptable, or should a queue-table poller be
-evaluated?). Options compared:
+evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
+2026-09-11** (below). Options compared:
 
 | Option | Strengths | Weaknesses |
 |---|---|---|
 | A. pg_cron only | In-database, transactional with data, simple for DB-native jobs (`sched.recurrence.evaluate`, `sched.alerts.evaluate`) | No HTTP semantics; invoking Edge Functions needs `pg_net` (DEC-OQ-02); limited retry/dead-letter ergonomics |
 | B. Database queue + worker | Full retry/dead-letter control; testable locally | A worker process to host and monitor; more moving parts for R0 scale |
 | C. Supabase Edge Function schedules only | Managed runtime; good for external calls | Scheduling granularity/reliability guarantees must be verified; DB-native jobs become awkward |
-| D. Hybrid (provisional) | pg_cron for DB-native evaluation/generation signals; Edge Functions where an HTTP/runtime boundary is genuinely needed | Two mechanisms to operate; boundary must be documented |
+| D. Hybrid (historical provisional — superseded by the final R0 decision below) | pg_cron for DB-native evaluation/generation signals; Edge Functions where an HTTP/runtime boundary is genuinely needed | Two mechanisms to operate; boundary must be documented |
 
-- **AUTO-SCH-01 (provisional recommendation):** Option D — pg_cron fires
-  the DB-native scheduler signals (recurrence, alert evaluation,
-  login-history mirroring) against the reliable-publication mechanism
-  (AUTO-FLOW-03); Edge Functions are introduced only for work needing an
-  HTTP/runtime boundary (Release 1 reminder sending is the first
-  candidate). **Not finalized:** mechanism details (including `pg_net`
-  acceptability per DEC-OQ-02) are validated at the harness gate and
-  recorded here before implementation.
-- **AUTO-SCH-02 — Harness-gate validation needs:** pg_cron availability on
-  the target projects; `pg_net` availability/acceptability (DEC-OQ-02);
-  schedule granularity; observable failure behaviour; local-stack parity
-  (jobs must run identically under the Supabase CLI local stack, TEN-12).
+- **AUTO-SCH-01 (FINAL R0 mechanism — AUTO-OQ-01 / DEC-OQ-02 RESOLVED,
+  human ruling 2026-09-11):** **pg_cron is the R0 scheduler.** pg_cron
+  fires the DB-native scheduler signals (recurrence, alert evaluation,
+  login-history mirroring) by invoking **hardened in-database
+  scheduler/job functions**, which write to and drain the transactional
+  outbox (AUTO-FLOW-03; SCH-33) with job-run and dead-letter records
+  (SCH-34/SCH-35). **pg_net is NOT required for R0** — no scheduled job
+  invokes HTTP in R0; **HTTP/Edge-function scheduling is deferred to R1+**
+  (Release 1 reminder sending remains the first candidate). The DEC-N
+  hybrid direction is thereby narrowed for R0 to Option A's scope; Edge
+  Functions enter only when an HTTP/runtime boundary genuinely exists.
+- **AUTO-SCH-02 — Validation record: PASS (2026-09-11).** Evidence
+  artifacts with full provenance (OBSERVED / HUMAN-PROVIDED /
+  INDEPENDENTLY RE-VERIFIED / NOT RETAINED):
+  `docs/harness/auto-sch-02-probe.md` +
+  `docs/harness/auto-sch-02-results.json`.
+  - **LOCAL: PASS.** Targeted local execution-context probe on the
+    Supabase CLI stack: pg_cron 1.6.4 available/preloaded; extension
+    enabled successfully; seconds-based schedule accepted; synthetic
+    success and deliberate failure jobs fired with run history observed;
+    named reschedule/upsert behaviour observed; a pg_cron job fired a
+    SECURITY INVOKER probe function; full teardown verified (job
+    unscheduled, probe objects dropped, pg_cron dropped, zero residue —
+    relations, functions, clean Git tree).
+  - **HOSTED: PASS (availability only — scoped to the actual staging
+    project).** Authorized human read-only Supabase Studio catalog
+    queries on the hosted staging project (`pyrniumcjcvagjygheyu`):
+    `pg_available_extensions` contains pg_cron with
+    `default_version = 1.6.4`, `installed_version = NULL` ("Job scheduler
+    for PostgreSQL"); `pg_available_extension_versions` offers versions
+    through 1.6.4 with none installed;
+    `current_setting('cron.database_name', true) = 'postgres'` — pg_cron
+    targets the project database. No hosted state was changed. **This
+    evidence is scoped to the actual staging project ONLY — production
+    pg_cron availability is NOT claimed and remains a pre-cutover
+    verification.**
+    **Hosted `CREATE EXTENSION` remains a future explicit human
+    state-change gate — availability is proven, installation is NOT
+    authorized by this record.**
+  - **OVERALL: PASS.** pg_cron availability, local execution behaviour,
+    and hosted availability are validated; schedule granularity and
+    failure behaviour are exercised through the TEST-AUTO-08 mechanism
+    checks during IMP-050 implementation (local stack parity, TEN-12).
+- **AUTO-SCH-03 — Scheduler execution-context security constraint
+  (binding; established by the LOCAL probe evidence, 2026-09-11).** The
+  cron execution identity was observed as `postgres` with
+  `rolsuper = false` and **`rolbypassrls = true`**: FORCE ROW LEVEL
+  SECURITY did not constrain the cron-fired SECURITY INVOKER path — the
+  bypass is structural (BYPASSRLS), not SECURITY DEFINER. Therefore:
+  (a) **scheduler isolation MUST NOT rely on RLS** — RLS is evidence of
+      nothing in the scheduler context;
+  (b) scheduler/job functions must **enforce tenant/firm boundaries
+      explicitly** in function logic (explicit per-firm iteration and
+      firm-scoped writes), and cross-firm references must remain
+      structurally constrained (composite same-firm FKs, SCH-FK-01…03);
+  (c) **`anon`/`authenticated` must have no scheduler execution
+      capability** — no EXECUTE on scheduler/job functions, no grants on
+      the SCH-33/34/35 records (browser grant posture per `06`);
+  (d) scheduler writes must carry **system/service audit context**
+      (`actor_type='system'`, `service_name`, AUD-ACT-02/RLS-SVC-02) and a
+      per-run **correlation identity** (AUTO-AUD-02, AUTO-ENV-02).
 
 ## Verification (forward references to `11`)
 
@@ -389,8 +539,12 @@ evaluated?). Options compared:
   records and operational signals (AUTO-RET-01).
 - **TEST-AUTO-07:** Automation audit rows carry the correct non-human
   actor model (AUTO-AUD-01, AUD-ACT-05).
-- **TEST-AUTO-08:** Scheduler mechanism checks per AUTO-SCH-02 (executed
-  with the RLS-MECH-02 spike at the harness gate).
+- **TEST-AUTO-08:** Scheduler mechanism checks per AUTO-SCH-02/03 —
+  availability/execution-context validation is recorded PASS
+  (2026-09-11); the remaining mechanism checks execute during IMP-050,
+  including direct cross-firm isolation assertions against the scheduler
+  path under the BYPASSRLS cron context (RLS-based tests are not
+  isolation evidence there — see `11`).
 - **TEST-AUTO-09:** Historical stability — activating a new rule version
   does not change already-generated instances; each generated instance
   retains `rule_version_id`, `generation_source`, `generated_at`,
@@ -403,8 +557,16 @@ evaluated?). Options compared:
 
 ## Assumptions
 
-- AUTO-A-01: pg_cron (and possibly `pg_net`) are available on the target
-  Supabase projects and the local CLI stack — validated per AUTO-SCH-02.
+- AUTO-A-01: pg_cron is available on the local CLI stack and on the
+  hosted **staging** project — **VALIDATED (AUTO-SCH-02
+  PASS, 2026-09-11: local execution-context probe PASS; hosted staging
+  availability PASS via authorized human read-only Studio queries —
+  pg_cron default_version 1.6.4, not installed, `cron.database_name =
+  'postgres'`; hosted `CREATE EXTENSION` remains a future explicit human
+  gate).** The hosted validation is scoped to the actual staging project
+  only; **production availability is NOT claimed and remains a
+  pre-cutover verification.** pg_net is not required for R0 (AUTO-OQ-01
+  resolution), so its availability is no longer an R0 assumption.
 - AUTO-A-02: R0 automation volume (one firm-scale deployment) fits simple
   scheduled evaluation; a queue/worker system is not justified yet
   (option B deferred without prejudice).
@@ -423,9 +585,9 @@ evaluated?). Options compared:
 
 | ID | Question | Owner | Status |
 |---|---|---|---|
-| AUTO-OQ-01 (= DEC-OQ-02) | Final scheduled-job mechanism: `pg_net` from pg_cron acceptable, or queue-table poller? | harness gate | **Open — provisional hybrid (AUTO-SCH-01); must not be silently finalized** |
-| AUTO-OQ-02 | Event-publication implementation: transactional outbox vs direct invocation (the *need* for reliability/idempotency/retry/correlation is approved, AUTO-FLOW-03; the mechanism is not) | harness gate | **Open — provisional outbox** |
-| AUTO-OQ-03 | Default recurrence look-ahead window value (AUTO-REC-02) | implementation + product | Open — configurable; default TBD |
+| AUTO-OQ-01 (= DEC-OQ-02) | Final scheduled-job mechanism: `pg_net` from pg_cron acceptable, or queue-table poller? | requester — human ruling 2026-09-11 (validation evidence AUTO-SCH-02) | **RESOLVED 2026-09-11 (human ruling):** pg_cron invoking hardened in-database scheduler/job functions is the final R0 mechanism (AUTO-SCH-01); pg_net not required for R0; HTTP/Edge scheduling deferred to R1+; validated per AUTO-SCH-02 (LOCAL/HOSTED/OVERALL PASS) |
+| AUTO-OQ-02 | Event-publication implementation: transactional outbox vs direct invocation (the *need* for reliability/idempotency/retry/correlation is approved, AUTO-FLOW-03; the mechanism is not) | requester — human ruling 2026-09-11 | **RESOLVED 2026-09-11 (human ruling):** transactional outbox — publication record (SCH-33, `06`) committed in the same transaction as the domain mutation; direct downstream invocation rejected for R0 |
+| AUTO-OQ-03 | Default recurrence look-ahead window value (AUTO-REC-02) | implementation + product | **RESOLVED 2026-09-11 (human ruling):** 90 calendar days as the R0 configurable default (not hard-coded; firm-specific future configuration must not change recurrence identity/instance semantics); business-date basis Asia/Kolkata with UTC-persisted timestamps (AUTO-REC-02/AUTO-REC-10) |
 | AUTO-OQ-04 | Which R0 alert rules ship enabled by default and with what thresholds | product (PRD §16) + `10` seeding | Open |
 | AUTO-OQ-05 (= AUTO-XREF-01) | Schema amendment for rule versioning + generation provenance | — | **Resolved (Batch 4 closure amendment):** specified in `06` — SCH-32 `compliance_rule_versions` (immutable, effective-dated, domain-approval gate) + SCH-12 provenance fields (`rule_version_id`, `generation_source`, `generated_at`, `calculated_due_date`) |
 
@@ -437,7 +599,9 @@ evaluated?). Options compared:
   scheduler tick is classified as a domain event (AUTO-PRIN-02/05).
 - AUTO-ACC-02: Envelope, idempotency, retry, dead-letter, and failure
   rules are specified (AUTO-ENV/IDM/RET); the reliable-publication need is
-  approved while its implementation remains provisional (AUTO-FLOW-03).
+  approved and its mechanism is resolved — transactional outbox
+  (AUTO-FLOW-03, AUTO-OQ-02 RESOLVED 2026-09-11; schema contract SCH-33
+  in `06`).
 - AUTO-ACC-03: The recurrence model specifies trigger points, the
   four-layer duplicate protection with race semantics (AUTO-REC-03/08),
   scope discipline per DM-27, due-date computation, system-actor auditing,
@@ -446,11 +610,21 @@ evaluated?). Options compared:
 - AUTO-ACC-04: Deadline board is defined as a derived read model; alert
   evaluation implements the DM-OQ-05 hybrid with audit-logged
   auto-resolution.
-- AUTO-ACC-05: Scheduling options are compared, a provisional
-  recommendation recorded, and validation needs assigned to the harness
-  gate — with no silent finalization (AUTO-OQ-01).
+- AUTO-ACC-05: Scheduling options are compared, the final R0 mechanism is
+  recorded with its validation evidence (AUTO-SCH-01 final — pg_cron +
+  hardened in-database functions; AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS,
+  2026-09-11), and the scheduler execution-context security constraint is
+  normative (AUTO-SCH-03 — BYPASSRLS cron identity; explicit tenant
+  enforcement; no scheduler capability for anon/authenticated). Hosted
+  pg_cron enablement remains a future explicit human gate.
 - AUTO-ACC-06: Reminder handling is recording-only in R0; no sending is
   specified.
+- AUTO-ACC-07: The recurrence look-ahead default and business-date basis
+  are resolved and recorded (AUTO-OQ-03, 2026-09-11): 90-calendar-day
+  configurable default (carrier `firms.settings.recurrence_lookahead_days`,
+  SCH-01); Asia/Kolkata business date; UTC-persisted
+  timestamps; statutory due dates never reinterpreted through UTC date
+  boundaries (AUTO-REC-02/AUTO-REC-10).
 
 ## Consequence of Change
 
@@ -461,5 +635,6 @@ duplicate-protection key is anchored in SCH-12 (and deliberately excludes
 AUTO-REC-03/08. Provenance immutability (SCH-32/SCH-12 update guards) is
 load-bearing for AUTO-REC-07 and TEST-AUTO-09; weakening it is a
 compliance-posture change requiring requester sign-off. Changing the
-scheduling mechanism after the harness gate requires updating this spec,
+scheduling mechanism after the recorded final decision (AUTO-SCH-01,
+2026-09-11) requires updating this spec,
 `13` (operations), and the harness tests.

@@ -1,0 +1,83 @@
+{
+  "artifact": "AUTO-SCH-02 validation evidence (IMP-050 architecture gate)",
+  "recorded": "2026-09-11",
+  "governing_spec": "docs/spec/09-automation-events.md (AUTO-SCH-01/02/03, AUTO-OQ-01)",
+  "report": "docs/harness/auto-sch-02-probe.md",
+  "note": "Evidence preservation artifact. AUTO-SCH-02 was recorded PASS on this evidence during the 2026-09-11 architecture-validation session; this file records provenance, not a re-run. No secrets. No hosted state was changed.",
+  "provenance_legend": {
+    "OBSERVED": "directly observed during the 2026-09-11 local probe session",
+    "HUMAN_PROVIDED": "authorized human read-only hosted Studio catalog query results; not re-executed by the probe",
+    "INDEPENDENTLY_RE_VERIFIED": "re-checked in a separate pass after the fact",
+    "NOT_RETAINED": "read interactively but not persisted; excluded from the evidence base; no values claimed"
+  },
+  "local_mechanism_evidence": {
+    "provenance": "OBSERVED",
+    "environment": "Supabase CLI local stack (development-only, loopback)",
+    "probe_objects": "temporary imp050_* objects only; no migrations; no R0 schema",
+    "findings": [
+      { "check": "pg_cron available/preloaded", "observed": "version 1.6.4", "pass": true },
+      { "check": "extension enablement", "observed": "CREATE EXTENSION pg_cron succeeded", "pass": true },
+      { "check": "seconds-based schedule accepted", "observed": "accepted", "pass": true },
+      { "check": "synthetic success job", "observed": "fired; successful run history observed", "pass": true },
+      { "check": "deliberate failing job", "observed": "fired; failure history observed", "pass": true },
+      { "check": "named reschedule/upsert", "observed": "scheduling under an existing job name updated the schedule in place", "pass": true },
+      { "check": "unschedule/teardown", "observed": "clean unschedule; no residue", "pass": true }
+    ]
+  },
+  "local_execution_context_evidence": {
+    "provenance": "OBSERVED",
+    "findings": [
+      { "check": "cron.job username", "observed": "postgres" },
+      { "check": "current_user in cron-fired probe", "observed": "postgres" },
+      { "check": "rolsuper", "observed": false },
+      { "check": "rolbypassrls", "observed": true },
+      { "check": "FORCE RLS, no permitting policy, synthetic row visible from cron-fired path", "observed": 1, "meaning": "FORCE RLS did not constrain the cron-fired path" },
+      { "check": "probe function security mode", "observed": "SECURITY INVOKER", "meaning": "bypass is structural BYPASSRLS, not SECURITY DEFINER" }
+    ],
+    "conclusion": "AUTO-SCH-03: scheduler isolation must never rely on RLS; explicit firm-boundary enforcement in function logic; no anon/authenticated scheduler capability; system/service audit context + per-run correlation identity"
+  },
+  "not_retained": {
+    "provenance": "NOT_RETAINED",
+    "fields": ["session_user", "role GUC", "search_path", "JWT claims", "auth.uid()"],
+    "rule": "no values are claimed for these fields anywhere in the spec set"
+  },
+  "hosted_availability_evidence": {
+    "provenance": "HUMAN_PROVIDED",
+    "source": "authorized human read-only Supabase Studio catalog queries",
+    "project": "pyrniumcjcvagjygheyu (staging)",
+    "scope": "staging project ONLY; production availability not claimed; pre-cutover verification",
+    "hosted_state_changed": false,
+    "findings": [
+      { "check": "pg_available_extensions pg_cron default_version", "observed": "1.6.4" },
+      { "check": "pg_available_extensions pg_cron installed_version", "observed": null },
+      { "check": "pg_available_extensions pg_cron comment", "observed": "Job scheduler for PostgreSQL" },
+      { "check": "pg_available_extension_versions", "observed": "versions available through 1.6.4; none installed" },
+      { "check": "current_setting('cron.database_name', true)", "observed": "postgres" }
+    ],
+    "gate": "hosted CREATE EXTENSION remains a future explicit human state-change gate; installation NOT authorized by this record"
+  },
+  "independently_re_verified": {
+    "provenance": "INDEPENDENTLY_RE_VERIFIED",
+    "performed": false,
+    "note": "no separate re-verification pass performed; teardown checks were observed within the same probe session"
+  },
+  "post_probe_teardown": {
+    "provenance": "OBSERVED",
+    "findings": [
+      { "check": "pg_cron absent again", "pass": true },
+      { "check": "zero imp050_* probe relations/functions remain", "pass": true },
+      { "check": "local database healthy", "pass": true },
+      { "check": "Git tree clean", "pass": true }
+    ]
+  },
+  "result": {
+    "local": "PASS",
+    "hosted": "PASS (availability only, staging project)",
+    "overall": "PASS",
+    "remaining": [
+      "TEST-AUTO-08 mechanism checks (granularity in implementation shape, failure injection, direct scheduler-path cross-firm isolation/attribution under BYPASSRLS) execute during IMP-050",
+      "hosted pg_cron CREATE EXTENSION: future explicit human state-change gate",
+      "production pg_cron availability: pre-cutover verification"
+    ]
+  }
+}
