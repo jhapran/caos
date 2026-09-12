@@ -7,13 +7,15 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human staging acceptance date: 2026-09-07
-- Last CLOSED package: IMP-042 — Alerts & My Work
-- IMP-042 implementation checkpoint: `1f3db3e`
-  (`feat: alerts and my work`)
-- IMP-042 closure checkpoint: `e5937ac`
-  (`docs: close IMP-042`)
-- `origin/staging` contains the accepted IMP-042 closure checkpoint
+- Human package-closure approval date: 2026-09-13
+- Last CLOSED package: IMP-050 — Recurrence generation & scheduler
+  signals
+- IMP-050 implementation checkpoint: `b15b584`
+  (`feat: implement IMP-050 recurrence automation`)
+- IMP-050 closure checkpoint: this commit (`docs: close IMP-050` — the
+  hash is recorded post-commit per the closure-pointer reconcile
+  convention; see the IMP-042 precedent)
+- IMP-050 hosted staging acceptance: PASS (see §4/§6/§6d)
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -21,7 +23,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (19 / 27, 70.37%):
+Completed (20 / 27, 74.07%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -30,83 +32,95 @@ Completed (19 / 27, 70.37%):
 - IMP-040 (Work Management — tasks/dependencies/checklists/comments)
 - IMP-041 (Work Management — review queue)
 - IMP-042 (Work Management — alerts & My Work)
+- IMP-050 (Automation & Deadlines — recurrence generation & scheduler
+  signals; human package-closure approval 2026-09-13)
 
 Remaining formal R0 packages:
 
-- IMP-050, IMP-051 (Automation & Deadlines)
+- IMP-051 (Automation & Deadlines — deadline materialization & alert
+  evaluation)
 - IMP-060, IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-042 — Alerts & My Work — CLOSED
-- Next: IMP-050 — Recurrence generation & scheduler signals — NOT STARTED
-- Next action: the explicit human IMP-050 IMPLEMENTATION AUTHORIZATION
-  (the only remaining state-changing gate before implementation). The
-  IMP-050 architecture/spec amendment is APPROVED — human diff review
-  PASSED 2026-09-12. The IMP-050 implementation contract / contract
-  closure is HUMAN APPROVED 2026-09-12 (final independent
-  contract-closure re-review: PASS — findings NONE). The implementation
-  contract is CLOSED by human rulings
-  2026-09-12 (recorded normatively in `09` as AUTO-SCH-04/05/06 and the
-  TEST-AUTO-05/06 clarification; reconciled in `06`/`10`/`11`/`12`/`13`):
-  cron registration ownership (AUTO-SCH-04 — IMP-050 registers
-  `sched.recurrence.evaluate` + ONE infrastructure outbox-drain job;
-  IMP-051 owns the `sched.alerts.evaluate` registration;
-  `sched.login_mirror.run` retains its existing deferred
-  ownership/binding outside IMP-050; the drain is infrastructure, not a
-  fourth scheduler signal); cadences (AUTO-SCH-05 — recurrence once daily
-  00:30 Asia/Kolkata; outbox drain once per minute via a stable named,
-  idempotent/re-runnable pg_cron registration); the pg_cron
-  installation/migration boundary (AUTO-SCH-06 — restored local baseline:
-  pg_cron available/preloaded, extension NOT installed; the IMP-050
-  migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
-  deterministic local reset/build); and the TEST-AUTO-05/06 harness-only
-  synthetic consumer / failure-injection strategy (no production outbox
-  consumer may be invented). Contract-closure review corrections (human
-  rulings 2026-09-12 — historical: the contract-closure review returned
-  PASS WITH REQUIRED CORRECTIONS; the required corrections R5–R8 below
-  were human-ruled and applied) are also recorded: R5 — the recurrence cron
-  registration uses `0 19 * * *` interpreted in GMT (= 00:30
-  Asia/Kolkata, fixed UTC+05:30) with a fail-closed
-  `current_setting('cron.timezone', true) = 'GMT'` precondition at every
-  registration/acceptance gate (AUTO-SCH-07; CAOS never mutates
-  `cron.timezone`; no ALTER SYSTEM / postgresql.conf / restart path);
-  R6 — the hosted pg_cron state change enters ONLY through the
-  version-controlled IMP-050 migration ledger (Dashboard-only or manual
-  out-of-chain enablement prohibited); R7 — SCH-12
-  `successor_instance_id` is structurally same-firm via the composite
-  self-FK contract (`06`; generator enforces successor/cycle semantics);
-  R8 — post-IMP-050 catalog targets: 24 tables, RLS enabled 24/24, FORCE
-  RLS 20, policies 51. IMP-050 implementation is NOT authorized. Entry criteria
-  per `12-release-0-plan.md`: R0-D green — satisfied; AUTO-OQ-01/02
-  technical validation with results recorded in `09` — **SATISFIED
-  2026-09-11: AUTO-OQ-01 RESOLVED (pg_cron + hardened in-database
-  scheduler/job functions; pg_net not required for R0), AUTO-OQ-02
-  RESOLVED (transactional outbox), AUTO-OQ-03 RESOLVED (90-calendar-day
-  configurable default look-ahead, Asia/Kolkata business-date basis,
-  UTC-persisted timestamps); AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS;
-  schema contracts SCH-33/34/35 recorded in `06`. Remaining gates:
-  the explicit IMP-050 implementation instruction; hosted pg_cron
-  `CREATE EXTENSION` (explicit human state-change gate — contract/spec
-  closure does NOT authorize it) at implementation time.**
+- Current: none in flight — IMP-050 — Recurrence generation &
+  scheduler signals — CLOSED (human package-closure approval
+  2026-09-13). Acceptance record: implementation HUMAN ACCEPTED;
+  independent final implementation reviewer verdict PASS — READY FOR
+  HUMAN IMPLEMENTATION ACCEPTANCE; final local Harness Gate PASS 23/23;
+  automation integration 43/43, schema 199/199, RLS 303/303, audit
+  111/111; hosted staging acceptance PASS (see §4/§6/§6d).
+- Next: IMP-051 — Deadline materialization & alert evaluation — NOT
+  STARTED and NOT AUTHORIZED (begins only with an explicit
+  implementation instruction; IMP-051 owns the
+  `sched.alerts.evaluate` registration; IMP-051 is alerts/deadline
+  materialization, NOT recurrence-rule definition).
+- Historical pre-implementation record (kept for rationale): the
+  IMP-050 architecture/spec amendment was APPROVED 2026-09-12 (human
+  diff review PASS); the IMP-050 implementation contract / contract
+  closure was HUMAN APPROVED 2026-09-12 (final independent
+  contract-closure re-review: PASS — findings NONE) and CLOSED by
+  human rulings 2026-09-12 (recorded normatively in `09` as
+  AUTO-SCH-04/05/06/07 and the TEST-AUTO-05/06 clarification;
+  reconciled in `06`/`10`/`11`/`12`/`13`): cron registration ownership
+  (AUTO-SCH-04 — IMP-050 registers `sched.recurrence.evaluate` + ONE
+  infrastructure outbox-drain job; IMP-051 owns `sched.alerts.evaluate`;
+  `sched.login_mirror.run` retains its deferred ownership outside
+  IMP-050; the drain is infrastructure, not a fourth scheduler signal);
+  cadences (AUTO-SCH-05 — recurrence once daily 00:30 Asia/Kolkata;
+  outbox drain once per minute via a stable named, idempotent
+  pg_cron registration); the pg_cron installation/migration boundary
+  (AUTO-SCH-06 — version-controlled
+  `CREATE EXTENSION IF NOT EXISTS pg_cron` in the IMP-050 migration);
+  R5 — the recurrence cron uses `0 19 * * *` interpreted in GMT
+  (= 00:30 Asia/Kolkata, fixed UTC+05:30) with the fail-closed
+  `current_setting('cron.timezone', true) = 'GMT'` precondition
+  (AUTO-SCH-07; CAOS never mutates `cron.timezone`); R6 — the hosted
+  pg_cron state change enters ONLY through the version-controlled
+  migration ledger (satisfied — see §4); R7 — SCH-12
+  `successor_instance_id` structurally same-firm via composite self-FK
+  (implemented); R8 — post-IMP-050 catalog targets 24 tables / RLS
+  24/24 / FORCE RLS 20 / policies 51 (all reached — see §4). Entry
+  criteria (satisfied before implementation): R0-D green;
+  AUTO-OQ-01/02/03 RESOLVED 2026-09-11 (pg_cron + hardened in-database
+  scheduler/job functions; transactional outbox; 90-calendar-day
+  configurable look-ahead, Asia/Kolkata business-date basis,
+  UTC-persisted timestamps); AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS
+  (evidence `docs/harness/auto-sch-02-probe.md` +
+  `docs/harness/auto-sch-02-results.json`); schema contracts
+  SCH-33/34/35 recorded in `06`.
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260908000000_alerts.sql`
-- Hosted staging migration ledger: 10 migrations, local == remote through
-  `20260908000000` (10 / 10)
-- Application public tables: 21 (CURRENT deployed; **TARGET after the
-  IMP-050 schema migration: 24** — SCH-33/34/35 are contract additions in
-  `06` from the IMP-050 amendment, APPROVED 2026-09-12 by human diff
-  review, with no migration yet)
-- RLS enabled: 21 / 21 (TARGET after IMP-050: 24 / 24)
-- FORCE-RLS: 18 (all tenant-owned content tables; TARGET after IMP-050:
-  20 — SCH-33 and SCH-35 forced, SCH-34 enabled but NOT forced;
-  Ruling 2026-09-12, R8)
-- Policies: 51 (remains 51 after IMP-050 unless implementation introduces
-  a separately contract-authorized policy — RLS-EVO-01/SJR-01/SDL-01 are
-  zero-browser-grant postures, R8)
+- Latest migration: `20260912000000_recurrence_scheduler.sql` (IMP-050)
+- Hosted staging migration ledger: 11 migrations, local == remote
+  through `20260912000000` (11 / 11)
+- Application public tables: 24 (CURRENT on hosted staging and local —
+  SCH-33/34/35 landed with the IMP-050 migration; the Ruling
+  2026-09-12 R8 target is reached)
+- RLS enabled: 24 / 24
+- FORCE-RLS: 20 (SCH-33 and SCH-35 forced; SCH-34 enabled but NOT
+  forced; Ruling 2026-09-12, R8)
+- Policies: 51 (unchanged through IMP-050 — RLS-EVO-01/SJR-01/SDL-01
+  are zero-browser-grant postures, R8)
+- IMP-050 automation tables: `event_outbox` (SCH-33),
+  `scheduler_job_runs` (SCH-34), `scheduler_dead_letters` (SCH-35) —
+  hosted catalog security acceptance PASS: zero forbidden
+  automation-table privileges, zero forbidden owner-only function
+  EXECUTE grants
+- Hosted pg_cron: INSTALLED, version 1.6.4, via the version-controlled
+  IMP-050 migration (`CREATE EXTENSION IF NOT EXISTS pg_cron`; no
+  Dashboard/manual out-of-chain enablement — Ruling R6 satisfied);
+  `cron.timezone = GMT` and `cron.database_name = postgres` verified
+  hosted
+- Hosted cron registrations — exactly two, both IMP-050-owned:
+  `outbox.drain` (`* * * * *`) and `sched.recurrence.evaluate`
+  (`0 19 * * *` GMT = 00:30 Asia/Kolkata next business-day
+  interpretation per contract); observed `outbox.drain` runs succeeded.
+  No alert-scheduler or login-mirror cron is owned by IMP-050.
+- Hosted data stability at acceptance: `compliance_instances` 0,
+  undelivered outbox rows 0, `scheduler_dead_letters` 0
 - IMP-042 tables: `alerts` (policy `alerts_select_scoped`) and
   `alert_rules` (policy `alert_rules_select_scoped`) — single scoped
   SELECT policies; every write goes through the Layer-B definer commands
@@ -128,7 +142,13 @@ Remaining formal R0 packages:
 - Statutory ACTIVE: 0 — production statutory activation remains gated;
   not approved by browser/application
 - Profiles do NOT pin RuleVersions; instances pin RuleVersion provenance
-- IMP-050 owns recurrence generation
+- IMP-050 has implemented the recurrence engine (CLOSED 2026-09-13):
+  the generator consumes approved ACTIVE rule versions. CAOS stores the
+  recurrence-rule framework and draft reference rules; final statutory
+  rules still require external practicing-CA/compliance-domain
+  validation and controlled activation — statutory rule versions remain
+  draft/pending (0 ACTIVE). IMP-051 is alerts, not recurrence-rule
+  definition.
 
 ## 6. Staging State
 
@@ -145,24 +165,46 @@ Remaining formal R0 packages:
   zero, API-RT-07 polling invalidation without reload, /alerts ModuleGate
   preservation, network/console isolation)
 - No real customer data in staging
-- **Hosted pg_cron capability (2026-09-11, AUTO-SCH-02 HOSTED PASS):**
-  authorized human read-only Supabase Studio catalog queries on
-  `pyrniumcjcvagjygheyu` observed `pg_available_extensions` pg_cron
-  `default_version = 1.6.4`, `installed_version = NULL` ("Job scheduler
-  for PostgreSQL"); versions available through 1.6.4, none installed;
-  `current_setting('cron.database_name', true) = 'postgres'`. No hosted
-  state was changed. **Scoped to the actual staging project only —
-  production pg_cron availability is NOT claimed and remains a
-  pre-cutover verification.** **pg_cron is available but NOT installed; hosted
-  `CREATE EXTENSION` remains a future explicit human state-change gate.**
-  **Local baseline (restored after the AUTO-SCH-02 probe): pg_cron
-  available/preloaded, extension NOT installed — the probe temporarily
-  enabled the extension for evidence capture and restored the baseline
-  (Ruling 2026-09-12, AUTO-SCH-06); the version-controlled IMP-050
-  migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
-  deterministic local reset/build.**
-  Evidence artifacts: `docs/harness/auto-sch-02-probe.md` +
-  `docs/harness/auto-sch-02-results.json`.
+- **Hosted pg_cron state (IMP-050 — CLOSED 2026-09-13):** pg_cron is
+  INSTALLED on hosted staging — installed version 1.6.4 — via the
+  version-controlled migration `20260912000000_recurrence_scheduler.sql`
+  (`CREATE EXTENSION IF NOT EXISTS pg_cron`; no Dashboard/manual
+  extension drift — Ruling R6 satisfied). `cron.timezone = GMT` and
+  `cron.database_name = postgres` verified hosted. Exactly two cron jobs
+  are active and exactly as expected: `outbox.drain` (every minute,
+  `* * * * *`) and `sched.recurrence.evaluate` (`0 19 * * *` GMT —
+  00:30 Asia/Kolkata next business-day interpretation per contract);
+  observed `outbox.drain` runs succeeded. **Scoped to the actual staging
+  project only — production pg_cron availability/installation is NOT
+  claimed and remains a pre-cutover verification.**
+  Historical (pre-installation, 2026-09-11, AUTO-SCH-02 HOSTED PASS):
+  authorized human read-only Studio catalog queries then observed pg_cron
+  available (`default_version = 1.6.4`) but NOT installed
+  (`installed_version = NULL`); that probe changed no hosted state, and
+  the local baseline it temporarily disturbed was restored (Ruling
+  AUTO-SCH-06). Evidence artifacts: `docs/harness/auto-sch-02-probe.md`
+  + `docs/harness/auto-sch-02-results.json`.
+- **Hosted IMP-050 acceptance (CLOSED 2026-09-13):** hosted SQL/catalog
+  security acceptance PASS — zero forbidden automation-table privileges;
+  zero forbidden owner-only function EXECUTE grants;
+  `requeue_dead_letter` service_role allowed and
+  public/anon/authenticated denied; `immediate_automation_correlation`
+  is SECURITY INVOKER with `search_path=''`. Hosted API/PostgREST
+  acceptance PASSED using an existing dedicated staging probe account
+  after an explicitly human-authorized password reset through the
+  supported Supabase Admin API — no credential/key/password is recorded
+  in the repository or this file. Browser/API denial proof:
+  authenticated requests denied (403) and anonymous requests denied
+  (401) for `event_outbox`, `scheduler_job_runs`,
+  `scheduler_dead_letters` and the protected RPC paths
+  `immediate_automation_correlation` / `requeue_dead_letter`. This was a
+  NEGATIVE PostgREST/RPC security proof — there is NO IMP-050
+  UI/browser product flow. No business data was created by the hosted
+  API acceptance. The local gitignored probe credential file is mode
+  600 and shell-syntax PASS; its values are never recorded.
+- IMP-050 ships no browser surface; Netlify staging state is unchanged
+  from IMP-042 closure (bundle checkpoint `1f3db3e` remains the latest
+  published UI bundle).
 - Dedicated staging test identities (durable testing note): the 8
   synthetic `imp041-*` Supabase Auth users remain for future acceptance
   gates, each with a verified TOTP factor enrolled during the IMP-041
@@ -340,6 +382,60 @@ Remaining formal R0 packages:
   audit_log evidence retained.
 - Harness Gate: 22 / 22 phases PASS.
 
+## 6d. Recurrence & Scheduler Enforcement Facts (IMP-050 — durable; CLOSED 2026-09-13)
+
+- Automation tables `event_outbox` (SCH-33), `scheduler_job_runs`
+  (SCH-34), `scheduler_dead_letters` (SCH-35): RLS enabled 24/24
+  catalog-wide (FORCE RLS on SCH-33/SCH-35; SCH-34 enabled but NOT
+  forced, Ruling R8); browser roles have no automation-table privileges
+  — access is service/cron-side only.
+- Exactly two IMP-050 cron registrations: `outbox.drain`
+  (`* * * * *`, timezone-independent infrastructure — NOT a fourth
+  scheduler signal, AUTO-SCH-04) and `sched.recurrence.evaluate`
+  (`0 19 * * *` interpreted in GMT = once daily 00:30 Asia/Kolkata,
+  fixed UTC+05:30), under the fail-closed
+  `current_setting('cron.timezone', true) = 'GMT'` precondition — CAOS
+  never mutates `cron.timezone` (Ruling R5/AUTO-SCH-07). IMP-051 owns
+  the `sched.alerts.evaluate` registration; `sched.login_mirror.run`
+  stays outside IMP-050.
+- Scheduler security never relies on RLS: pg_cron execution was proven
+  BYPASSRLS-capable (AUTO-SCH-03); firm boundaries are enforced
+  explicitly in scheduler logic, and anon/authenticated have no
+  scheduler execution capability. The SCH-12 `successor_instance_id`
+  linkage is structurally same-firm via the composite self-FK
+  `(firm_id, successor_instance_id)` → `compliance_instances(firm_id,
+  id)` (Ruling R7); the generator additionally enforces valid
+  successor/cycle semantics.
+- The R0 registered production outbox consumer set may be empty;
+  "delivered" means drain-completion, not external delivery. The
+  TEST-AUTO-05/06 consumer / failure-injection strategy is harness-only
+  — no production outbox consumer was invented.
+- Dead-letter manual recovery is service-only via
+  `requeue_dead_letter(uuid,text)` — browser roles have no execute.
+  `immediate_automation_correlation` is SECURITY INVOKER with
+  `search_path=''`.
+- Recurrence configuration: 90-calendar-day configurable look-ahead
+  (AUTO-OQ-03), Asia/Kolkata business-date basis, UTC-persisted
+  timestamps.
+- There is NO IMP-050 UI/browser product flow; the hosted browser-path
+  acceptance was a negative PostgREST/RPC security proof
+  (authenticated 403 / anonymous 401 on the automation tables and
+  protected RPC paths).
+- Statutory posture unchanged: CAOS stores the recurrence-rule
+  framework and draft reference rules; IMP-050 implements the engine
+  consuming approved ACTIVE rules; draft statutory rule versions remain
+  pending external practicing-CA/compliance-domain validation and
+  controlled activation (OPS-OQ-04 stays a production activation
+  blocker). IMP-051 is alerts — not recurrence-rule definition.
+- Local acceptance: final Harness Gate PASS 23/23 phases; automation
+  integration 43/43; schema integration 199/199; RLS 303/303; audit
+  111/111; catalog 24 public app tables / RLS 24/24 / FORCE RLS 20 /
+  policies 51. Independent final implementation reviewer verdict:
+  PASS — READY FOR HUMAN IMPLEMENTATION ACCEPTANCE; implementation
+  HUMAN ACCEPTED; human package-closure approval 2026-09-13 — CLOSED.
+- Production promotion is NOT part of IMP-050 closure and remains NOT
+  authorized; no production verification is claimed.
+
 ## 7. Permanent Architecture Boundaries
 
 - Data flow: React → `@/data` → fixture OR Supabase adapter. No direct
@@ -378,19 +474,24 @@ Remaining formal R0 packages:
   open review item):** successor linkage is structurally same-firm via
   the composite self-FK `(firm_id, successor_instance_id)` →
   `compliance_instances(firm_id, id)` (contract recorded in `06` SCH-12;
-  the FK lands with the IMP-050 implementation migration); the generator
+  the FK landed with the IMP-050 implementation migration); the generator
   function logic additionally enforces valid successor/cycle semantics;
   the boundary never relies on RLS.
-- Recurrence generator belongs to IMP-050.
-- Domain-event publication wiring remains with IMP-050; the mechanism is
-  RESOLVED 2026-09-11 (AUTO-OQ-02 — transactional outbox, SCH-33):
-  `compliance_instance.created` (IMP-031), `task.created` /
+- Recurrence generator: implemented in IMP-050 (CLOSED 2026-09-13 —
+  see §6d).
+- Domain-event publication: the mechanism is RESOLVED 2026-09-11
+  (AUTO-OQ-02 — transactional outbox, SCH-33) and IMPLEMENTED by
+  IMP-050 (CLOSED 2026-09-13 — see §6d): `event_outbox` +
+  `scheduler_job_runs` + `scheduler_dead_letters` with the
+  `outbox.drain` cron; "delivered" means drain-completion, not external
+  delivery, and the R0 registered production outbox consumer set may be
+  empty. `compliance_instance.created` (IMP-031), `task.created` /
   `task.assigned` / `task.completed` (IMP-040), `review.submitted` /
   `review.completed` (IMP-041), and `alert.created` / `alert.resolved`
-  (IMP-042) are contract names only until IMP-050 wires publication.
-  The accepted API-RT-07 Review Queue polling fallback is unrelated to
-  event publication and does not discharge this deferral; the IMP-042
-  alert badge uses the same approved fallback (D2 ruling).
+  (IMP-042) are the contract event names on the outbox path. The
+  accepted API-RT-07 Review Queue polling fallback is unrelated to
+  event publication; the IMP-042 alert badge uses the same approved
+  fallback (D2 ruling).
 - **Scheduler execution-context security finding (2026-09-11, AUTO-SCH-03,
   local probe):** pg_cron executes as `postgres` (rolsuper=false,
   rolbypassrls=true); FORCE RLS did not constrain the cron-fired
