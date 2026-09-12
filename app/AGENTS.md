@@ -291,8 +291,7 @@ not forced — policies 51; the Ruling 2026-09-12 R8 target is reached).
 IMP-050 (recurrence generation & scheduler signals) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-13; implementation
 checkpoint `b15b584` `feat: implement IMP-050 recurrence automation`;
-closure checkpoint: this closure commit — hash recorded post-commit per
-the closure-pointer reconcile convention). Implementation was HUMAN
+closure checkpoint `6b645e4` `docs: close IMP-050 recurrence`). Implementation was HUMAN
 ACCEPTED before closure: independent final implementation reviewer
 verdict PASS — READY FOR HUMAN IMPLEMENTATION ACCEPTANCE; final local
 Harness Gate PASS 23/23 phases; automation integration 43/43; schema

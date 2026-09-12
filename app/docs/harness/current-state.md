@@ -12,9 +12,8 @@
   signals
 - IMP-050 implementation checkpoint: `b15b584`
   (`feat: implement IMP-050 recurrence automation`)
-- IMP-050 closure checkpoint: this commit (`docs: close IMP-050` — the
-  hash is recorded post-commit per the closure-pointer reconcile
-  convention; see the IMP-042 precedent)
+- IMP-050 closure checkpoint: `6b645e4`
+  (`docs: close IMP-050 recurrence`)
 - IMP-050 hosted staging acceptance: PASS (see §4/§6/§6d)
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
