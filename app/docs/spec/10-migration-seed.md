@@ -370,10 +370,34 @@ category below says otherwise.
 
 - MIG-A-01: The Supabase CLI local stack supports the full migration chain
   offline (pg_cron availability per AUTO-SCH-02 — VALIDATED PASS
-  2026-09-11: local execution-context probe PASS; hosted availability PASS
+  2026-09-11: local execution-context probe PASS — pg_cron
+  available/preloaded with the extension NOT installed at the restored
+  local baseline (the probe temporarily enabled it, then restored the
+  baseline); hosted availability PASS
   via authorized human read-only Studio queries, default_version 1.6.4,
   not installed; hosted `CREATE EXTENSION` remains a future explicit human
   gate; a local-only gap would be recorded, not worked around silently).
+  **Migration boundary (Ruling 2026-09-12, AUTO-SCH-06):** the
+  version-controlled IMP-050 migration MAY contain
+  `CREATE EXTENSION IF NOT EXISTS pg_cron` so a clean local reset/build is
+  deterministic (no Dashboard-only/manual local drift); applying
+  `CREATE EXTENSION` to hosted staging remains a separate explicit human
+  state-change gate — contract/spec closure does NOT authorize executing
+  it; production availability remains a pre-cutover verification and no
+  production state change is authorized.
+  **Hosted state-change path (Ruling 2026-09-12, R6):** the human gate
+  means the human explicitly authorizes application of the
+  version-controlled IMP-050 migration to hosted staging — the hosted
+  pg_cron state change MUST enter through the migration ledger.
+  PROHIBITED: Dashboard-only enablement; manual SQL `CREATE EXTENSION`
+  outside the migration chain; enabling pg_cron first and then letting
+  the migration silently no-op. Sequence: (1) implementation + local
+  acceptance → (2) human authorizes the hosted state change → (3) the
+  version-controlled IMP-050 migration applied to staging → (4) the
+  migration executes `CREATE EXTENSION IF NOT EXISTS pg_cron` → (5) the
+  migration continues with the contract-approved schema/functions/jobs →
+  (6) hosted acceptance verifies the resulting state. This does NOT
+  authorize hosted execution now.
 - MIG-A-02: Fixture volumes (34 clients, 1,284 tasks) are representative
   enough to design seeds from; production-scale synthetic volume is
   generated, not copied (MIG-SEED-03).

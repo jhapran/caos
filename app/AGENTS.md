@@ -284,7 +284,11 @@ IMP-031, IMP-040, IMP-041, IMP-042; 70.37%); migrations run through
 tables — CURRENT deployed (RLS enabled on all 21, FORCE RLS on the 18
 tenant-owned content tables, 51 policies); TARGET 24 after the IMP-050
 schema migration (SCH-33/34/35 are proposed contract additions of the
-IMP-050 amendment — APPROVED 2026-09-12 by human diff review, no migration yet); Harness Gate green (22/22 phases). Next package:
+IMP-050 amendment — APPROVED 2026-09-12 by human diff review, no migration yet;
+target posture per Ruling 2026-09-12 R8: RLS enabled 24/24, FORCE RLS 20
+— SCH-33/SCH-35 forced, SCH-34 enabled not forced — policies remain 51
+unless implementation introduces a separately contract-authorized
+policy); Harness Gate green (22/22 phases). Next package:
 IMP-050 — Recurrence generation & scheduler signals (NOT STARTED —
 begins only with a fresh contract extraction and an explicit
 implementation instruction; entry criteria per `12-release-0-plan.md`:
@@ -296,10 +300,35 @@ Asia/Kolkata business-date basis, UTC-persisted timestamps); AUTO-SCH-02
 PASS (LOCAL/HOSTED/OVERALL — evidence `docs/harness/auto-sch-02-probe.md`
 + `docs/harness/auto-sch-02-results.json`); automation record contracts
 SCH-33/34/35 added to `06`. The architecture/spec amendment is APPROVED
-(human diff review PASS 2026-09-12);
+(human diff review PASS 2026-09-12); the implementation contract /
+contract closure is HUMAN APPROVED 2026-09-12 (final independent
+contract-closure re-review: PASS — findings NONE) and is
+CLOSED by human rulings 2026-09-12 (recorded in `09` as
+AUTO-SCH-04/05/06/07 + the TEST-AUTO-05/06 clarification, reconciled across
+`06`/`10`/`11`/`12`/`13`): IMP-050 registers `sched.recurrence.evaluate`
+(once daily 00:30 Asia/Kolkata — cron expression `0 19 * * *` interpreted
+in GMT, fixed UTC+05:30, under a fail-closed
+`current_setting('cron.timezone', true) = 'GMT'` precondition at every
+registration/acceptance gate; CAOS never mutates `cron.timezone` — no
+ALTER SYSTEM / postgresql.conf / restart path, Ruling R5/AUTO-SCH-07) and
+ONE infrastructure outbox-drain job
+(once per minute, stable named idempotent pg_cron registration — NOT a
+fourth scheduler signal, timezone-independent); IMP-051 owns the
+`sched.alerts.evaluate`
+registration; `sched.login_mirror.run` stays outside IMP-050; the local
+pg_cron baseline (restored after the AUTO-SCH-02 probe) is
+available/preloaded with the extension NOT installed — the probe
+temporarily enabled it and restored the baseline — and the IMP-050
+migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
+deterministic local reset/build; the hosted pg_cron state change enters
+ONLY through that version-controlled migration ledger (Ruling R6 —
+Dashboard-only or manual out-of-chain enablement prohibited); the SCH-12
+`successor_instance_id` linkage is structurally same-firm via composite
+self-FK (Ruling R7, `06`);
 implementation remains NOT authorized; hosted pg_cron is available
 (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` is a
-future explicit human state-change gate. Binding constraint AUTO-SCH-03:
+future explicit human state-change gate (NOT authorized by the
+2026-09-12 contract closure). Binding constraint AUTO-SCH-03:
 the cron identity has BYPASSRLS — scheduler tenancy is enforced
 explicitly, never via RLS, and anon/authenticated get no scheduler
 capability**).

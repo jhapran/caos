@@ -1132,19 +1132,52 @@ separate explicit implementation instruction.
 - **Allowed scope:** generator function(s), scheduler wiring per the
   validated mechanism (pg_cron + hardened in-database functions,
   AUTO-SCH-01 final), transactional outbox publication (SCH-33),
-  idempotency/retry/dead-letter handling (SCH-34/35).
+  idempotency/retry/dead-letter handling (SCH-34/35). Cron registration
+  ownership (Ruling 2026-09-12, AUTO-SCH-04): this package registers
+  exactly `sched.recurrence.evaluate` (once daily 00:30 Asia/Kolkata —
+  cron expression `0 19 * * *` interpreted in GMT under the fail-closed
+  `cron.timezone='GMT'` precondition, AUTO-SCH-05/07) and ONE
+  infrastructure outbox-drain job (once per minute;
+  stable named, idempotent/re-runnable pg_cron registration).
 - **Non-goals:** reminder *delivery* (AUTO-RMD-01 produces reminder-ready
-  events only); no activation of statutory rules.
+  events only); no activation of statutory rules; no registration of
+  `sched.alerts.evaluate` (owned by IMP-051) or `sched.login_mirror.run`
+  (retains its existing deferred ownership/binding); the outbox drain is
+  operational infrastructure — never a fourth `sched.*` scheduler signal
+  (AUTO-SCH-04).
 - **Expected files/areas:** `supabase/` (functions, cron config),
   automation worker area.
 - **Entry criteria:** R0-D green; AUTO-OQ-01/02 resolved with results
   recorded in `09` (amendment) — **SATISFIED 2026-09-11** (human rulings
   recorded in `09`; schema contracts SCH-33/34/35 in `06`; AUTO-SCH-02
   PASS). The IMP-050 architecture amendment diff is APPROVED (human
-  review PASSED 2026-09-12). Remaining gate before implementation: the
+  review PASSED 2026-09-12). **Contract closure 2026-09-12 (human
+  rulings, recorded normatively in `09`):** cron registration ownership
+  partition (AUTO-SCH-04), cadences (AUTO-SCH-05 — recurrence daily 00:30
+  Asia/Kolkata; infrastructure outbox drain every minute), the pg_cron
+  installation/migration boundary (AUTO-SCH-06 — the IMP-050 migration
+  MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a deterministic
+  local reset/build; hosted execution stays human-gated), and the
+  TEST-AUTO-05/06 harness-only strategy are closed; no cadence or
+  cron-ownership open question remains. **Contract-closure review
+  corrections (human rulings 2026-09-12) are recorded:** R5 — cron
+  representation `0 19 * * *` GMT with the fail-closed
+  `cron.timezone='GMT'` registration/acceptance precondition
+  (AUTO-SCH-05/07; CAOS never mutates `cron.timezone`); R6 — the hosted
+  pg_cron state change enters ONLY through the version-controlled IMP-050
+  migration ledger (AUTO-SCH-06; Dashboard-only or manual out-of-chain
+  enablement prohibited); R7 — SCH-12 `successor_instance_id` composite
+  same-firm self-FK contract (`06`; generator enforces successor/cycle
+  semantics; never RLS); R8 — post-IMP-050 catalog targets (24 tables,
+  RLS 24/24, FORCE RLS 20, policies 51). **Final independent
+  contract-closure re-review (2026-09-12): PASS — findings NONE; the
+  IMP-050 implementation contract / contract closure is HUMAN APPROVED
+  2026-09-12.** Remaining gate before
+  implementation: the
   explicit IMP-050 implementation instruction, then hosted pg_cron
   `CREATE EXTENSION` by an authorized human (explicit state-change gate —
-  availability proven, installation not yet authorized).
+  availability proven, installation not yet authorized; executed only via
+  the version-controlled migration per R6).
 - **Acceptance criteria:** double-run/race yields exactly one instance and
   one downstream event; rule edits never mutate historical instances;
   correlation IDs reach events and audit rows.
@@ -1161,7 +1194,9 @@ separate explicit implementation instruction.
   configurable default look-ahead (carrier
   `firms.settings.recurrence_lookahead_days`, SCH-01 — default 90 when
   absent/null), Asia/Kolkata business-date basis,
-  UTC-persisted timestamps (AUTO-REC-02/AUTO-REC-10). The binding
+  UTC-persisted timestamps (AUTO-REC-02/AUTO-REC-10). Schedule cadence and
+  cron registration ownership are likewise CLOSED (Ruling 2026-09-12:
+  AUTO-SCH-04/05/06/07, recorded in `09`). The binding
   scheduler security constraint is AUTO-SCH-03 (BYPASSRLS cron identity —
   explicit tenant enforcement; no anon/authenticated scheduler
   capability).
@@ -1179,7 +1214,9 @@ separate explicit implementation instruction.
   auto-resolution, retry, mechanism), TEST-API-* (deadline contracts).
 - **Dependencies:** IMP-050, IMP-042.
 - **Allowed scope:** evaluation functions, deadline read paths, alert
-  lifecycle wiring.
+  lifecycle wiring; the `sched.alerts.evaluate` pg_cron registration is
+  owned by THIS package (Ruling 2026-09-12 cron-ownership partition,
+  AUTO-SCH-04 — IMP-050 does not register it).
 - **Non-goals:** reminder delivery; new alert-rule families beyond seeded
   defaults (AUTO-OQ-04).
 - **Expected files/areas:** `supabase/`, `src/data/`.

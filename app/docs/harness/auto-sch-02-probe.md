@@ -112,7 +112,7 @@ re-verification record.
 
 | AUTO-SCH-02 validation need (`09`) | Evidence | Result |
 |---|---|---|
-| pg_cron availability (local + hosted staging) | LOCAL: OBSERVED (1.6.4 preloaded, enabled, jobs fired). HOSTED: HUMAN-PROVIDED (staging only — default_version 1.6.4, installed_version NULL, `cron.database_name='postgres'`). Production: NOT verified — pre-cutover gate | PASS (staging-scoped) |
+| pg_cron availability (local + hosted staging) | LOCAL: OBSERVED (1.6.4 preloaded; extension temporarily enabled for the probe, jobs fired; dropped at teardown — restored baseline: available/preloaded, extension absent). HOSTED: HUMAN-PROVIDED (staging only — default_version 1.6.4, installed_version NULL, `cron.database_name='postgres'`). Production: NOT verified — pre-cutover gate | PASS (staging-scoped) |
 | `pg_net` availability/acceptability (DEC-OQ-02) | Moot for R0 — AUTO-OQ-01 human ruling: pg_net NOT required for R0; HTTP/Edge scheduling deferred to R1+ | Closed by ruling |
 | Schedule granularity | OBSERVED: seconds-based schedule accepted; full granularity/mechanism checks land with TEST-AUTO-08 during IMP-050 implementation | PASS (probe level) |
 | Observable failure behaviour | OBSERVED: deliberate failing job fired; failure history recorded | PASS |

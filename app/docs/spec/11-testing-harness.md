@@ -387,6 +387,41 @@ instance, one event). Extensions:
 - **TEST-AUTO-12:** correlation propagation — a scheduler run's
   correlation id reaches every event and audit row it causes
   (AUTO-AUD-02).
+- **TEST-AUTO-05/06 harness strategy (test contract clarification,
+  Ruling 2026-09-12):** R0 has no production registered outbox consumers
+  (AUTO-FLOW-05, `09`) — these tests MUST NOT force creation of a
+  production consumer merely to exercise drain/idempotency/failure
+  behavior. TEST-AUTO-05 sets up a deterministic **HARNESS-ONLY
+  synthetic consumer/effect fixture** (temporary/synthetic test objects
+  or test-only registration consistent with existing harness conventions
+  — the `hgate_*` precedent in `tests/integration/rls/setup.sql`), never
+  part of production runtime configuration and never becoming production
+  schema/business behavior; the assertion is deterministic — duplicate
+  delivery produces exactly one domain result per domain/effect key
+  (`event_id` is NOT the idempotency key, AUTO-IDM-01). TEST-AUTO-06 uses
+  deterministic **HARNESS-ONLY failure injection** against the
+  drain/retry machinery — proving bounded retries, the
+  failed/dead-letter transition, SCH-35 dead-letter evidence, correlation
+  preservation (AUTO-RET-02), and operational visibility (`13`) — with no
+  fake production consumer. Both tests tear down completely: **zero
+  synthetic residue**.
+- **TEST-AUTO-08 acceptance precondition + post-IMP-050 catalog targets
+  (Rulings 2026-09-12, R5/R8):** before registering or accepting the
+  recurrence cron job, verify `current_setting('cron.timezone', true) =
+  'GMT'` — at local implementation acceptance, hosted staging acceptance,
+  and production pre-cutover verification alike; a non-GMT effective
+  timezone FAILS CLOSED (no registration, no automatic `cron.timezone`
+  alteration, no ALTER SYSTEM / `postgresql.conf` edit / server restart —
+  explicit human review required, AUTO-SCH-07). This is part of the
+  existing TEST-AUTO-08 obligation; no new TEST ID is allocated. Harness
+  catalog contract after IMP-050: 24 public application tables, RLS
+  enabled 24/24, FORCE RLS 20 (SCH-33/SCH-35 forced; SCH-34 enabled but
+  NOT forced — system-scoped), policy count 51 unless implementation
+  introduces a separately contract-authorized policy
+  (RLS-EVO-01/SJR-01/SDL-01 are zero-browser-grant families and require
+  no permissive browser policies). The gate implementation
+  (`scripts/harness/gate.mjs`) is updated by the IMP-050 implementation
+  package, not by contract closure.
 - AUTO-OQ-01/02/03 are RESOLVED (human ruling 2026-09-11, recorded in
   `09`/`06`); no provisional wording remains for them.
 - **Scheduler-path isolation must be tested directly:** because the cron
@@ -641,7 +676,12 @@ claim complete production coverage for Auth, RLS, audit, or E2E.
 
 - TEST-A-01: The Supabase CLI local stack supports the full schema,
   pg_cron (AUTO-SCH-02 — VALIDATED PASS 2026-09-11: local
-  execution-context probe PASS; hosted availability PASS via authorized
+  execution-context probe PASS — pg_cron available/preloaded with the
+  extension NOT installed at the restored local baseline (the probe
+  temporarily enabled it, then restored the baseline); the IMP-050
+  migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
+  deterministic local reset/build (Ruling 2026-09-12, AUTO-SCH-06);
+  hosted availability PASS via authorized
   human read-only Studio queries, default_version 1.6.4, not installed —
   hosted `CREATE EXTENSION` remains a future explicit human gate), and
   header-GUC behaviour needed by the spikes;

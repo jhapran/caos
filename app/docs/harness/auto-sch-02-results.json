@@ -63,6 +63,7 @@
   },
   "post_probe_teardown": {
     "provenance": "OBSERVED",
+    "restored_baseline": "pg_cron available/preloaded; extension NOT installed at the restored baseline — the probe temporarily enabled it for evidence capture and dropped it at teardown (Ruling 2026-09-12, AUTO-SCH-06)",
     "findings": [
       { "check": "pg_cron absent again", "pass": true },
       { "check": "zero imp050_* probe relations/functions remain", "pass": true },

@@ -41,10 +41,44 @@ Remaining formal R0 packages:
 
 - Current: IMP-042 — Alerts & My Work — CLOSED
 - Next: IMP-050 — Recurrence generation & scheduler signals — NOT STARTED
-- Next action: fresh-session contract extraction / reconciliation for
-  IMP-050. The IMP-050 architecture/spec amendment (2026-09-11,
-  uncommitted) is APPROVED — human diff review PASSED 2026-09-12.
-  IMP-050 implementation is NOT authorized yet. Entry criteria
+- Next action: the explicit human IMP-050 IMPLEMENTATION AUTHORIZATION
+  (the only remaining state-changing gate before implementation). The
+  IMP-050 architecture/spec amendment is APPROVED — human diff review
+  PASSED 2026-09-12. The IMP-050 implementation contract / contract
+  closure is HUMAN APPROVED 2026-09-12 (final independent
+  contract-closure re-review: PASS — findings NONE). The implementation
+  contract is CLOSED by human rulings
+  2026-09-12 (recorded normatively in `09` as AUTO-SCH-04/05/06 and the
+  TEST-AUTO-05/06 clarification; reconciled in `06`/`10`/`11`/`12`/`13`):
+  cron registration ownership (AUTO-SCH-04 — IMP-050 registers
+  `sched.recurrence.evaluate` + ONE infrastructure outbox-drain job;
+  IMP-051 owns the `sched.alerts.evaluate` registration;
+  `sched.login_mirror.run` retains its existing deferred
+  ownership/binding outside IMP-050; the drain is infrastructure, not a
+  fourth scheduler signal); cadences (AUTO-SCH-05 — recurrence once daily
+  00:30 Asia/Kolkata; outbox drain once per minute via a stable named,
+  idempotent/re-runnable pg_cron registration); the pg_cron
+  installation/migration boundary (AUTO-SCH-06 — restored local baseline:
+  pg_cron available/preloaded, extension NOT installed; the IMP-050
+  migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
+  deterministic local reset/build); and the TEST-AUTO-05/06 harness-only
+  synthetic consumer / failure-injection strategy (no production outbox
+  consumer may be invented). Contract-closure review corrections (human
+  rulings 2026-09-12 — historical: the contract-closure review returned
+  PASS WITH REQUIRED CORRECTIONS; the required corrections R5–R8 below
+  were human-ruled and applied) are also recorded: R5 — the recurrence cron
+  registration uses `0 19 * * *` interpreted in GMT (= 00:30
+  Asia/Kolkata, fixed UTC+05:30) with a fail-closed
+  `current_setting('cron.timezone', true) = 'GMT'` precondition at every
+  registration/acceptance gate (AUTO-SCH-07; CAOS never mutates
+  `cron.timezone`; no ALTER SYSTEM / postgresql.conf / restart path);
+  R6 — the hosted pg_cron state change enters ONLY through the
+  version-controlled IMP-050 migration ledger (Dashboard-only or manual
+  out-of-chain enablement prohibited); R7 — SCH-12
+  `successor_instance_id` is structurally same-firm via the composite
+  self-FK contract (`06`; generator enforces successor/cycle semantics);
+  R8 — post-IMP-050 catalog targets: 24 tables, RLS enabled 24/24, FORCE
+  RLS 20, policies 51. IMP-050 implementation is NOT authorized. Entry criteria
   per `12-release-0-plan.md`: R0-D green — satisfied; AUTO-OQ-01/02
   technical validation with results recorded in `09` — **SATISFIED
   2026-09-11: AUTO-OQ-01 RESOLVED (pg_cron + hardened in-database
@@ -54,8 +88,8 @@ Remaining formal R0 packages:
   UTC-persisted timestamps); AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS;
   schema contracts SCH-33/34/35 recorded in `06`. Remaining gates:
   the explicit IMP-050 implementation instruction; hosted pg_cron
-  `CREATE EXTENSION` (explicit human state-change gate) at
-  implementation time.**
+  `CREATE EXTENSION` (explicit human state-change gate — contract/spec
+  closure does NOT authorize it) at implementation time.**
 
 ## 4. Database / Migration State (accepted staging)
 
@@ -66,9 +100,13 @@ Remaining formal R0 packages:
   IMP-050 schema migration: 24** — SCH-33/34/35 are contract additions in
   `06` from the IMP-050 amendment, APPROVED 2026-09-12 by human diff
   review, with no migration yet)
-- RLS enabled: 21 / 21
-- FORCE-RLS: 18 (all tenant-owned content tables)
-- Policies: 51
+- RLS enabled: 21 / 21 (TARGET after IMP-050: 24 / 24)
+- FORCE-RLS: 18 (all tenant-owned content tables; TARGET after IMP-050:
+  20 — SCH-33 and SCH-35 forced, SCH-34 enabled but NOT forced;
+  Ruling 2026-09-12, R8)
+- Policies: 51 (remains 51 after IMP-050 unless implementation introduces
+  a separately contract-authorized policy — RLS-EVO-01/SJR-01/SDL-01 are
+  zero-browser-grant postures, R8)
 - IMP-042 tables: `alerts` (policy `alerts_select_scoped`) and
   `alert_rules` (policy `alert_rules_select_scoped`) — single scoped
   SELECT policies; every write goes through the Layer-B definer commands
@@ -117,6 +155,12 @@ Remaining formal R0 packages:
   production pg_cron availability is NOT claimed and remains a
   pre-cutover verification.** **pg_cron is available but NOT installed; hosted
   `CREATE EXTENSION` remains a future explicit human state-change gate.**
+  **Local baseline (restored after the AUTO-SCH-02 probe): pg_cron
+  available/preloaded, extension NOT installed — the probe temporarily
+  enabled the extension for evidence capture and restored the baseline
+  (Ruling 2026-09-12, AUTO-SCH-06); the version-controlled IMP-050
+  migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for a
+  deterministic local reset/build.**
   Evidence artifacts: `docs/harness/auto-sch-02-probe.md` +
   `docs/harness/auto-sch-02-results.json`.
 - Dedicated staging test identities (durable testing note): the 8
@@ -329,8 +373,14 @@ Remaining formal R0 packages:
   remains deferred.
 - MIG-OQ-04 historical back-materialization depth remains unresolved for
   production onboarding; non-blocking for current schema.
-- `successor_instance_id` generator-time same-firm/cycle hardening is an
-  IMP-050 review item.
+- `successor_instance_id` generator-time same-firm/cycle hardening —
+  **RESOLVED BY RULING 2026-09-12 (R7; kept for history, no longer an
+  open review item):** successor linkage is structurally same-firm via
+  the composite self-FK `(firm_id, successor_instance_id)` →
+  `compliance_instances(firm_id, id)` (contract recorded in `06` SCH-12;
+  the FK lands with the IMP-050 implementation migration); the generator
+  function logic additionally enforces valid successor/cycle semantics;
+  the boundary never relies on RLS.
 - Recurrence generator belongs to IMP-050.
 - Domain-event publication wiring remains with IMP-050; the mechanism is
   RESOLVED 2026-09-11 (AUTO-OQ-02 — transactional outbox, SCH-33):

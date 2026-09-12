@@ -103,7 +103,12 @@ observability platform — R0 needs reliable basics, executed well.
   server/operator-only recovery path (AUTO-RPL-02 —
   `requeue_dead_letter`); `pending`/ordinary `failed` publications remain
   under automatic retry and are NOT manually requeued — no automated
-  replay tooling exists in R0.
+  replay tooling exists in R0. **Drain cadence context (Ruling
+  2026-09-12, AUTO-SCH-05):** the infrastructure outbox drain runs once
+  per minute, so SCH-33 backlog age is assessed against that cadence
+  (a `pending` publication older than the per-minute drain interval is
+  already an operational signal); the drain is infrastructure, not a
+  `sched.*` signal (AUTO-SCH-04).
 
 ## Health / readiness
 

@@ -1,7 +1,7 @@
 # 09 — Automation & Events (Design)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.) **IMP-050 architecture amendment (human-ruled 2026-09-11): AUTO-OQ-01 RESOLVED — pg_cron is the final R0 scheduler, invoking hardened in-database scheduler/job functions (pg_net not required for R0; HTTP/Edge-function scheduling deferred to R1+); AUTO-OQ-02 RESOLVED — transactional outbox is the final event-publication mechanism (direct downstream invocation rejected for R0); AUTO-OQ-03 RESOLVED — 90-calendar-day configurable default look-ahead on an Asia/Kolkata business-date basis. AUTO-SCH-02 recorded PASS (LOCAL/HOSTED/OVERALL). Open/provisional items remaining: AUTO-OQ-04 only.**
+- **Approval status:** Approved (Batch 4). Closure amendment recorded: AUTO-XREF-01 satisfied by the `06` schema amendment (SCH-32 `compliance_rule_versions` + SCH-12 provenance fields); AUTO-OQ-05 resolved. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01.) **IMP-050 architecture amendment (human-ruled 2026-09-11): AUTO-OQ-01 RESOLVED — pg_cron is the final R0 scheduler, invoking hardened in-database scheduler/job functions (pg_net not required for R0; HTTP/Edge-function scheduling deferred to R1+); AUTO-OQ-02 RESOLVED — transactional outbox is the final event-publication mechanism (direct downstream invocation rejected for R0); AUTO-OQ-03 RESOLVED — 90-calendar-day configurable default look-ahead on an Asia/Kolkata business-date basis. AUTO-SCH-02 recorded PASS (LOCAL/HOSTED/OVERALL).** **IMP-050 contract closure (human rulings 2026-09-12): cron registration ownership partitioned (AUTO-SCH-04) — IMP-050 registers `sched.recurrence.evaluate` and ONE infrastructure outbox-drain job; IMP-051 owns the `sched.alerts.evaluate` registration; `sched.login_mirror.run` retains its existing deferred ownership/binding and stays outside IMP-050; the outbox drain is infrastructure, NOT a fourth scheduler signal. Cadences fixed (AUTO-SCH-05) — recurrence once daily 00:30 Asia/Kolkata; outbox drain once per minute. pg_cron installation/migration boundary fixed (AUTO-SCH-06) — restored local baseline is available/preloaded with the extension NOT installed; the IMP-050 migration MAY carry `CREATE EXTENSION IF NOT EXISTS pg_cron` for deterministic local reset/build; hosted `CREATE EXTENSION` remains a separate explicit human state-change gate. TEST-AUTO-05/06 clarified — harness-only synthetic consumer / failure-injection fixtures; no production outbox consumer is created to test drain behavior. **Contract-closure review corrections (human rulings 2026-09-12 — historical: the contract-closure review returned PASS WITH REQUIRED CORRECTIONS; the required corrections R5–R8 were human-ruled and applied):** R5 — the recurrence cron registration uses the expression `0 19 * * *` interpreted in GMT (= 00:30 Asia/Kolkata, fixed UTC+05:30); CAOS never mutates the global `cron.timezone`, and a GMT precondition gates registration and every acceptance gate (AUTO-SCH-07). R6 — the hosted pg_cron state change enters ONLY through the version-controlled IMP-050 migration ledger; Dashboard-only or manual out-of-chain enablement is prohibited (AUTO-SCH-06). R7 — SCH-12 `successor_instance_id` linkage is structurally same-firm via the composite same-firm FK pattern (AUTO-SCH-03/SCH-FK-01 clarification, `06`). R8 — deterministic post-IMP-050 catalog targets recorded: 24 tables, RLS enabled 24/24, FORCE RLS 20 (SCH-33/SCH-35 forced; SCH-34 enabled, not forced), policies 51. **Final independent contract-closure re-review (2026-09-12): PASS — findings NONE. The IMP-050 implementation contract / contract closure is HUMAN APPROVED 2026-09-12.** Open/provisional items remaining: AUTO-OQ-04 only.**
 
 ## Purpose
 
@@ -139,13 +139,18 @@ operationally (`13`), never consumed as business facts:
 
 | Signal | Fires | Consumed by |
 |---|---|---|
-| `sched.recurrence.evaluate` | On the recurrence schedule | Recurrence generator — evaluates active profiles and materializes due instances (AUTO-REC-01) |
+| `sched.recurrence.evaluate` | Once daily at 00:30 Asia/Kolkata — cron expression `0 19 * * *` interpreted in GMT (fixed UTC+05:30; AUTO-SCH-07 GMT precondition), Ruling 2026-09-12, AUTO-SCH-05 — catch-up / look-ahead maintenance | Recurrence generator — evaluates active profiles and materializes due instances (AUTO-REC-01) |
 | `sched.alerts.evaluate` | On the alert-evaluation schedule | Alert evaluation job — runs enabled alert_rules (AUTO-ALR-01) |
 | `sched.login_mirror.run` | On the login-history schedule | Login-history mirroring job (AUD-LOGIN-01) |
 
 - **AUTO-EVT-02:** Adding scheduler signals is an operations decision
   recorded here; signals never appear in the domain-event catalogue and
   never write audit rows by themselves.
+- **Catalogue exhaustiveness (Ruling 2026-09-12, AUTO-SCH-04):** the
+  scheduler/internal-signal catalogue above is EXACTLY these three
+  signals. The transactional-outbox drain is an operational
+  **infrastructure** job — it is NOT a scheduler/domain signal, is never
+  named `sched.*`, and MUST NOT be added to this catalogue.
 
 ## Producers, consumers, and flow
 
@@ -227,7 +232,11 @@ compliance_instances (provenance: rule_version_id, generation_source,
   when an instance reaches `closed` (materialize its successor, linked via
   `successor_instance_id`, SCH-12); (c) on the `sched.recurrence.evaluate`
   signal, which materializes instances entering a look-ahead window so
-  work appears before the period starts. Trigger point (a) is owned by the
+  work appears before the period starts. **Scheduled-run semantics
+  (Ruling 2026-09-12, AUTO-SCH-05):** the scheduled run is catch-up /
+  look-ahead maintenance — trigger points (a) and (b) retain their
+  immediate materialization behavior and never wait for the daily run.
+  Trigger point (a) is owned by the
   generator package (IMP-050); IMP-031 ships the profile approval command
   without any generation side effect — an `active` profile with zero
   materialized instances is valid in the interim; no trigger/RPC-enqueued
@@ -262,7 +271,10 @@ compliance_instances (provenance: rule_version_id, generation_source,
   date. **Persisted timestamps remain UTC** (`timestamptz` per `06`
   conventions); **statutory due dates must never be reinterpreted through
   UTC date boundaries** — a due date is a business date in the Asia/Kolkata
-  calendar, not a UTC instant truncation.
+  calendar, not a UTC instant truncation. **Timezone independence
+  (Ruling 2026-09-12):** the recurrence function derives its
+  `business_date` explicitly in Asia/Kolkata; correctness MUST NOT depend
+  on the PostgreSQL server or session timezone.
 - **AUTO-REC-03 — Duplicate protection is multi-layered.** Four layers,
   each independently sufficient:
   1. **Deterministic recurrence identity:** the period calculation
@@ -477,12 +489,15 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
   `docs/harness/auto-sch-02-probe.md` +
   `docs/harness/auto-sch-02-results.json`.
   - **LOCAL: PASS.** Targeted local execution-context probe on the
-    Supabase CLI stack: pg_cron 1.6.4 available/preloaded; extension
-    enabled successfully; seconds-based schedule accepted; synthetic
+    Supabase CLI stack: pg_cron 1.6.4 available/preloaded with the
+    extension NOT installed at baseline — the probe temporarily enabled
+    it (`CREATE EXTENSION` succeeded) for evidence capture and restored
+    the baseline afterwards; seconds-based schedule accepted; synthetic
     success and deliberate failure jobs fired with run history observed;
     named reschedule/upsert behaviour observed; a pg_cron job fired a
     SECURITY INVOKER probe function; full teardown verified (job
-    unscheduled, probe objects dropped, pg_cron dropped, zero residue —
+    unscheduled, probe objects dropped, pg_cron dropped — restored
+    baseline: available/preloaded, extension absent; zero residue —
     relations, functions, clean Git tree).
   - **HOSTED: PASS (availability only — scoped to the actual staging
     project).** Authorized human read-only Supabase Studio catalog
@@ -521,6 +536,89 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
   (d) scheduler writes must carry **system/service audit context**
       (`actor_type='system'`, `service_name`, AUD-ACT-02/RLS-SVC-02) and a
       per-run **correlation identity** (AUTO-AUD-02, AUTO-ENV-02).
+- **AUTO-SCH-03 clarification — successor same-firm structure (Ruling
+  2026-09-12, R7; clarification of the existing AUTO-SCH-03 / SCH-FK-01
+  contract, not a new architecture decision).** For `compliance_instances`
+  successor linkage, `successor_instance_id` MUST be structurally
+  same-firm via the existing composite same-firm FK pattern:
+  `(firm_id, successor_instance_id)` → `compliance_instances(firm_id,
+  id)`, preserving nullable successor semantics (the `(firm_id, id)`
+  parent-key precedent per the SCH-FK conventions; the composite FK lands
+  with the IMP-050 implementation migration — contract recorded in `06`
+  SCH-12). The generator function logic additionally enforces valid
+  successor/cycle semantics. This boundary MUST NOT rely on RLS.
+- **AUTO-SCH-04 — Cron registration ownership (FINAL, human ruling
+  2026-09-12).** IMP-050 owns exactly TWO pg_cron registrations: (1)
+  `sched.recurrence.evaluate` and (2) ONE infrastructure outbox-drain
+  job. IMP-050 does NOT register `sched.alerts.evaluate` (its
+  registration is owned by IMP-051) and does NOT register
+  `sched.login_mirror.run` (which retains its existing deferred
+  ownership/binding). The outbox drain is an **operational
+  infrastructure job** — it is NOT a fourth scheduler/domain signal and
+  MUST NOT be added to the AUTO-PRIN-02 catalogue, which remains exactly
+  `sched.recurrence.evaluate`, `sched.alerts.evaluate`,
+  `sched.login_mirror.run`.
+- **AUTO-SCH-05 — Cadences (FINAL, human ruling 2026-09-12).**
+  `sched.recurrence.evaluate` runs **once daily at 00:30 Asia/Kolkata**;
+  the scheduled run is catch-up / look-ahead maintenance — profile
+  activation and instance closure retain their immediate materialization
+  behavior (AUTO-REC-01 trigger points a/b) — and the recurrence function
+  derives `business_date` explicitly in Asia/Kolkata, never depending on
+  the PostgreSQL server/session timezone (AUTO-REC-10). **Cron
+  representation (Ruling 2026-09-12, R5):** the business requirement is
+  unchanged; the pg_cron registration MUST use the expression
+  **`0 19 * * *` interpreted in GMT** — 00:30 Asia/Kolkata, because
+  Asia/Kolkata is fixed UTC+05:30 — under the AUTO-SCH-07 GMT
+  precondition; CAOS MUST NOT modify the global `cron.timezone` setting.
+  The
+  **infrastructure outbox drain runs once per minute** via a **stable
+  named pg_cron registration**; the registration is **idempotent /
+  re-runnable** (named upsert semantics per the AUTO-SCH-02 probe
+  evidence) and is **timezone-independent**. The drain remains
+  infrastructure, not a scheduler signal.
+- **AUTO-SCH-06 — pg_cron installation / migration boundary (FINAL,
+  human ruling 2026-09-12).** Restored local baseline after the
+  AUTO-SCH-02 probe: pg_cron **available and preloaded, extension NOT
+  installed** (the probe temporarily enabled the extension and restored
+  the baseline). Implementation contract: the version-controlled IMP-050
+  migration **MAY contain `CREATE EXTENSION IF NOT EXISTS pg_cron`** —
+  deterministic clean local reset/build; no Dashboard-only/manual local
+  drift. **Hosted staging:** pg_cron is available but NOT installed;
+  applying `CREATE EXTENSION` to hosted staging remains a **separate
+  explicit HUMAN STATE-CHANGE GATE** — this contract/spec closure does
+  NOT authorize executing it. **Hosted state-change path (Ruling
+  2026-09-12, R6):** the human gate means the human explicitly authorizes
+  application of the **version-controlled IMP-050 migration** to hosted
+  staging — the hosted pg_cron state change MUST enter through the
+  migration ledger. **PROHIBITED:** Dashboard-only enablement; manual SQL
+  `CREATE EXTENSION` outside the migration chain; enabling pg_cron first
+  and then letting the migration silently no-op. Sequence: (1)
+  implementation + local acceptance → (2) human authorizes the hosted
+  state change → (3) the version-controlled IMP-050 migration is applied
+  to staging → (4) the migration executes
+  `CREATE EXTENSION IF NOT EXISTS pg_cron` → (5) the migration continues
+  with the contract-approved schema/functions/jobs → (6) hosted
+  acceptance verifies the resulting state. This correction does NOT
+  authorize hosted execution now. **Production:** pg_cron availability
+  remains a pre-cutover verification; no production state change is
+  authorized.
+- **AUTO-SCH-07 — pg_cron time representation / `cron.timezone`
+  precondition (FINAL, human ruling 2026-09-12, R5).** The recurrence
+  registration fires at 00:30 Asia/Kolkata via the GMT expression
+  `0 19 * * *` (AUTO-SCH-05). Before registering or accepting the
+  recurrence cron job, the implementation MUST verify
+  `current_setting('cron.timezone', true) = 'GMT'` — at **local
+  implementation acceptance, hosted staging acceptance, and production
+  pre-cutover verification** alike. If the effective pg_cron timezone is
+  NOT GMT: DO NOT register the recurrence job, DO NOT alter
+  `cron.timezone` automatically — **fail closed / stop the acceptance
+  gate and require explicit human review**. `ALTER SYSTEM`,
+  `postgresql.conf` edits, server restarts, and any silent global
+  `cron.timezone` mutation are prohibited as an implementation path.
+  Business correctness never depends on this setting: the recurrence
+  function derives `business_date` explicitly in Asia/Kolkata
+  (AUTO-REC-10), and the per-minute outbox drain is
+  timezone-independent.
 
 ## Verification (forward references to `11`)
 
@@ -534,9 +632,26 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
 - **TEST-AUTO-04:** Alert evaluation dedupes (AUTO-ALR-02) and auto-resolve
   writes `resolution_type='auto'` audit rows (AUTO-ALR-03).
 - **TEST-AUTO-05:** Consumer idempotency — duplicate event delivery
-  produces no duplicate effect (AUTO-IDM-01).
+  produces no duplicate effect (AUTO-IDM-01). **Harness strategy (test
+  contract clarification, Ruling 2026-09-12):** R0 has no production
+  registered outbox consumers (AUTO-FLOW-05); this test MUST NOT force
+  the creation of a production consumer merely to exercise
+  drain/idempotency behavior. It uses a deterministic **HARNESS-ONLY
+  synthetic consumer/effect fixture** (temporary/synthetic test objects
+  or test-only registration consistent with existing harness conventions
+  — the `hgate_*` precedent, `tests/integration/rls/setup.sql`), which is
+  NOT part of production runtime configuration and MUST NOT become
+  production schema/business behavior. Duplicate delivery proves exactly
+  one domain result per domain/effect key; `event_id` is NOT the
+  idempotency key (AUTO-IDM-01). Teardown leaves **zero synthetic
+  residue**.
 - **TEST-AUTO-06:** Failure path — exhausted retries produce dead-letter
-  records and operational signals (AUTO-RET-01).
+  records and operational signals (AUTO-RET-01). **Harness strategy
+  (Ruling 2026-09-12):** deterministic **HARNESS-ONLY failure injection**
+  against the drain/retry machinery proves bounded retries, the
+  failed/dead-letter transition, SCH-35 dead-letter evidence, correlation
+  preservation (AUTO-RET-02), and operational visibility (`13`) — with NO
+  fake production consumer; teardown leaves **zero synthetic residue**.
 - **TEST-AUTO-07:** Automation audit rows carry the correct non-human
   actor model (AUTO-AUD-01, AUD-ACT-05).
 - **TEST-AUTO-08:** Scheduler mechanism checks per AUTO-SCH-02/03 —
@@ -615,7 +730,14 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
   hardened in-database functions; AUTO-SCH-02 LOCAL/HOSTED/OVERALL PASS,
   2026-09-11), and the scheduler execution-context security constraint is
   normative (AUTO-SCH-03 — BYPASSRLS cron identity; explicit tenant
-  enforcement; no scheduler capability for anon/authenticated). Hosted
+  enforcement; no scheduler capability for anon/authenticated). Cron
+  registration ownership and cadences are recorded (AUTO-SCH-04/05,
+  Ruling 2026-09-12): the signal catalogue remains exactly the three
+  `sched.*` signals — the per-minute outbox drain is infrastructure, not
+  a signal — and the pg_cron installation/migration boundary is normative
+  (AUTO-SCH-06), including the hosted migration-ledger-only state-change
+  path (R6) and the GMT `cron.timezone` fail-closed precondition
+  (AUTO-SCH-07, R5). Hosted
   pg_cron enablement remains a future explicit human gate.
 - AUTO-ACC-06: Reminder handling is recording-only in R0; no sending is
   specified.
