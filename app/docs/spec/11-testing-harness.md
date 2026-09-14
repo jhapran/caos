@@ -387,6 +387,14 @@ instance, one event). Extensions:
 - **TEST-AUTO-12:** correlation propagation — a scheduler run's
   correlation id reaches every event and audit row it causes
   (AUTO-AUD-02).
+- **TEST-AUTO-04 label correction (human ruling HRR-08=A 2026-09-14):**
+  canonical TEST-AUTO-04 is alert dedupe + audit-logged auto-resolution
+  (above; `09`) and is exercised by IMP-051. The IMP-050 recurrence
+  suite's use of the TEST-AUTO-04 label for per-firm look-ahead
+  configuration (AUTO-REC-02, SCH-01) in
+  `tests/integration/automation/recurrence.test.ts` was a mislabel; the
+  correction there is label/comment/metadata only — no execution,
+  assertion, setup/teardown, or test-data change.
 - **TEST-AUTO-05/06 harness strategy (test contract clarification,
   Ruling 2026-09-12):** R0 has no production registered outbox consumers
   (AUTO-FLOW-05, `09`) — these tests MUST NOT force creation of a
@@ -557,6 +565,18 @@ instance, one event). Extensions:
   Asia/Kolkata business-date boundaries (overdue-inclusive Today,
   ISO-week-bounded This Week, NULL `due_date` excluded from date
   buckets), and the ruled sort order with stable ID tie-break.
+- **TEST-API-20 (newly allocated, IMP-051 contract reconciliation
+  2026-09-14, human ruling HRR-10=A):** the API-R0-DLN deadline
+  read-model contract — the deadline board and group drill-down are a
+  server-derived read model over `compliance_instances(due_date, state)`
+  (AUTO-DLN-01: derived; no persisted deadline rows; grouping computed
+  server-side per API-ARCH-05); results are tenant-scoped identically to
+  the underlying instance reads (RLS-CIN-01 — cross-firm zero, manager
+  portfolio scope, senior/article assigned-only); due-date and
+  period-boundary correctness holds on the Asia/Kolkata business-date
+  basis with UTC-persisted timestamps (AUTO-REC-10); the board reflects
+  the operative `due_date` and never rewrites immutable
+  `calculated_due_date` provenance (SCH-12).
 
 ## Security family (TEST-SEC-*)
 

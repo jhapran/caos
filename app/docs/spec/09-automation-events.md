@@ -140,7 +140,7 @@ operationally (`13`), never consumed as business facts:
 | Signal | Fires | Consumed by |
 |---|---|---|
 | `sched.recurrence.evaluate` | Once daily at 00:30 Asia/Kolkata — cron expression `0 19 * * *` interpreted in GMT (fixed UTC+05:30; AUTO-SCH-07 GMT precondition), Ruling 2026-09-12, AUTO-SCH-05 — catch-up / look-ahead maintenance | Recurrence generator — evaluates active profiles and materializes due instances (AUTO-REC-01) |
-| `sched.alerts.evaluate` | On the alert-evaluation schedule | Alert evaluation job — runs enabled alert_rules (AUTO-ALR-01) |
+| `sched.alerts.evaluate` | Once daily at 01:00 Asia/Kolkata — cron expression `30 19 * * *` interpreted in GMT (fixed UTC+05:30), human ruling HRR-02=A 2026-09-14 (reviewer-validated); whether the AUTO-SCH-07 GMT registration precondition binds this registration is unresolved (HRR-03) | Alert evaluation job — runs enabled alert_rules (AUTO-ALR-01) |
 | `sched.login_mirror.run` | On the login-history schedule | Login-history mirroring job (AUD-LOGIN-01) |
 
 - **AUTO-EVT-02:** Adding scheduler signals is an operations decision
@@ -576,6 +576,16 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
   re-runnable** (named upsert semantics per the AUTO-SCH-02 probe
   evidence) and is **timezone-independent**. The drain remains
   infrastructure, not a scheduler signal.
+  **Alert-evaluation cadence (human ruling HRR-02=A 2026-09-14,
+  reviewer-validated CADENCE_VALID=YES):** `sched.alerts.evaluate` runs
+  **once daily at 01:00 Asia/Kolkata**; the pg_cron registration uses
+  the expression **`30 19 * * *` interpreted in GMT** (fixed UTC+05:30).
+  This ruling fixes cadence only: it does not change recurrence
+  behavior, does not make the evaluator an outbox consumer (it remains
+  pull-based over live state, AUTO-FLOW-05), and leaves unresolved the
+  AUTO-SCH-07 GMT registration-precondition applicability and hosted
+  registration path (HRR-03), catch-up/missed-run behavior, and
+  concurrency/re-entry semantics for this job.
 - **AUTO-SCH-06 — pg_cron installation / migration boundary (FINAL,
   human ruling 2026-09-12).** Restored local baseline after the
   AUTO-SCH-02 probe: pg_cron **available and preloaded, extension NOT

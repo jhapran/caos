@@ -14,7 +14,7 @@
  *   TEST-AUTO-03 — scope cardinality: a registration-scoped type with two
  *     registrations yields one instance per registration per period; an
  *     entity-scoped type yields one per entity per period;
- *   TEST-AUTO-04 — look-ahead configuration (AUTO-REC-02, SCH-01): the
+ *   AUTO-REC-02 (SCH-01) — look-ahead configuration: the
  *     firm's recurrence_lookahead_days is honored (30 => fewer periods);
  *     invalid values (0, -3, "abc", 1.5) fail the run observably (SCH-34
  *     'failed' + per-firm error, zero new instances) — and the re-run
@@ -71,7 +71,7 @@ import { api, psql, signIn, userEmail, userId } from '../helpers.mjs';
 const FA = '6f500000-0000-4000-8000-000000000001';
 const FB = '6f500000-0000-4000-8000-000000000002';
 const FC = '6f500000-0000-4000-8000-000000000003'; // TEST-AUTO-09 isolated firm
-const FD = '6f500000-0000-4000-8000-000000000004'; // TEST-AUTO-04 isolated firm
+const FD = '6f500000-0000-4000-8000-000000000004'; // AUTO-REC-02 look-ahead isolated firm
 const ALL_FIRMS = [FA, FB, FC, FD];
 const H = (firm: string) => ({ 'x-active-firm': firm });
 
@@ -141,7 +141,7 @@ const P = {
   race: '6f500000-0000-4000-8000-000000000e09', // staged inside TEST-AUTO-10
   b: '6f500000-0000-4000-8000-000000000e0a', // active (FB)
   hist: '6f500000-0000-4000-8000-000000000e0b', // staged inside TEST-AUTO-09 (FC)
-  la: '6f500000-0000-4000-8000-000000000e0c', // staged inside TEST-AUTO-04 (FD)
+  la: '6f500000-0000-4000-8000-000000000e0c', // staged inside the AUTO-REC-02 look-ahead block (FD)
   bad: '6f500000-0000-4000-8000-000000000e0d', // staged inside M-1 (FD, active, broken rule)
   badProp: '6f500000-0000-4000-8000-000000000e0e', // staged inside M-1 (FD, proposed)
   proof: '6f500000-0000-4000-8000-000000000e0f', // staged inside M-1 (FA, continuation)
@@ -576,12 +576,17 @@ describe('TEST-AUTO-03 — one instance per registration per period / per entity
 });
 
 // ---------------------------------------------------------------------------
-// TEST-AUTO-04 — look-ahead configuration (AUTO-REC-02, SCH-01) + the
+// AUTO-REC-02 (SCH-01) — look-ahead configuration + the
 // TEST-OPS-07 recurrence half (failure is visible; the re-run after the
 // fix is safe and idempotent)
+// (Label correction, human ruling HRR-08=A 2026-09-14: this block was
+// mislabeled TEST-AUTO-04; canonical TEST-AUTO-04 is alert dedupe +
+// audit-logged auto-resolution per `11`/`09` and belongs to IMP-051.
+// Label/comment metadata only — no execution, assertion, setup, or data
+// change.)
 // ---------------------------------------------------------------------------
 
-describe('TEST-AUTO-04 — per-firm look-ahead configuration', () => {
+describe('AUTO-REC-02 — per-firm look-ahead configuration', () => {
   it('a configured 30-day horizon yields fewer periods; invalid values fail the run observably; the fixed re-run succeeds', () => {
     try {
       psql(`update public.firms set settings = '{"recurrence_lookahead_days": 30}'::jsonb where id = '${FD}';`);

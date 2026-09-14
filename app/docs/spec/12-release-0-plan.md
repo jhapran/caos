@@ -1209,16 +1209,45 @@ separate explicit implementation instruction.
   alert evaluation against alert_rules with dedupe, audit-logged
   auto-resolution, and manual acknowledgement.
 - **Requirement IDs:** AUTO-DLN-01, AUTO-ALR-01…03, AUTO-RET-01/02,
-  AUTO-RPL-01 (replay considerations); DM-17/18.
+  AUTO-RPL-01 (replay considerations). **(Erratum, human ruling HRR-01=A
+  2026-09-14: the former trailing citation "DM-17/18" is removed —
+  DM-17/18 are the deferred Release-1 DocumentVersion/DocumentRequest
+  family (DEC-T exclusion) and were never IMP-051 scope; same correction
+  class as the human-ruled IMP-042 card erratum of 2026-09-06.)**
 - **TEST-* IDs:** TEST-AUTO-02/04/06/08 (trigger points, dedupe +
-  auto-resolution, retry, mechanism), TEST-API-* (deadline contracts).
+  auto-resolution, retry, mechanism — the IMP-050/IMP-051 partition of
+  these shared IDs remains an unresolved pre-implementation ruling,
+  HRR-04), TEST-API-20 (canonical API-R0-DLN deadline read-model
+  contract binding, allocated in `11`; human ruling HRR-10=A
+  2026-09-14). Canonical TEST-AUTO-04 is alert dedupe + audit-logged
+  auto-resolution (`11`; HRR-08=A 2026-09-14 — the IMP-050 recurrence
+  suite's use of that label was a mislabel, corrected label-only with no
+  execution/assertion change).
 - **Dependencies:** IMP-050, IMP-042.
 - **Allowed scope:** evaluation functions, deadline read paths, alert
   lifecycle wiring; the `sched.alerts.evaluate` pg_cron registration is
   owned by THIS package (Ruling 2026-09-12 cron-ownership partition,
-  AUTO-SCH-04 — IMP-050 does not register it).
-- **Non-goals:** reminder delivery; new alert-rule families beyond seeded
-  defaults (AUTO-OQ-04).
+  AUTO-SCH-04 — IMP-050 does not register it). **Cadence (human ruling
+  HRR-02=A 2026-09-14, reviewer-validated CADENCE_VALID=YES): the
+  registration uses the expression `30 19 * * *` interpreted in GMT =
+  once daily 01:00 Asia/Kolkata (fixed UTC+05:30); recorded in `09`
+  (signal table + AUTO-SCH-05). This fixes cadence only — AUTO-SCH-07
+  GMT registration-precondition applicability and the hosted
+  registration path (HRR-03), catch-up/missed-run behavior, and
+  concurrency/re-entry semantics for this job remain unresolved.**
+  Deadline materialization is a derived read model over
+  `compliance_instances(due_date, state)` (AUTO-DLN-01) — no persisted
+  deadline rows; the evaluator is pull-based over live state
+  (AUTO-FLOW-05), not an outbox consumer. No UI page wiring: the
+  `/alerts` ModuleGate is unchanged (D1 ruling) and deadlines/Command
+  Centre live UI is IMP-060 (TEST-E2E-10).
+- **Non-goals:** reminder delivery; alert-rule seed rows, default
+  thresholds, or default-enabled rules (human ruling HRR-07=A
+  2026-09-14 — the D3 no-seed ruling governs IMP-051: ZERO alert-rule
+  seeds; AUTO-OQ-04 remains OPEN; the evaluator must remain compatible
+  with zero enabled alert rules; practicing-CA/compliance-domain
+  validation remains separately required before any statutory
+  activation); new alert-rule families.
 - **Expected files/areas:** `supabase/`, `src/data/`.
 - **Entry criteria:** IMP-050 green.
 - **Acceptance criteria:** deadlines correct across period boundaries;
@@ -1228,8 +1257,14 @@ separate explicit implementation instruction.
 - **Human approval:** no (mechanism approved at IMP-050).
 - **Git checkpoint:** `feat: deadlines and alert evaluation`.
 - **Rollback concern:** evaluation re-runnable idempotently.
-- **Open/provisional dependency:** AUTO-OQ-04 (default rule set) — product
-  input needed before seed enablement.
+- **Open/provisional dependency:** AUTO-OQ-04 (default rule set) — OPEN;
+  product input needed before any seed enablement (no seeds authorized).
+  **Unresolved pre-implementation rulings preserved (2026-09-14 contract
+  reconciliation): HRR-03 (GMT precondition scope + hosted registration
+  path), HRR-04 (TEST-AUTO-02/04/06/08 ownership partition), HRR-05
+  (further test-ID allocations), HRR-06 (alert dedupe persistence
+  mechanism), HRR-09 (retrigger/re-raise semantics). This reconciliation
+  edits contract text only and does NOT authorize implementation.**
 
 ### PHASE R0-G — Application Read Models
 

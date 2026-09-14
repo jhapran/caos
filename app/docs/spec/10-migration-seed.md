@@ -247,7 +247,7 @@ category below says otherwise.
 | `COMPLIANCE_MASTER` (11 types) | `compliance_types` system defaults (NULL firm_id) + initial `compliance_rule_versions` | Reference seed | `dueRule` text → structured `due_rule jsonb` on the initial version (SCH-32); `scope_kind`/`registration_class` per the DM-27 matrix; **seeded but not production-activated until external CA/domain sign-off** (DM-OQ-01; SCH-32 `domain_approval_status`) |
 | `TASKS` (1,284 generated) | `compliance_instances` + `tasks` | Transform | Generator logic is discarded; fixture rows map to instances (with structured periods; `generation_source='import'` or `'manual'` — never claimed as recurrence-generated, SCH-12) and their linked tasks; `nextAction` → `tasks.next_action`; fixture string periods → `period_start`/`period_end`/`period_label` (SCH-12) |
 | `REVIEW_ITEMS` (21) | `review_items` | Transform | Display type strings → the frozen R0 category keys (API-OQ-01 RESOLVED 2026-09-05: `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper`; SCH-17 CHECK); submitter names → memberships; comments → immutable `task_comments` (SCH-16 — no review-history table exists; decision facts live on `review_items`, mutation history in `audit_log`) |
-| `ALERTS` (5) | `alerts` + `alert_rules` templates | Transform | Each alert implies a rule; rules seed as firm templates (SCH-19); statuses map to the DM-22 lifecycle |
+| `ALERTS` (5) | `alerts` + `alert_rules` templates | Transform | Each alert implies a rule; statuses map to the DM-22 lifecycle. **Alert-rule template seeding is superseded by the D3 ruling (IMP-042 contract reconciliation 2026-09-06, recorded in `06` SCH-19; reaffirmed for IMP-051 by human ruling HRR-07=A 2026-09-14): R0 ships ZERO alert-rule seed rows and zero default thresholds — schema capability (SCH-19) is not approved seed content; which rules ship enabled and with what thresholds remains AUTO-OQ-04 (OPEN, product input); no statutory or default-enabled alert rule/threshold is authorized, and practicing-CA/compliance-domain validation remains separately required where applicable** |
 | `DEPENDENCY_CLIENTS` (48) | none (derived) | Demo-only | Production dependency board is derived from instances/tasks (`09`, AUTO-DLN-01); fixture stays in the demo adapter |
 | `ASK_FIXTURES` (6) | none | Demo-only | Ask CAOS is demo-only in R0 (`07`); real AI deferred (DEC-C) |
 | `AGGREGATES`, `REVIEW_COUNTS`, `ACTIVE_ALERT_COUNT`, `DEPENDENCY_TOTALS`, `TOTAL_ACTIVE` | none | Fixture-only presentation data | Replaced by server-derived aggregates (DM-X-03, API-R0-DASH) |
@@ -278,7 +278,11 @@ category below says otherwise.
 - **MIG-SEED-02 — Compliance-type reference data:** the statutory
   catalogue as `compliance_types` system defaults **plus their initial
   `compliance_rule_versions`** (SCH-32), with `scope_kind`/
-  `registration_class` per DM-27 and alert-rule templates. **Seed
+  `registration_class` per DM-27. Alert-rule templates are NOT part of
+  R0 seeding (D3 ruling, recorded in `06` SCH-19; reaffirmed for
+  IMP-051 by human ruling HRR-07=A 2026-09-14 — zero alert-rule seeds
+  and zero default thresholds; AUTO-OQ-04 remains OPEN; no statutory
+  activation is implied by schema capability). **Seed
   governance classification (R0 closure 2026-09-03):** GST, TDS, Income
   Tax/ITR, ROC/MCA, Professional Tax, PF, ESI, and Audit are seeded as
   `governance_class='statutory'`; Certificates/custom recurring are
