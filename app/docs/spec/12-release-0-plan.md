@@ -1214,10 +1214,17 @@ separate explicit implementation instruction.
   DM-17/18 are the deferred Release-1 DocumentVersion/DocumentRequest
   family (DEC-T exclusion) and were never IMP-051 scope; same correction
   class as the human-ruled IMP-042 card erratum of 2026-09-06.)**
-- **TEST-* IDs:** TEST-AUTO-02/04/06/08 (trigger points, dedupe +
-  auto-resolution, retry, mechanism — the IMP-050/IMP-051 partition of
-  these shared IDs remains an unresolved pre-implementation ruling,
-  HRR-04), TEST-API-20 (canonical API-R0-DLN deadline read-model
+- **TEST-* IDs:** TEST-AUTO-02/04/06/08 (shared canonical automation
+  IDs — human ruling HRR-04=A 2026-09-15: the existing shared TEST-AUTO
+  IDs are kept; IMP-051 updates/extends the existing automation suites
+  in place and creates NO replacement IDs for already-canonical shared
+  obligations; canonical TEST-AUTO-04 remains alert dedupe +
+  auto-resolution audit; post-IMP051 the TEST-AUTO-08 oracle expects
+  `sched.alerts.evaluate` present at cadence `30 19 * * *` while
+  `sched.login_mirror.run` remains absent under current ownership),
+  TEST-AUTO-13/14/15 (new sequential IDs for genuinely new IMP-051
+  behavior — human ruling HRR-05=A 2026-09-15; allocated and defined in
+  `11`), TEST-API-20 (canonical API-R0-DLN deadline read-model
   contract binding, allocated in `11`; human ruling HRR-10=A
   2026-09-14). Canonical TEST-AUTO-04 is alert dedupe + audit-logged
   auto-resolution (`11`; HRR-08=A 2026-09-14 — the IMP-050 recurrence
@@ -1231,10 +1238,17 @@ separate explicit implementation instruction.
   HRR-02=A 2026-09-14, reviewer-validated CADENCE_VALID=YES): the
   registration uses the expression `30 19 * * *` interpreted in GMT =
   once daily 01:00 Asia/Kolkata (fixed UTC+05:30); recorded in `09`
-  (signal table + AUTO-SCH-05). This fixes cadence only — AUTO-SCH-07
-  GMT registration-precondition applicability and the hosted
-  registration path (HRR-03), catch-up/missed-run behavior, and
-  concurrency/re-entry semantics for this job remain unresolved.**
+  (signal table + AUTO-SCH-05). **Registration precondition and
+  operational semantics are likewise RESOLVED (human rulings 2026-09-15,
+  recorded in `09`):** the AUTO-SCH-07 fail-closed GMT precondition
+  applies to this registration (HRR-03=A — register only when
+  `current_setting('cron.timezone', true) = 'GMT'`; otherwise do not
+  register, never mutate `cron.timezone`, fail closed to explicit human
+  review; hosted registration remains through the version-controlled
+  migration path; cron expression interpretation, the `cron.timezone`
+  operating convention, and Asia/Kolkata business-date semantics remain
+  distinct concerns); catch-up / missed-run semantics are governed by
+  HRR-11=A and concurrency / re-entry semantics by HRR-12=A.**
   Deadline materialization is a derived read model over
   `compliance_instances(due_date, state)` (AUTO-DLN-01) — no persisted
   deadline rows; the evaluator is pull-based over live state
@@ -1259,12 +1273,37 @@ separate explicit implementation instruction.
 - **Rollback concern:** evaluation re-runnable idempotently.
 - **Open/provisional dependency:** AUTO-OQ-04 (default rule set) — OPEN;
   product input needed before any seed enablement (no seeds authorized).
-  **Unresolved pre-implementation rulings preserved (2026-09-14 contract
-  reconciliation): HRR-03 (GMT precondition scope + hosted registration
-  path), HRR-04 (TEST-AUTO-02/04/06/08 ownership partition), HRR-05
-  (further test-ID allocations), HRR-06 (alert dedupe persistence
-  mechanism), HRR-09 (retrigger/re-raise semantics). This reconciliation
-  edits contract text only and does NOT authorize implementation.**
+  **Pre-implementation rulings RESOLVED (human rulings 2026-09-15, all
+  Option A; recorded normatively here and in `06`/`09`/`11`):** HRR-03=A
+  (the AUTO-SCH-07 fail-closed GMT precondition applies to
+  `sched.alerts.evaluate` — registration requires
+  `current_setting('cron.timezone', true) = 'GMT'`; otherwise do not
+  register, never mutate `cron.timezone`, fail closed to explicit human
+  review; hosted registration remains through the version-controlled
+  migration path); HRR-04=A (shared canonical TEST-AUTO IDs kept;
+  IMP-051 updates/extends the existing automation suites in place);
+  HRR-05=A (TEST-AUTO-13/14/15 allocated for the evaluator
+  alert-creation race, alert retrigger / new occurrence, and persisted
+  snooze-expiry normalization — defined in `11`); HRR-06=A (AUTO-ALR-02
+  dedupe structurally enforced — at most one non-resolved alert per the
+  approved dedupe identity via a database-level uniqueness mechanism
+  over non-resolved states; creation races converge safely;
+  check-then-insert alone insufficient; invariant recorded in `06`
+  SCH-18); HRR-09=A (resolved alerts are terminal historical
+  occurrences; a later recurrence creates a NEW alert occurrence with
+  fresh lifecycle state — no reopen, no permanent suppression);
+  HRR-11=A (catch-up / missed-run semantics — no historical
+  replay/backfill; missed executions recover through safe re-fire over
+  current live state; SCH-34 job-run evidence provides observability);
+  HRR-12=A (concurrency / re-entry semantics — structural
+  business-effect dedupe is the correctness layer; overlapping runs
+  converge safely; no mandatory job-level advisory lock). **ALL
+  pre-implementation human decisions for IMP-051 are now RESOLVED and
+  recorded; the IMP-051 package contract remains HUMAN-APPROVED.
+  Implementation remains NOT AUTHORIZED — it begins only with an
+  explicit implementation instruction; this reconciliation edits
+  contract text only and does NOT authorize implementation, Git
+  checkpoint, or push.**
 
 ### PHASE R0-G — Application Read Models
 
@@ -1471,7 +1510,7 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | TEST-SCH-01…20 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 (TEST-SCH-01 dependency-acyclicity implementation coverage and TEST-SCH-15…20 owned by IMP-040; TEST-SCH-02 shared — earlier package coverage remains regression; TEST-SCH-12/13/14 owned by IMP-031) |
 | TEST-AUD-01…11 | IMP-013, extended per domain package |
 | TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-040 (API-R0-TSK contract tests), IMP-060, IMP-061, IMP-062 |
-| TEST-AUTO-01…12 | IMP-050, IMP-051 |
+| TEST-AUTO-01…15 | IMP-050, IMP-051 |
 | TEST-MIG-01…15 | IMP-003, IMP-014, IMP-070, IMP-071 |
 | TEST-E2E-01…12 | IMP-001 (skeleton), flows land with their packages (TEST-E2E-07 owned by IMP-042); full pass at IMP-071 |
 | TEST-SEC-01…05 | IMP-011, IMP-012, IMP-013 |

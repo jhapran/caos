@@ -74,7 +74,7 @@ roles.
   | TEST-RLS-EVO-01 / SJR-01 / SDL-01 (`05` §12/§14, IMP-050 architecture amendment 2026-09-11) | Grant closure: `anon`/`authenticated` have no read/write/execute on the SCH-33/34/35 automation records or their scheduler/job functions; scheduler-path cross-firm isolation/attribution is TEST-AUTO-08 (never RLS-based, AUTO-SCH-03) |
   | TEST-RLS-RVW-* (`06` SCH-17, `05` RLS-RVW-01) | TEST-RLS-RVW-01…16 defined below (IMP-041 contract closure 2026-09-05) |
   | TEST-AUD-01…12 (`08` §20) | Each ID defined by its `08` enumeration and binding here: TEST-AUD-01, TEST-AUD-02, TEST-AUD-03, TEST-AUD-04, TEST-AUD-05, TEST-AUD-06, TEST-AUD-07, TEST-AUD-08, TEST-AUD-09, TEST-AUD-10, TEST-AUD-11, TEST-AUD-12 |
-  | TEST-AUTO-01…10 (`09`) | Each ID defined below (TEST-AUTO-01…TEST-AUTO-10), extended by TEST-AUTO-11/12 here |
+  | TEST-AUTO-01…10 (`09`) | Each ID defined below (TEST-AUTO-01…TEST-AUTO-10), extended by TEST-AUTO-11/12/13/14/15 here |
   | TEST-MIG-01…05 (`10` phases) | Each phase-gate check defined by `10` and binding here: TEST-MIG-01, TEST-MIG-02, TEST-MIG-03, TEST-MIG-04, TEST-MIG-05; extended by TEST-MIG-06…15 below |
   | TEST-SCH-01 (`06` SCH-14) | TEST-SCH family, acyclicity case |
   | TEST-AUTH-* (`10` Phase A) | TEST-AUTH family below |
@@ -387,6 +387,40 @@ instance, one event). Extensions:
 - **TEST-AUTO-12:** correlation propagation — a scheduler run's
   correlation id reaches every event and audit row it causes
   (AUTO-AUD-02).
+- **TEST-AUTO-13 (newly allocated, human ruling HRR-05=A 2026-09-15):**
+  evaluator alert-creation race. **Owning behavior/requirement:**
+  AUTO-ALR-02 structural dedupe (HRR-06=A) under concurrent evaluator
+  execution (HRR-12=A) — the alert-evaluator analogue of TEST-AUTO-10's
+  recurrence-generator race. **Minimum acceptance oracle:** two
+  concurrent evaluator executions racing to create an alert for the same
+  dedupe identity converge to EXACTLY ONE non-resolved alert row,
+  exactly one `alert.created` publication, and no duplicate audit
+  effect; the losing creation attempt no-ops. **Package ownership:**
+  IMP-051.
+- **TEST-AUTO-14 (newly allocated, human ruling HRR-05=A 2026-09-15):**
+  alert retrigger / new occurrence. **Owning behavior/requirement:**
+  HRR-09=A (AUTO-ALR-02/03) — resolved alerts are terminal historical
+  occurrences and never suppress later recurrence. **Minimum acceptance
+  oracle:** after an alert reaches `resolved`, the same rule condition
+  becoming true again creates a NEW alert occurrence with fresh
+  lifecycle state (`raised_at`, correlation identity, acknowledgement
+  lifecycle, and the rule's applicable `requires_explicit_ack`
+  behavior); the resolved row remains terminal and unchanged (no
+  reopen); while a current non-resolved occurrence exists
+  (`active`/`acknowledged`/`snoozed`), re-evaluation creates NO
+  duplicate. **Package ownership:** IMP-051.
+- **TEST-AUTO-15 (newly allocated, human ruling HRR-05=A 2026-09-15):**
+  persisted snooze-expiry normalization. **Owning behavior/requirement:**
+  the human-ruled snooze-expiry ownership partition (`09` Alert
+  evaluation; `06` SCH-18) — persisted expiry normalization belongs to
+  the IMP-051 evaluator; the IMP-042 read derivation (TEST-API-18) is
+  unchanged. **Minimum acceptance oracle:** an evaluator run normalizes
+  a persisted `snoozed` row with `snoozed_until <= now()` to its SCH-18
+  non-snoozed state (`acknowledged` when `acknowledged_at IS NOT NULL`,
+  else `active`), consistent with the TEST-API-18 read derivation; the
+  write carries the automation audit actor model (AUTO-AUD-01) and
+  re-running is a no-op (idempotent, AUTO-IDM-01). **Package
+  ownership:** IMP-051.
 - **TEST-AUTO-04 label correction (human ruling HRR-08=A 2026-09-14):**
   canonical TEST-AUTO-04 is alert dedupe + audit-logged auto-resolution
   (above; `09`) and is exercised by IMP-051. The IMP-050 recurrence
@@ -430,6 +464,18 @@ instance, one event). Extensions:
   no permissive browser policies). The gate implementation
   (`scripts/harness/gate.mjs`) is updated by the IMP-050 implementation
   package, not by contract closure.
+- **TEST-AUTO-08 post-IMP051 expectation (human ruling HRR-04=A
+  2026-09-15):** IMP-051 updates/extends the existing shared automation
+  suites in place — NO replacement IDs are created for already-canonical
+  shared test obligations. After IMP-051 the TEST-AUTO-08 oracle
+  additionally expects `sched.alerts.evaluate` PRESENT at cadence
+  `30 19 * * *` under the same AUTO-SCH-07 fail-closed GMT registration
+  precondition (HRR-03=A — a scheduler-timezone operating-convention
+  check only; it does not conflate scheduler timezone with the
+  Asia/Kolkata business-date semantics the evaluator derives
+  explicitly), and expects `sched.login_mirror.run` to remain ABSENT
+  under current ownership. Canonical TEST-AUTO-04 remains alert dedupe +
+  audit-logged auto-resolution (HRR-08=A 2026-09-14), unchanged.
 - AUTO-OQ-01/02/03 are RESOLVED (human ruling 2026-09-11, recorded in
   `09`/`06`); no provisional wording remains for them.
 - **Scheduler-path isolation must be tested directly:** because the cron

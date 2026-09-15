@@ -378,6 +378,29 @@ prevention only; full design lands with each feature's release spec.
   reads as `acknowledged` when `acknowledged_at IS NOT NULL`, else
   `active`; commands remain correct against an expired-but-persisted
   `snoozed` row; persisted normalization belongs to the IMP-051 evaluator.
+- **Alert dedupe uniqueness invariant (human ruling HRR-06=A
+  2026-09-15; the approved dedupe identity is unchanged — AUTO-ALR-02,
+  `09`):** at most one NON-RESOLVED alert
+  (`active`/`acknowledged`/`snoozed`) exists for the approved business
+  dedupe identity `(alert_rule_id, object)` within its firm. This
+  invariant MUST be enforced by a **database-level uniqueness
+  mechanism** over the dedupe identity restricted to non-resolved
+  status — check-then-insert alone is NOT sufficient as the correctness
+  layer: concurrent creations MUST converge safely and the losing
+  creation attempt persists no duplicate row (and publishes no duplicate
+  `alert.created` event and no duplicate audit effect, `09`). **Resolved
+  rows are EXCLUDED from the uniqueness scope (human ruling HRR-09=A
+  2026-09-15):** resolved alerts remain terminal historical occurrences
+  — no reopen path exists — so a later recurrence of the same condition
+  creates a NEW alert occurrence carrying fresh lifecycle state
+  (`raised_at`, correlation identity, acknowledgement lifecycle, and the
+  rule's applicable `requires_explicit_ack` behavior); a current
+  non-resolved occurrence continues to suppress duplicates.
+  `resolution_type='auto'` remains evaluator-reserved — no
+  browser/manual path may write it. The physical mechanism (partial
+  unique index or equivalent database-level uniqueness construct) is an
+  IMP-051 implementation detail within this contract; no migration SQL
+  is specified here.
 - **RLS:** RLS-ALR-*. **Tests:** TEST-RLS-ALR-*, TEST-AUD-03.
 
 ### SCH-19 — alert_rules

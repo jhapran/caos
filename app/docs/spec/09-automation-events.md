@@ -140,7 +140,7 @@ operationally (`13`), never consumed as business facts:
 | Signal | Fires | Consumed by |
 |---|---|---|
 | `sched.recurrence.evaluate` | Once daily at 00:30 Asia/Kolkata — cron expression `0 19 * * *` interpreted in GMT (fixed UTC+05:30; AUTO-SCH-07 GMT precondition), Ruling 2026-09-12, AUTO-SCH-05 — catch-up / look-ahead maintenance | Recurrence generator — evaluates active profiles and materializes due instances (AUTO-REC-01) |
-| `sched.alerts.evaluate` | Once daily at 01:00 Asia/Kolkata — cron expression `30 19 * * *` interpreted in GMT (fixed UTC+05:30), human ruling HRR-02=A 2026-09-14 (reviewer-validated); whether the AUTO-SCH-07 GMT registration precondition binds this registration is unresolved (HRR-03) | Alert evaluation job — runs enabled alert_rules (AUTO-ALR-01) |
+| `sched.alerts.evaluate` | Once daily at 01:00 Asia/Kolkata — cron expression `30 19 * * *` interpreted in GMT (fixed UTC+05:30), human ruling HRR-02=A 2026-09-14 (reviewer-validated); the AUTO-SCH-07 fail-closed GMT registration precondition binds this registration (human ruling HRR-03=A 2026-09-15) | Alert evaluation job — runs enabled alert_rules (AUTO-ALR-01) |
 | `sched.login_mirror.run` | On the login-history schedule | Login-history mirroring job (AUD-LOGIN-01) |
 
 - **AUTO-EVT-02:** Adding scheduler signals is an operations decision
@@ -368,7 +368,23 @@ compliance_instances (provenance: rule_version_id, generation_source,
   offboarding-with-open-obligations, workload thresholds.
 - **AUTO-ALR-02 — Dedupe.** At most one `active` alert per
   `(alert_rule_id, object)`; re-evaluation of an existing condition updates
-  nothing (idempotent, AUTO-IDM-01).
+  nothing (idempotent, AUTO-IDM-01). **Structural enforcement (human
+  ruling HRR-06=A 2026-09-15):** the business invariant is at most one
+  NON-RESOLVED alert for this approved dedupe identity, enforced by a
+  database-level uniqueness mechanism over the dedupe identity
+  restricted to non-resolved states (contract recorded in `06` SCH-18) —
+  check-then-insert alone is NOT sufficient as the correctness layer.
+  Creation races MUST converge safely: the losing creation attempt
+  produces no duplicate alert, no duplicate `alert.created` event, and
+  no duplicate audit effect. **Retrigger / new occurrence (human ruling
+  HRR-09=A 2026-09-15):** a resolved alert is a terminal historical
+  occurrence — it is never reopened and never permanently suppresses
+  recurrence of the risk; if the same condition becomes true again
+  later, the evaluator creates a NEW alert occurrence with fresh
+  lifecycle state (`raised_at`, correlation identity, acknowledgement
+  lifecycle, and the rule's applicable `requires_explicit_ack`
+  behavior). An acknowledged or snoozed non-resolved alert continues to
+  suppress duplicate current occurrences under this invariant.
 - **AUTO-ALR-03 — Hybrid resolution (DM-OQ-05).** Rule-derived alerts with
   `auto_resolve=true` (SCH-19) auto-resolve when the triggering condition
   clears — every auto-resolution is audit-logged with
@@ -581,11 +597,37 @@ evaluated?). **DEC-OQ-02 / AUTO-OQ-01 is RESOLVED by human ruling
   **once daily at 01:00 Asia/Kolkata**; the pg_cron registration uses
   the expression **`30 19 * * *` interpreted in GMT** (fixed UTC+05:30).
   This ruling fixes cadence only: it does not change recurrence
-  behavior, does not make the evaluator an outbox consumer (it remains
-  pull-based over live state, AUTO-FLOW-05), and leaves unresolved the
-  AUTO-SCH-07 GMT registration-precondition applicability and hosted
-  registration path (HRR-03), catch-up/missed-run behavior, and
-  concurrency/re-entry semantics for this job.
+  behavior and does not make the evaluator an outbox consumer (it
+  remains pull-based over live state, AUTO-FLOW-05). **Registration
+  precondition (human ruling HRR-03=A 2026-09-15):** the AUTO-SCH-07
+  fail-closed GMT precondition applies to `sched.alerts.evaluate`
+  exactly as it does to the recurrence registration — registration
+  requires `current_setting('cron.timezone', true) = 'GMT'`; if the
+  effective pg_cron timezone is NOT GMT: DO NOT register, DO NOT mutate
+  `cron.timezone` (no ALTER SYSTEM / `postgresql.conf` edit / server
+  restart) — fail closed and require explicit human review. Hosted
+  registration remains through the version-controlled migration path.
+  Three concerns remain distinct: cron **expression interpretation**
+  (GMT wall-clock), the **`cron.timezone` operating convention** (GMT —
+  verified, never mutated), and **Asia/Kolkata business-date
+  semantics** (derived explicitly in function logic, never from the
+  server/session timezone). **Catch-up / missed-run semantics (human
+  ruling HRR-11=A 2026-09-15):** there is NO historical evaluator
+  replay/backfill — a missed 01:00 execution does not trigger past-state
+  reconstruction, and database/scheduler downtime does not create
+  per-missed-date evaluation runs; a delayed or multiple-missed
+  execution recovers through safe re-fire that evaluates CURRENT live
+  state (pull-based, AUTO-FLOW-05), so current live truth — not
+  reconstructed historical truth — governs recovery; SCH-34 job-run
+  records provide the observability evidence for missed, failed, and
+  recovered runs. **Concurrency / re-entry semantics (human ruling
+  HRR-12=A 2026-09-15):** structural business-effect dedupe
+  (AUTO-ALR-02, database-enforced per `06` SCH-18) is the correctness
+  layer; overlapping evaluator executions, duplicate invocation, and
+  cron + manual/service overlap MAY run and converge safely — a
+  creation-race loser no-ops, auto-resolution races use status-guarded /
+  idempotent writes, and separate SCH-34 run attempts are allowed; NO
+  mandatory job-level advisory lock is required for correctness.
 - **AUTO-SCH-06 — pg_cron installation / migration boundary (FINAL,
   human ruling 2026-09-12).** Restored local baseline after the
   AUTO-SCH-02 probe: pg_cron **available and preloaded, extension NOT
