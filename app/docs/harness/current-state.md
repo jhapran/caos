@@ -7,14 +7,18 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human package-closure approval date: 2026-09-13
-- Last CLOSED package: IMP-050 — Recurrence generation & scheduler
-  signals
-- IMP-050 implementation checkpoint: `b15b584`
-  (`feat: implement IMP-050 recurrence automation`)
-- IMP-050 closure checkpoint: `6b645e4`
-  (`docs: close IMP-050 recurrence`)
-- IMP-050 hosted staging acceptance: PASS (see §4/§6/§6d)
+- Human package-closure approval date: 2026-09-18
+- Last CLOSED package: IMP-051 — Deadline materialization & alert
+  evaluation
+- IMP-051 implementation checkpoint: `8e8464a`
+  (`IMP-051: materialize deadlines and evaluate alerts`)
+- IMP-051 closure checkpoint: this commit (`docs: close IMP-051 …` — the
+  hash is recorded post-commit per the closure-pointer reconcile
+  convention; see the IMP-050 precedent)
+- IMP-051 pre-implementation normative checkpoints (rulings record):
+  `712cf8e` (`IMP-051: reconcile package contract rulings`) and
+  `8a82136` (`IMP-051: record pre-implementation rulings`)
+- IMP-051 hosted staging acceptance: PASS (see §4/§6/§6e)
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -22,7 +26,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (20 / 27, 74.07%):
+Completed (21 / 27, 77.78%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -33,28 +37,53 @@ Completed (20 / 27, 74.07%):
 - IMP-042 (Work Management — alerts & My Work)
 - IMP-050 (Automation & Deadlines — recurrence generation & scheduler
   signals; human package-closure approval 2026-09-13)
+- IMP-051 (Automation & Deadlines — deadline materialization & alert
+  evaluation; human package-closure approval 2026-09-18)
 
 Remaining formal R0 packages:
 
-- IMP-051 (Automation & Deadlines — deadline materialization & alert
-  evaluation)
 - IMP-060, IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: none in flight — IMP-050 — Recurrence generation &
-  scheduler signals — CLOSED (human package-closure approval
-  2026-09-13). Acceptance record: implementation HUMAN ACCEPTED;
-  independent final implementation reviewer verdict PASS — READY FOR
-  HUMAN IMPLEMENTATION ACCEPTANCE; final local Harness Gate PASS 23/23;
-  automation integration 43/43, schema 199/199, RLS 303/303, audit
-  111/111; hosted staging acceptance PASS (see §4/§6/§6d).
-- Next: IMP-051 — Deadline materialization & alert evaluation — NOT
+- Current: none in flight — IMP-051 — Deadline materialization & alert
+  evaluation — CLOSED (human package-closure approval 2026-09-18).
+  Acceptance record: final local runtime PASS (corrected migration
+  `20260916000000_alert_evaluation.sql`; TEST-SCH-29; automation
+  integration 51/51; targeted audit 15/15 incl. TEST-AUD-03; deadline
+  integration 10/10; deadline unit tests; `npm run verify`; full Harness
+  Gate PASS 24/24 phases including the new deadlines-integration phase);
+  final post-runtime independent review PASS; post-checkpoint independent
+  verification PASS; hosted staging acceptance PASS (see §4/§6/§6e).
+- Next: IMP-060 — Command Centre & Morning Brief live data — NOT
   STARTED and NOT AUTHORIZED (begins only with an explicit
-  implementation instruction; IMP-051 owns the
-  `sched.alerts.evaluate` registration; IMP-051 is alerts/deadline
-  materialization, NOT recurrence-rule definition).
+  implementation instruction; IMP-051 closure does not authorize it).
+- Historical pre-implementation record for IMP-051 (kept for
+  rationale): all pre-implementation human decisions were RESOLVED and
+  normatively recorded before implementation (HRR-01…HRR-12, human
+  rulings 2026-09-14/15, in `06`/`09`/`11`/`12`; checkpoints `712cf8e`/
+  `8a82136`): cadence `30 19 * * *` GMT = 01:00 Asia/Kolkata (HRR-02=A);
+  the AUTO-SCH-07 fail-closed GMT precondition binds the
+  `sched.alerts.evaluate` registration (HRR-03=A); shared canonical
+  TEST-AUTO IDs kept (HRR-04=A); TEST-AUTO-13/14/15 allocated
+  (HRR-05=A); structural non-resolved dedupe (HRR-06=A); resolved alerts
+  are terminal historical occurrences, retrigger creates a NEW occurrence
+  (HRR-09=A); ZERO alert-rule seeds / AUTO-OQ-04 stays OPEN (HRR-07=A);
+  canonical TEST-AUTO-04 = alert dedupe + audit-logged auto-resolution
+  (HRR-08=A); TEST-API-20 binds the API-R0-DLN read model (HRR-10=A);
+  missed runs recover by safe current-live-state re-fire, never replay
+  (HRR-11=A); overlapping runs converge via structural dedupe +
+  status-guarded writes, no advisory lock (HRR-12=A). The implementation
+  file boundary was expanded once with independent review and human
+  authorization (fixture compatibility in the alerts RLS/command suites;
+  rls-catalog grant inventories). Two runtime-found defect classes were
+  corrected and independently re-reviewed before the final green chain:
+  a migration defect (the corrected lifecycle CHECK's resolved clause
+  needed an explicit `resolution_type IS NOT NULL` — a PostgreSQL CHECK
+  accepts UNKNOWN) and focused test-defect repairs (SQL probe
+  concatenation syntax; a boolean `::text` representation expectation;
+  the TEST-AUD-03 evaluator fixture's obligation-period isolation).
 - Historical pre-implementation record (kept for rationale): the
   IMP-050 architecture/spec amendment was APPROVED 2026-09-12 (human
   diff review PASS); the IMP-050 implementation contract / contract
@@ -92,12 +121,30 @@ Remaining formal R0 packages:
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260912000000_recurrence_scheduler.sql` (IMP-050)
-- Hosted staging migration ledger: 11 migrations, local == remote
-  through `20260912000000` (11 / 11)
+- Latest migration: `20260916000000_alert_evaluation.sql` (IMP-051)
+- Hosted staging migration ledger: 12 migrations, local == remote
+  through `20260916000000` (12 / 12)
 - Application public tables: 24 (CURRENT on hosted staging and local —
-  SCH-33/34/35 landed with the IMP-050 migration; the Ruling
-  2026-09-12 R8 target is reached)
+  unchanged by IMP-051: DEADLINE_MODEL=DERIVED adds NO base table; the
+  deadline read model is two security_invoker views,
+  `public.deadline_board` and `public.client_dependency_board`, SELECT
+  to authenticated only — anon and service_role denied, no public grant;
+  views are not relkind='r' and carry no policies, so the Ruling
+  2026-09-12 R8 posture — RLS 24/24, FORCE 20, policies 51 — is
+  unchanged)
+- IMP-051 structural acceptance (hosted + local): the corrected
+  `alerts_lifecycle_fields_check` requires `resolution_type IS NOT NULL`
+  for every resolved row — manual resolution requires a human
+  `resolved_by`, auto resolution requires `resolved_by IS NULL`
+  (AUD-ACT-05; no synthetic system auth.users identity);
+  `alerts_nonresolved_dedupe_unique` — partial UNIQUE NULLS NOT DISTINCT
+  over (firm_id, alert_rule_id, client_id, compliance_instance_id)
+  restricted to active/acknowledged/snoozed (HRR-06=A; resolved rows
+  excluded, HRR-09=A); the fail-closed legacy-duplicate preflight passed
+  silently (duplicate groups after migration = 0, zero automatic
+  cleanup); `public.evaluate_alerts()` is SECURITY DEFINER with
+  `search_path = ''` and owner-only EXECUTE (anon/authenticated/
+  service_role denied)
 - RLS enabled: 24 / 24
 - FORCE-RLS: 20 (SCH-33 and SCH-35 forced; SCH-34 enabled but NOT
   forced; Ruling 2026-09-12, R8)
@@ -113,11 +160,15 @@ Remaining formal R0 packages:
   Dashboard/manual out-of-chain enablement — Ruling R6 satisfied);
   `cron.timezone = GMT` and `cron.database_name = postgres` verified
   hosted
-- Hosted cron registrations — exactly two, both IMP-050-owned:
-  `outbox.drain` (`* * * * *`) and `sched.recurrence.evaluate`
-  (`0 19 * * *` GMT = 00:30 Asia/Kolkata next business-day
-  interpretation per contract); observed `outbox.drain` runs succeeded.
-  No alert-scheduler or login-mirror cron is owned by IMP-050.
+- Hosted cron registrations — exactly three: `outbox.drain`
+  (`* * * * *` — infrastructure, NOT a scheduler signal, AUTO-SCH-04),
+  `sched.recurrence.evaluate` (`0 19 * * *` GMT = 00:30 Asia/Kolkata),
+  and the IMP-051-owned `sched.alerts.evaluate` (`30 19 * * *` GMT =
+  01:00 Asia/Kolkata, HRR-02=A), all under the fail-closed
+  `cron.timezone = 'GMT'` precondition (HRR-03=A); hosted
+  `cron.timezone = GMT`, `cron.database_name = postgres`, pg_cron 1.6.4
+  re-verified; `sched.login_mirror.run` remains ABSENT (deferred
+  ownership unchanged).
 - Hosted data stability at acceptance: `compliance_instances` 0,
   undelivered outbox rows 0, `scheduler_dead_letters` 0
 - IMP-042 tables: `alerts` (policy `alerts_select_scoped`) and
@@ -170,10 +221,12 @@ Remaining formal R0 packages:
   (`CREATE EXTENSION IF NOT EXISTS pg_cron`; no Dashboard/manual
   extension drift — Ruling R6 satisfied). `cron.timezone = GMT` and
   `cron.database_name = postgres` verified hosted. Exactly two cron jobs
-  are active and exactly as expected: `outbox.drain` (every minute,
+  were active at the IMP-050 boundary and exactly as expected: `outbox.drain` (every minute,
   `* * * * *`) and `sched.recurrence.evaluate` (`0 19 * * *` GMT —
   00:30 Asia/Kolkata next business-day interpretation per contract);
-  observed `outbox.drain` runs succeeded. **Scoped to the actual staging
+  observed `outbox.drain` runs succeeded. (IMP-051 later added
+  `sched.alerts.evaluate` — the current hosted inventory is in §4/§6e.)
+  **Scoped to the actual staging
   project only — production pg_cron availability/installation is NOT
   claimed and remains a pre-cutover verification.**
   Historical (pre-installation, 2026-09-11, AUTO-SCH-02 HOSTED PASS):
@@ -435,6 +488,102 @@ Remaining formal R0 packages:
 - Production promotion is NOT part of IMP-050 closure and remains NOT
   authorized; no production verification is claimed.
 
+## 6e. Deadline & Alert-Evaluation Enforcement Facts (IMP-051 — durable; CLOSED 2026-09-18)
+
+- Schema/evaluator: the corrected `alerts_lifecycle_fields_check`
+  (explicit `resolution_type IS NOT NULL` for resolved rows; manual ⇒
+  human `resolved_by`, auto ⇒ `resolved_by IS NULL`); the HRR-06=A
+  structural dedupe index `alerts_nonresolved_dedupe_unique` (partial
+  UNIQUE NULLS NOT DISTINCT over the approved identity, non-resolved
+  states only); `public.evaluate_alerts()` (SECURITY DEFINER,
+  `search_path=''`, owner-only EXECUTE, pull-based over live state —
+  AUTO-FLOW-05, never an outbox consumer); audit via explicit
+  `audit_write` with `app.audit_skip_trigger='1'` (actor_type='system',
+  actor_user_id NULL, service_name='alerts', per-run correlation;
+  actions exactly alert.created / alert.resolved / alert.snooze_expired;
+  no double auditing; the alerts_publish_event trigger alone owns
+  alert.created/alert.resolved publication).
+- Deadline model: DEADLINE_MODEL=DERIVED — NO persisted deadline table;
+  `public.deadline_board` (compliance_instances ONLY, grouped by
+  (compliance_type_id, operative due_date), Asia/Kolkata day semantics)
+  and `public.client_dependency_board` (information_requested instances
+  + waiting tasks — tasks appear ONLY here); both security_invoker with
+  SELECT to authenticated only. The provider-neutral `deadlinesService`
+  sits behind `@/data` (`src/data/deadlines/` five-file convention; the
+  barrel wires `./deadlines/index` explicitly — the legacy flat
+  `src/data/deadlines.ts` fixture module is untouched). NO UI wiring
+  (UI_WORK_IN_IMP051=NO; `/alerts` ModuleGate unchanged; live Deadline
+  Board UI is IMP-060).
+- Scheduler: `sched.alerts.evaluate` registered at exactly
+  `30 19 * * *` GMT = 01:00 Asia/Kolkata (HRR-02=A) through the
+  version-controlled migration, under the unchanged fail-closed
+  `cron.timezone='GMT'` precondition (HRR-03=A);
+  `sched.login_mirror.run` remains unregistered; `outbox.drain` stays
+  infrastructure (not a fourth scheduler signal).
+- Local final runtime: PASS — corrected migration, TEST-SCH-29,
+  automation integration 51/51, targeted audit 15/15 (TEST-AUD-03
+  incl.), deadline integration 10/10, deadline unit tests, `npm run
+  verify`, full Harness Gate PASS 24/24 phases (the new
+  deadlines-integration phase included); final post-runtime independent
+  review PASS; post-checkpoint independent verification PASS. (Two
+  runtime-found defect classes — one migration defect and focused test
+  defects — were corrected and independently re-reviewed en route; they
+  are superseded history, not open failures.)
+- Hosted staging acceptance: PASS — structural (§4) and behavioral:
+  deadline-board aggregation with operative due_date grouping
+  (calculated_due_date never replaces it; due-today days_left = 0;
+  at-risk derivation) and the client-dependency projection; RLS scope
+  proofs — partner firm scope, forged active-firm isolation, manager
+  portfolio scope, senior assigned scope, billing truthful empty,
+  anonymous view denial; evaluator — zero-rule safe no-op, alert
+  creation, second-run dedupe, alert.created audit + event, gated
+  auto-resolution (resolved_by NULL, resolution_type='auto'),
+  alert.resolved audit + event, snooze-expiry normalization with and
+  without acknowledgement, future snooze untouched, snooze audit,
+  fabricated alert.acknowledged audit count = 0, SCH-34 run evidence,
+  system actor attribution, correlation evidence. Hosted race/retrigger
+  were intentionally NOT rerun — TEST-AUTO-13/14 remained covered by
+  the previously green full local runtime gate.
+- Campaign safety/cleanup: hosted precheck accepted (non-probe enabled
+  alert rules = 0, non-probe expired snoozes = 0); the behavioral
+  campaign used 5 synthetic probe firms + 5 synthetic auth users, all
+  fully removed (synthetic mutable domain residue NONE; synthetic auth
+  residue NONE); global alert_rules = 0 and statutory ACTIVE compliance
+  rule versions = 0 after cleanup — NO default alert rule activated, NO
+  statutory activation, NO production change. Retained operational
+  evidence: 6 scheduler-run evidence rows were attributed to the
+  campaign at handback (later legitimate scheduled executions may grow
+  current counts — not frozen at 6); 87 firm-scoped campaign audit rows
+  plus 10 NULL-firm synthetic profile-lifecycle audit rows are
+  campaign-owned retained append-only audit evidence — NOT mutable
+  fixture residue, NOT deletion candidates.
+- Accepted anomalies (independent review PASS, neither is an unresolved
+  blocker): hosted public signup was disabled during acceptance, so the
+  five disposable synthetic auth identities were bootstrapped through
+  scoped privileged SQL — the review established the bootstrap itself
+  was NOT used as RLS proof (RLS proof used the real authenticated
+  HTTP/PostgREST path), no pre-existing/human auth identities were
+  modified, no auth/secret boundary was violated, and the synthetic
+  users were fully removed; the Asia/Kolkata business date rolled over
+  during the campaign and one synthetic fixture due-date was re-aligned
+  solely to preserve the original due-today test condition —
+  synthetic-only, no real staging data changed, assertions rerun after
+  the adjustment, semantics not weakened.
+- Post-hosted independent review: PASS (worktree clean, nothing staged,
+  hosted migration ledger parity 12/12, cron state correct,
+  alert_rule_count = 0, statutory_active_count = 0, synthetic residue
+  NONE, deadline/RLS/evaluator/snooze/audit-event evidence PASS,
+  privileged-bootstrap and rollover reviews PASS, local runtime coverage
+  review PASS; NEW_HUMAN_RULINGS_REQUIRED=NONE, SPEC_BLOCKERS=NONE,
+  SECURITY_BLOCKERS=NONE).
+- Netlify accounting: the operator separately observed that Netlify
+  automatically deployed after the staging branch push
+  (NETLIFY_AUTO_DEPLOY_OPERATOR_OBSERVED=YES); the hosted behavioral
+  campaign itself did NOT trigger a deployment, and no independent
+  Netlify verification is claimed. IMP-051 ships NO browser surface, so
+  any automatic deployment of the staging commit does not widen package
+  scope.
+
 ## 7. Permanent Architecture Boundaries
 
 - Data flow: React → `@/data` → fixture OR Supabase adapter. No direct
@@ -499,10 +648,16 @@ Remaining formal R0 packages:
   authenticated have no scheduler execution capability; scheduler writes
   carry system/service audit context + per-run correlation identity.
 - AUTO-OQ-04 (which alert rules ship enabled / default thresholds)
-  remains OPEN — IMP-042 shipped NO alert-rule seeds (D3 ruling);
-  product input is needed before seed enablement (IMP-051).
-- Alert generation/evaluation/dedupe/auto-resolution and the snooze-expiry
-  scheduler belong to IMP-051; IMP-042 shipped persistence, manual
+  remains OPEN — IMP-042 shipped NO alert-rule seeds (D3 ruling) and
+  IMP-051 likewise shipped ZERO alert-rule seeds, thresholds, or
+  default-enabled rules (HRR-07=A); the evaluator is proven correct with
+  zero enabled rules. Product input is needed before any seed
+  enablement; statutory/default activation still requires the separately
+  controlled practicing-CA/compliance-domain validation and activation
+  process.
+- Alert generation/evaluation/dedupe/auto-resolution and persisted
+  snooze-expiry normalization: IMPLEMENTED by IMP-051 (CLOSED
+  2026-09-18 — see §6e); IMP-042 had shipped persistence, manual
   transitions, and the My Work surface only.
 - Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
