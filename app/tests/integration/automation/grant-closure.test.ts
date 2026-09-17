@@ -1,6 +1,10 @@
 /**
  * IMP-050 — grant-closure contract for the automation records
  * (RLS-EVO-01 / RLS-SJR-01 / RLS-SDL-01, RLS-SVC-01/02, AUTO-SCH-03c).
+ * Extended by IMP-051: evaluate_alerts() (the sched.alerts.evaluate job
+ * function) joins the owner-only set — no EXECUTE for anon /
+ * authenticated / service_role / public (AUTO-SCH-03c, no browser
+ * invocation).
  *
  * The three IMP-050 tables (event_outbox SCH-33, scheduler_job_runs SCH-34,
  * scheduler_dead_letters SCH-35) and every new scheduler/outbox function
@@ -24,6 +28,7 @@ const TABLES = ['event_outbox', 'scheduler_job_runs', 'scheduler_dead_letters'];
 // Owner-only: no EXECUTE for anon/authenticated/service_role/public.
 const OWNER_ONLY = [
   'evaluate_recurrence()',
+  'evaluate_alerts()', // IMP-051 — sched.alerts.evaluate job function
   'drain_event_outbox()',
   'register_scheduler_jobs()',
   'publish_domain_event(text,uuid,jsonb)',

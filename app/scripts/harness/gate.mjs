@@ -9,6 +9,7 @@
  *   → schema integration → audit integration → client-hierarchy adapter contract
  *   → engagement adapter contract → Client 360 composite contract
  *   → review/alerts/My Work integration → automation (IMP-050) integration
+ *   → deadlines (IMP-051) integration
  *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
@@ -191,6 +192,13 @@ async function main() {
   // scheduler registrations, outbox drain/retry/dead-letter, recovery).
   currentPhase = 'automation-integration';
   run('automation-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/automation');
+
+  // IMP-051: deadline read-model contract (TEST-API-20 against the real
+  // stack — deadline board, group drill-down, client-dependency projection;
+  // alert evaluation/dedupe/auto-resolution coverage runs in the automation
+  // phase above).
+  currentPhase = 'deadlines-integration';
+  run('deadlines-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/deadlines');
 
   currentPhase = 'build';
   run('build', 'npm run build');

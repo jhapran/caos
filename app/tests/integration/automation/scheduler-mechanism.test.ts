@@ -1,20 +1,27 @@
 /**
  * IMP-050 — scheduler mechanism contract against the REAL local stack
  * (AUTO-SCH-01…07, AUTO-OBS-01, AUTO-AUD-01/02, AUD-ACT-02/05, AUD-INV-06).
+ * Extended by IMP-051 (HRR-02=A/HRR-03=A): sched.alerts.evaluate is now
+ * registered and evaluate_alerts() joins the scheduler-path coverage.
  *
  * Maps to spec 11 (IMP-050 contract closure 2026-09-12):
  *   TEST-AUTO-08 — pg_cron registration inventory: cron.job contains
- *     EXACTLY sched.recurrence.evaluate (0 19 * * *) and outbox.drain
- *     (* * * * *); sched.alerts.evaluate and sched.login_mirror.run are
- *     ABSENT (AUTO-SCH-04); register_scheduler_jobs() re-run is an
- *     idempotent named upsert (AUTO-SCH-05); the fail-closed precondition
+ *     EXACTLY sched.recurrence.evaluate (0 19 * * *), outbox.drain
+ *     (* * * * *) and the IMP-051-owned sched.alerts.evaluate
+ *     (30 19 * * *) (AUTO-SCH-04); sched.login_mirror.run remains ABSENT
+ *     (deferred ownership unchanged); register_scheduler_jobs() re-run is
+ *     an idempotent named upsert returning all three job names
+ *     (AUTO-SCH-05); the fail-closed precondition
  *     current_setting('cron.timezone', true) = 'GMT' holds (AUTO-SCH-07);
  *     and DIRECT Firm A/B scheduler isolation — fixtures in both suite
  *     firms, one evaluate_recurrence run via psql (the BYPASSRLS context,
  *     so RLS is evidence of nothing here): every instance/publication/
  *     audit row the run writes references only its own firm's ids and
  *     per-firm counts match profiles per firm (AUTO-SCH-03 explicit
- *     tenancy, verified in function-logic terms);
+ *     tenancy, verified in function-logic terms); plus one
+ *     evaluate_alerts() run proven to be a recorded no-op with zero
+ *     alert/audit/outbox effects for the suite firms (the suite stages no
+ *     alert_rules and no alerts — HRR-07=A zero-rule safe no-op);
  *   TEST-AUTO-07 — automation audit actor model: generated-instance audit
  *     rows carry actor_type='system', service_name='recurrence',
  *     actor_user_id IS NULL (AUD-ACT-02/03/05);
@@ -105,6 +112,20 @@ function lastRecurrenceRun(): {
       select id, status, rows_affected, correlation_id
       from public.scheduler_job_runs
       where job_name = 'sched.recurrence.evaluate'
+      order by started_at desc limit 1) r;`);
+  return JSON.parse(out);
+}
+
+function lastAlertRun(): {
+  id: string;
+  status: string;
+  rows_affected: number | null;
+  correlation_id: string;
+} {
+  const out = psql(`select row_to_json(r) from (
+      select id, status, rows_affected, correlation_id
+      from public.scheduler_job_runs
+      where job_name = 'sched.alerts.evaluate'
       order by started_at desc limit 1) r;`);
   return JSON.parse(out);
 }
@@ -215,19 +236,21 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('TEST-AUTO-08 — pg_cron registration inventory', () => {
-  it('cron.job contains EXACTLY the two IMP-050 jobs with the expected schedule and command', () => {
+  it('cron.job contains EXACTLY the three registered jobs with the expected schedule and command', () => {
     const jobs = psql(`select jobname || '|' || schedule || '|' || command from cron.job order by jobname;`)
       .trim()
       .split('\n')
       .sort();
     expect(jobs).toEqual([
       'outbox.drain|* * * * *|select public.drain_event_outbox()',
+      'sched.alerts.evaluate|30 19 * * *|select public.evaluate_alerts()',
       'sched.recurrence.evaluate|0 19 * * *|select public.evaluate_recurrence()',
     ]);
-    // IMP-050 deliberately does NOT register the IMP-051/deferred jobs.
+    // IMP-051 owns sched.alerts.evaluate (EXPECTED PRESENT above);
+    // sched.login_mirror.run remains ABSENT (deferred ownership unchanged).
     expect(
       psql(`select count(*) from cron.job
-            where jobname in ('sched.alerts.evaluate', 'sched.login_mirror.run');`).trim(),
+            where jobname = 'sched.login_mirror.run';`).trim(),
     ).toBe('0');
   });
 
@@ -238,8 +261,9 @@ describe('TEST-AUTO-08 — pg_cron registration inventory', () => {
     const res = JSON.parse(psql(`select public.register_scheduler_jobs();`).trim());
     expect(res.status).toBe('registered');
     expect(res.cron_timezone).toBe('GMT');
+    expect(res.jobs).toEqual(['sched.recurrence.evaluate', 'outbox.drain', 'sched.alerts.evaluate']);
     expect(snapshot()).toBe(before);
-    expect(Number(psql(`select count(*) from cron.job;`).trim())).toBe(2);
+    expect(Number(psql(`select count(*) from cron.job;`).trim())).toBe(3);
   });
 
   it("the fail-closed precondition holds: current_setting('cron.timezone', true) = 'GMT' (AUTO-SCH-07)", () => {
@@ -302,6 +326,28 @@ describe('TEST-AUTO-08 — direct Firm A/B scheduler isolation under the BYPASSR
               and (i.legal_entity_id in (select id from public.legal_entities where firm_id = '${FSB}')
                 or i.compliance_type_id in (select id from public.compliance_types where firm_id = '${FSB}')
                 or i.client_compliance_profile_id in (select id from public.client_compliance_profiles where firm_id = '${FSB}'));`).trim(),
+    ).toBe('0');
+  });
+
+  it('evaluate_alerts() is a recorded no-op with zero staged rules/snoozes — no cross-firm bleed, no fabricated effects', () => {
+    // The suite's fixtures stage NO alert_rules and NO alerts for FSA/FSB,
+    // so the IMP-051 pull-based evaluator is a safe no-op (HRR-07=A): one
+    // SCH-34 run row, zero business effects. Direct privileged-path
+    // assertions (the BYPASSRLS context — RLS is evidence of nothing here).
+    psql(`select public.evaluate_alerts();`);
+    const run = lastAlertRun();
+    expect(run.status).toBe('succeeded');
+    expect(run.rows_affected).toBe(0);
+    expect(
+      psql(`select count(*) from public.alerts where firm_id in ('${FSA}', '${FSB}');`).trim(),
+    ).toBe('0');
+    expect(
+      psql(`select count(*) from public.audit_log
+            where firm_id in ('${FSA}', '${FSB}') and action like 'alert.%';`).trim(),
+    ).toBe('0');
+    expect(
+      psql(`select count(*) from public.event_outbox
+            where firm_id in ('${FSA}', '${FSB}') and event_type like 'alert.%';`).trim(),
     ).toBe('0');
   });
 });

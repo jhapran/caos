@@ -96,6 +96,7 @@ const C = {
   taskScoped: '6c000000-0000-4000-8000-000000000102', // article holds an assigned task here
   other: '6c000000-0000-4000-8000-000000000103', // no senior/article assignment
   taskLink: '6c000000-0000-4000-8000-000000000104', // senior/article hold instance-LINKED tasks here (TEST-RLS-ALR-13 A2)
+  cmd: '6c000000-0000-4000-8000-000000000105', // manager-managed, NO senior/article assignment — dedicated AL.cmdTarget client (IMP-051 HRR-06=A)
   xten: '6c000000-0000-4000-8000-000000000111', // cross-tenant firm
 };
 const E = {
@@ -133,7 +134,7 @@ const AL = {
   clientTask: '6c000000-0000-4000-8000-000000000603', // client C.taskScoped only
   plain: '6c000000-0000-4000-8000-000000000604', // client C.other only
   firmWide: '6c000000-0000-4000-8000-000000000605', // no client/instance
-  cmdTarget: '6c000000-0000-4000-8000-000000000606', // command smoke target (mutated mid-run)
+  cmdTarget: '6c000000-0000-4000-8000-000000000606', // command smoke target (mutated mid-run); client C.cmd (IMP-051 HRR-06=A)
   // TEST-RLS-ALR-13 exact-instance fixtures (human-ruled IMP-042
   // pre-checkpoint correction 2026-09-06):
   instReview: '6c000000-0000-4000-8000-000000000607', // instance I.seniorReview (senior = REVIEWER)
@@ -227,6 +228,7 @@ function seedFixture() {
       ('${C.taskScoped}', '${FIRM_MAIN}', 'ALR RLS TaskScoped', '${M.partnerA}', null,            'active'),
       ('${C.other}',      '${FIRM_MAIN}', 'ALR RLS Other',      '${M.partnerA}', '${M.managerA}', 'active'),
       ('${C.taskLink}',   '${FIRM_MAIN}', 'ALR RLS TaskLink',   '${M.partnerA}', null,            'active'),
+      ('${C.cmd}',        '${FIRM_MAIN}', 'ALR RLS Cmd',        '${M.partnerA}', '${M.managerA}', 'active'),
       ('${C.xten}',       '${FIRM_XTEN}', 'ALR RLS Xten',       '${M.partnerX}', null,            'active');
 
     insert into public.legal_entities (id, firm_id, client_id, entity_type, legal_name) values
@@ -271,7 +273,11 @@ function seedFixture() {
       ('${AL.clientTask}',     '${FIRM_MAIN}', null,         'info',     'ALR client-task',        '${C.taskScoped}', null),
       ('${AL.plain}',          '${FIRM_MAIN}', '${RL.main}', 'critical', 'ALR plain',              '${C.other}',      null),
       ('${AL.firmWide}',       '${FIRM_MAIN}', '${RL.ack}',  'critical', 'ALR firm-wide',          null,              null),
-      ('${AL.cmdTarget}',      '${FIRM_MAIN}', '${RL.main}', 'warning',  'ALR command target',     '${C.other}',      null),
+      -- IMP-051 HRR-06=A — distinct client identity so AL.plain (C.other) and
+      -- AL.cmdTarget (C.cmd) are structurally valid under the dedupe index.
+      -- (The rule dimension could not be used: FIRM_MAIN's rule set is pinned
+      -- to [RL.main, RL.ack] by TEST-RLS-ALR-10 / TEST-RLS-ARL-01 assertions.)
+      ('${AL.cmdTarget}',      '${FIRM_MAIN}', '${RL.main}', 'warning',  'ALR command target',     '${C.cmd}',        null),
       ('${AL.instReview}',     '${FIRM_MAIN}', '${RL.main}', 'warning',  'ALR instance-reviewed',  '${C.assigned}',   '${I.seniorReview}'),
       ('${AL.instArticle}',    '${FIRM_MAIN}', '${RL.main}', 'info',     'ALR instance-article',   '${C.taskScoped}', '${I.article}'),
       ('${AL.instArtRev}',     '${FIRM_MAIN}', '${RL.main}', 'info',     'ALR instance-art-rev',   '${C.taskScoped}', '${I.artRev}'),

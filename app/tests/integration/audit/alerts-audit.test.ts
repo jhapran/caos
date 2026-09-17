@@ -5,6 +5,12 @@
  * old/new capture; AUD-FAIL-01 denial evidence; AUD-CTX-05 fail-closed;
  * spec 08 §7c Layer-A/B split).
  *
+ * IMP-051 extension (same IDs): TEST-AUD-03 auto-resolution portion —
+ * public.evaluate_alerts() audits its winning effects (alert.created /
+ * alert.resolved / alert.snooze_expired) exactly once each with the
+ * system/alerts actor and the per-run scheduler correlation; Layer-A
+ * stays silent under app.audit_skip_trigger (no double auditing).
+ *
  * Verifies, through REAL PostgREST requests plus operator psql inspection
  * of public.audit_log:
  *   - acknowledge_alert / snooze_alert / resolve_alert each write exactly
@@ -73,20 +79,31 @@ const E = {
 };
 const I = {
   senior: '6e000000-0000-4000-8000-000000000301', // assignee=senior (senior-visible alert)
+  eval: '6e000000-0000-4000-8000-000000000302', // deadline-risk evaluation target
 };
 const RL = {
   plain: '6e000000-0000-4000-8000-000000000401', // requires_explicit_ack=false
   ack: '6e000000-0000-4000-8000-000000000402', // requires_explicit_ack=true
+  // Extra plain-like firm rules (IMP-051 HRR-06=A repair): the five active
+  // fixture alerts sharing (FIRM_MAIN, RL.plain, C.main, NULL) need their
+  // own rules under alerts_nonresolved_dedupe_unique; audit assertions key
+  // off alert ids, not rules.
+  p2: '6e000000-0000-4000-8000-000000000404',
+  p3: '6e000000-0000-4000-8000-000000000405',
+  p4: '6e000000-0000-4000-8000-000000000406',
+  p5: '6e000000-0000-4000-8000-000000000407',
+  eval: '6e000000-0000-4000-8000-000000000403', // deadline-risk (TEST-AUD-03 evaluator portion)
 };
 const AL = {
   ack: '6e000000-0000-4000-8000-000000000501', // active — acknowledge + replay
   snooze: '6e000000-0000-4000-8000-000000000502', // active — snooze + changed re-snooze
-  resolve: '6e000000-0000-4000-8000-000000000503', // active, RL.plain — keyed resolve
+  resolve: '6e000000-0000-4000-8000-000000000503', // active, RL.p3 — keyed resolve
   resolved: '6e000000-0000-4000-8000-000000000504', // staged resolved — invalid_state probe
   hidden: '6e000000-0000-4000-8000-000000000505', // active, instance-linked — role-denial probes
   gated: '6e000000-0000-4000-8000-000000000506', // active, RL.ack — resolve-gate denial
   fault: '6e000000-0000-4000-8000-000000000507', // active — AUD-CTX-05 fail-closed target
   crossProbe: '6e000000-0000-4000-8000-000000000508', // active — cross-firm denial-audit target
+  expSnooze: '6e000000-0000-4000-8000-000000000509', // snoozed, expired — evaluator normalization
 };
 const GHOST = '6e000000-0000-4000-8000-00000000ffff';
 
@@ -109,11 +126,26 @@ interface AuditRow {
   firm_id: string | null;
   actor_type: string;
   actor_user_id: string | null;
+  service_name: string | null;
   action: string;
   object_type: string;
   object_id: string | null;
   old_value: Record<string, unknown> | null;
   new_value: Record<string, unknown> | null;
+  correlation_id: string | null;
+}
+
+/** Suite window start — scopes the scheduler_job_runs teardown. */
+const suiteStart = new Date().toISOString();
+
+/** Latest sched.alerts.evaluate job-run row (SCH-34 run evidence). */
+function lastEvalRun(): { status: string; correlation_id: string } {
+  const out = psql(`select row_to_json(r) from (
+      select status, correlation_id
+      from public.scheduler_job_runs
+      where job_name = 'sched.alerts.evaluate'
+      order by started_at desc limit 1) r;`);
+  return JSON.parse(out);
 }
 
 function auditRows(objectId: string, objectTypes: string[] = ['alert']): AuditRow[] {
@@ -204,23 +236,29 @@ beforeAll(async () => {
 
     insert into public.alert_rules (id, firm_id, rule_key, name, severity, requires_explicit_ack) values
       ('${RL.plain}', '${FIRM_MAIN}', 'filing_due_soon', 'Filing due soon', 'warning',  false),
-      ('${RL.ack}',   '${FIRM_MAIN}', 'risk_escalation', 'Risk escalation', 'critical', true);
+      ('${RL.ack}',   '${FIRM_MAIN}', 'risk_escalation', 'Risk escalation', 'critical', true),
+      ('${RL.p2}',    '${FIRM_MAIN}', 'filing_due_soon_p2', 'Filing due soon (P2)', 'warning', false),
+      ('${RL.p3}',    '${FIRM_MAIN}', 'filing_due_soon_p3', 'Filing due soon (P3)', 'warning', false),
+      ('${RL.p4}',    '${FIRM_MAIN}', 'filing_due_soon_p4', 'Filing due soon (P4)', 'warning', false),
+      ('${RL.p5}',    '${FIRM_MAIN}', 'filing_due_soon_p5', 'Filing due soon (P5)', 'warning', false);
 
     -- Alert fixtures are plain operator INSERTs (the write guard restricts
     -- UPDATE only); the staged resolved row carries the CHECK-mandated
-    -- resolution triple.
+    -- resolution triple. IMP-051 HRR-06=A: each active row carrying the
+    -- (FIRM_MAIN, rule, C.main, NULL) identity gets its OWN rule — the
+    -- dedupe index admits one non-resolved alert per identity.
     insert into public.alerts
       (id, firm_id, alert_rule_id, severity, title, client_id, compliance_instance_id, status,
        resolved_by, resolved_at, resolution_type)
     values
       ('${AL.ack}',     '${FIRM_MAIN}', '${RL.plain}', 'warning',  'AUD ack target',     '${C.main}', null,        'active', null, null, null),
-      ('${AL.snooze}',  '${FIRM_MAIN}', '${RL.plain}', 'info',     'AUD snooze target',  '${C.main}', null,        'active', null, null, null),
-      ('${AL.resolve}', '${FIRM_MAIN}', '${RL.plain}', 'critical', 'AUD resolve target', '${C.main}', null,        'active', null, null, null),
+      ('${AL.snooze}',  '${FIRM_MAIN}', '${RL.p2}',    'info',     'AUD snooze target',  '${C.main}', null,        'active', null, null, null),
+      ('${AL.resolve}', '${FIRM_MAIN}', '${RL.p3}',    'critical', 'AUD resolve target', '${C.main}', null,        'active', null, null, null),
       ('${AL.resolved}','${FIRM_MAIN}', '${RL.plain}', 'warning',  'AUD resolved',       '${C.main}', null,        'resolved', '${PARTNER}', '2026-09-01T10:00:00+00:00', 'manual'),
       ('${AL.hidden}',  '${FIRM_MAIN}', '${RL.plain}', 'info',     'AUD senior-visible', '${C.main}', '${I.senior}', 'active', null, null, null),
       ('${AL.gated}',   '${FIRM_MAIN}', '${RL.ack}',   'critical', 'AUD gated',          '${C.main}', null,        'active', null, null, null),
-      ('${AL.fault}',   '${FIRM_MAIN}', '${RL.plain}', 'warning',  'AUD fault target',   '${C.main}', null,        'active', null, null, null),
-      ('${AL.crossProbe}', '${FIRM_MAIN}', '${RL.plain}', 'info',  'AUD cross-firm probe', '${C.main}', null,      'active', null, null, null);
+      ('${AL.fault}',   '${FIRM_MAIN}', '${RL.p4}',    'warning',  'AUD fault target',   '${C.main}', null,        'active', null, null, null),
+      ('${AL.crossProbe}', '${FIRM_MAIN}', '${RL.p5}', 'info',     'AUD cross-firm probe', '${C.main}', null,      'active', null, null, null);
   `);
   // Fixture writes are operator/system-actor rows; remove fixture noise so
   // the exact-multiset assertions read a clean table (IMP-031/040/041
@@ -572,5 +610,169 @@ describe('TEST-AUD-02 — alert-rule administration audit', () => {
     expect(updateDenied[0].object_id).toBe(RL.plain);
 
     expect(auditRows(GHOST, ['alert_rule'])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEST-AUD-03 (auto-resolution portion, IMP-051) — the evaluate_alerts()
+// evaluator audits its own winning effects exactly once each with the
+// system/alerts actor and the per-run correlation; Layer-A stays silent
+// (app.audit_skip_trigger) so there is no double auditing.
+// ---------------------------------------------------------------------------
+
+describe('TEST-AUD-03 — system evaluator audit (evaluate_alerts, IMP-051)', () => {
+  beforeAll(() => {
+    // A recognized deadline-risk rule (auto-resolve permitted) plus an
+    // at-risk instance: state 'preparation' (pre-filing), due within the
+    // 10-day threshold of the Asia/Kolkata business date. The instance's
+    // obligation period is the NEXT quarter (FY26 Q2) — distinct from the
+    // file-level I.senior fixture's (SYS_ITR, E.main, NULL registration,
+    // 2026-04-01) key under cin_obligation_period_unique (period isolation;
+    // the evaluator reads only state/due_date, so eligibility semantics are
+    // unchanged).
+    psql(`
+      insert into public.alert_rules
+        (id, firm_id, rule_key, name, severity, config, auto_resolve, requires_explicit_ack, enabled)
+      values
+        ('${RL.eval}', '${FIRM_MAIN}', 'deadline-risk', 'Deadline risk', 'warning',
+         '{"days_before_due": 10}'::jsonb, true, false, true);
+      insert into public.compliance_instances
+        (id, firm_id, legal_entity_id, compliance_type_id, period_start, period_end,
+         period_label, due_date, state)
+      values
+        ('${I.eval}', '${FIRM_MAIN}', '${E.main}', '${SYS_ITR}', '2026-07-01', '2026-09-30',
+         'FY26 Q2', (now() at time zone 'Asia/Kolkata')::date + 5, 'preparation');
+    `);
+    // Staging writes are operator rows; clear fixture noise so the exact
+    // evaluator-run audit multisets below read clean (suite precedent).
+    psql(`delete from public.audit_log where firm_id = '${FIRM_MAIN}'`);
+  });
+
+  afterAll(() => {
+    // Remove everything this describe staged or the evaluator runs created:
+    // no enabled deadline-risk rule and no alert/audit/outbox/job-run noise
+    // may leak into the sequentially-following suites.
+    psql(`
+      delete from public.event_outbox
+      where firm_id = '${FIRM_MAIN}'
+        and (payload ->> 'instance_id' = '${I.eval}'
+             or payload ->> 'alert_id' in (
+               select a.id::text from public.alerts a
+               where a.firm_id = '${FIRM_MAIN}'
+                 and (a.alert_rule_id = '${RL.eval}' or a.id = '${AL.expSnooze}')));
+      delete from public.audit_log
+      where firm_id = '${FIRM_MAIN}' and actor_type = 'system' and service_name = 'alerts';
+      delete from public.alerts
+      where firm_id = '${FIRM_MAIN}' and (alert_rule_id = '${RL.eval}' or id = '${AL.expSnooze}');
+      delete from public.alert_rules where id = '${RL.eval}';
+      delete from public.compliance_instances where id = '${I.eval}';
+      delete from public.scheduler_job_runs
+      where job_name = 'sched.alerts.evaluate' and started_at >= '${suiteStart}'::timestamptz;
+    `);
+  });
+
+  it('evaluate_alerts creates the at-risk alert and audits alert.created exactly once (system actor, run correlation)', () => {
+    psql(`select public.evaluate_alerts();`);
+    const alertId = psql(`
+      select id from public.alerts
+      where firm_id = '${FIRM_MAIN}' and alert_rule_id = '${RL.eval}'
+        and compliance_instance_id = '${I.eval}';
+    `).trim();
+    expect(alertId).not.toBe('');
+
+    const run = lastEvalRun();
+    expect(run.status).toBe('succeeded');
+    const rows = auditRows(alertId);
+    expect(rows.map((r) => r.action)).toEqual(['alert.created']);
+    const row = rows[0];
+    expect(row.actor_type).toBe('system');
+    expect(row.actor_user_id).toBeNull(); // no fabricated human actor (AUD-ACT-05)
+    expect(row.service_name).toBe('alerts');
+    expect(row.firm_id).toBe(FIRM_MAIN);
+    expect(row.object_type).toBe('alert');
+    expect(row.object_id).toBe(alertId);
+    expect(row.old_value).toBeNull();
+    expect(row.new_value?.alert_id).toBe(alertId);
+    expect(row.new_value?.alert_rule_id).toBe(RL.eval);
+    expect(row.correlation_id).toBe(run.correlation_id);
+  });
+
+  it('filing the instance auto-resolves the alert (resolution_type auto) and audits alert.resolved exactly once — no double auditing', () => {
+    const alertId = psql(`
+      select id from public.alerts
+      where firm_id = '${FIRM_MAIN}' and alert_rule_id = '${RL.eval}'
+        and compliance_instance_id = '${I.eval}';
+    `).trim();
+    // Move the instance out of the at-risk condition (state -> filed) under
+    // the compliance_instances single-writer marker; Layer-A stays silent
+    // for this operator move.
+    psql(`
+      do $$
+      begin
+        perform set_config('app.cin_transition_command', '1', true);
+        perform set_config('app.audit_skip_trigger', '1', true);
+        update public.compliance_instances
+        set state = 'filed', filed_at = now()
+        where id = '${I.eval}';
+      end
+      $$;
+    `);
+    psql(`select public.evaluate_alerts();`);
+
+    const run = lastEvalRun();
+    const resolved = auditRows(alertId).filter((r) => r.action === 'alert.resolved');
+    expect(resolved).toHaveLength(1);
+    const row = resolved[0];
+    expect(row.actor_type).toBe('system');
+    expect(row.actor_user_id).toBeNull();
+    expect(row.service_name).toBe('alerts');
+    expect(row.correlation_id).toBe(run.correlation_id);
+    // Old/new snapshot contract: old carries the pre-resolution row, new
+    // the resolved row.
+    expect(row.old_value?.status).toBe('active');
+    expect(row.new_value?.status).toBe('resolved');
+    expect(row.new_value?.resolution_type).toBe('auto');
+    expect(row.new_value?.resolved_by).toBeNull();
+    expect(row.new_value?.resolved_at).toBeTruthy();
+
+    // No double auditing: the whole evaluator history for this alert is
+    // exactly the two domain rows, and the alert INSERT/UPDATE produced NO
+    // Layer-A 'insert'/'update' rows (app.audit_skip_trigger='1').
+    expect(auditRows(alertId).map((r) => r.action)).toEqual(['alert.created', 'alert.resolved']);
+    expect(
+      psql(`select count(*) from public.audit_log
+            where object_type = 'alert' and object_id = '${alertId}'
+              and action in ('insert', 'update');`).trim(),
+    ).toBe('0');
+  });
+
+  it('persisted snooze expiry is normalized and audited alert.snooze_expired (no fabricated alert.acknowledged)', () => {
+    psql(`
+      insert into public.alerts
+        (id, firm_id, alert_rule_id, severity, title, status,
+         acknowledged_by, acknowledged_at, snoozed_until)
+      values
+        ('${AL.expSnooze}', '${FIRM_MAIN}', '${RL.ack}', 'info', 'AUD expired snooze',
+         'snoozed', '${PARTNER}', now() - interval '2 hours', now() - interval '1 hour');
+      -- The operator INSERT fires the publication trigger and the Layer-A
+      -- audit trigger; both are staging noise, not evaluator effects.
+      delete from public.audit_log where object_id = '${AL.expSnooze}';
+      delete from public.event_outbox where payload ->> 'alert_id' = '${AL.expSnooze}';
+    `);
+    psql(`select public.evaluate_alerts();`);
+
+    const rows = auditRows(AL.expSnooze);
+    expect(rows.map((r) => r.action)).toEqual(['alert.snooze_expired']);
+    const row = rows[0];
+    expect(row.actor_type).toBe('system');
+    expect(row.actor_user_id).toBeNull();
+    expect(row.service_name).toBe('alerts');
+    expect(row.old_value?.status).toBe('snoozed');
+    expect(row.new_value?.status).toBe('acknowledged');
+    // acknowledged_at is preserved; snoozed_until is cleared.
+    expect(row.new_value?.acknowledged_at).toBe(row.old_value?.acknowledged_at);
+    expect(row.new_value?.snoozed_until).toBeNull();
+    // The exact-multiset assertion above already proves NO fabricated
+    // 'alert.acknowledged' row exists for the system path.
   });
 });

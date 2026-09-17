@@ -173,6 +173,27 @@ export type {
   CreateAlertRuleInput,
   UpdateAlertRuleInput,
 } from './alerts/index';
+// --- IMP-051: deadlines & client dependency (API-R0-DLN, AUTO-DLN-01) ------
+// SAME NAMING HAZARD as tasks/review/alerts: the extensionless specifier
+// './deadlines' resolves to the LEGACY flat fixture module
+// src/data/deadlines.ts (kept exported unchanged in the fixture block
+// below). The IMP-051 domain folder src/data/deadlines/ is therefore wired
+// through its explicit sub-barrel path './deadlines/index'. Consumers
+// import deadlinesService / these types from '@/data'; nothing should ever
+// import '@/data/deadlines' expecting the folder.
+export { deadlinesService } from './deadlines/index';
+export {
+  DEADLINE_GROUP_ID_SEPARATOR,
+  makeDeadlineGroupId,
+  parseDeadlineGroupId,
+} from './deadlines/index';
+export type {
+  ClientDependencyKind,
+  ClientDependencyRecord,
+  DeadlineGroupRecord,
+  DeadlineInstanceRecord,
+  DeadlinesService,
+} from './deadlines/index';
 // --- IMP-042: My Work (API-R0-MWK, DEC-L) --------------------------------------
 // No naming hazard (no legacy flat mywork module) — plain folder specifier,
 // the client360 convention.

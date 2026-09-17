@@ -102,6 +102,15 @@
  * — all owner-only; requeue_dead_letter(uuid,text) joins the
  * service-role-only class (AUTO-RPL-02, RLS-SVC-01).
  *
+ * IMP-051 changes reflected here: two security_invoker deadline views —
+ * public.deadline_board + public.client_dependency_board (AUTO-DLN-01,
+ * API-R0-DLN, DEADLINE_MODEL=DERIVED) — carry SELECT to authenticated
+ * only (the underlying tables' RLS is the row filter; NO SECURITY
+ * DEFINER read path), and the sched.alerts.evaluate job function
+ * public.evaluate_alerts() is SECURITY DEFINER with search_path='' and
+ * owner-only EXECUTE. The views are not relkind='r' and carry no
+ * policies, so the RLS/FORCE/51-policy inventories are unchanged.
+ *
  * Order-independent (sorted comparisons) so harmless catalog ordering
  * changes do not break the suite.
  */
@@ -412,6 +421,9 @@ const IMP050_FNS = [
   'register_scheduler_jobs()',
   'sjr_guard_update()',
   'sdl_guard_write()',
+  // IMP-051: the sched.alerts.evaluate job function — owner-only EXECUTE
+  // (AUTO-SCH-03c); no anon/authenticated/service_role/public capability.
+  'evaluate_alerts()',
 ];
 
 describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SVC-03, RLS-AUD-01)', () => {
@@ -471,12 +483,16 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
       'alerts:SELECT',
       'audit_log:SELECT',
       'client_compliance_profiles:SELECT',
+      // IMP-051: the two security_invoker deadline views (API-R0-DLN);
+      // SELECT only, the underlying tables' RLS does the row filtering.
+      'client_dependency_board:SELECT',
       'client_relationships:SELECT',
       'clients:SELECT',
       'compliance_instances:SELECT',
       'compliance_rule_versions:SELECT',
       'compliance_types:SELECT',
       'contacts:SELECT',
+      'deadline_board:SELECT',
       'engagements:SELECT',
       'firm_memberships:SELECT',
       'firms:SELECT',
@@ -578,6 +594,23 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
         'client_compliance_profiles:UPDATE:applicability_answers',
         'client_compliance_profiles:UPDATE:registration_id',
         'client_compliance_profiles:UPDATE:status',
+        // IMP-051 client_dependency_board (API-R0-DLN) — security_invoker
+        // view; table-level SELECT expands to all 14 view columns, NO
+        // insert/update/delete grant exists (read model only).
+        'client_dependency_board:SELECT:age_days',
+        'client_dependency_board:SELECT:assignee_membership_id',
+        'client_dependency_board:SELECT:client_id',
+        'client_dependency_board:SELECT:client_name',
+        'client_dependency_board:SELECT:due_date',
+        'client_dependency_board:SELECT:firm_id',
+        'client_dependency_board:SELECT:id',
+        'client_dependency_board:SELECT:kind',
+        'client_dependency_board:SELECT:label',
+        'client_dependency_board:SELECT:period_label',
+        'client_dependency_board:SELECT:reviewer_membership_id',
+        'client_dependency_board:SELECT:status',
+        'client_dependency_board:SELECT:waiting_reason',
+        'client_dependency_board:SELECT:waiting_since',
         // IMP-031 compliance instances — SELECT covers readable columns;
         // INSERT excludes id/client_id (trigger-derived)/state/filed_at/
         // closed_at/risk/successor (command-stamped or server-owned) AND the
@@ -797,6 +830,23 @@ describe('IMP-012/013/020/021/030/031 catalog — least-privilege grants (RLS-SV
         'contacts:UPDATE:phone',
         'contacts:UPDATE:role_title',
         'contacts:UPDATE:status',
+        // IMP-051 deadline_board (API-R0-DLN) — security_invoker view;
+        // table-level SELECT expands to all 14 view columns, NO
+        // insert/update/delete grant exists (read model only).
+        'deadline_board:SELECT:at_risk',
+        'deadline_board:SELECT:compliance_name',
+        'deadline_board:SELECT:compliance_type_id',
+        'deadline_board:SELECT:days_left',
+        'deadline_board:SELECT:due_date',
+        'deadline_board:SELECT:filed',
+        'deadline_board:SELECT:firm_id',
+        'deadline_board:SELECT:group_id',
+        'deadline_board:SELECT:in_progress',
+        'deadline_board:SELECT:not_started',
+        'deadline_board:SELECT:ready_to_file',
+        'deadline_board:SELECT:total_clients',
+        'deadline_board:SELECT:under_review',
+        'deadline_board:SELECT:waiting',
         // IMP-021 engagements — SELECT covers readable columns; INSERT is
         // column-pinned (no id), UPDATE excludes firm_id/client_id
         // (parentage never changes).
@@ -1092,7 +1142,9 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     "'recurrence_lookahead_days', 'recurrence_insert_instance', " +
     "'generate_profile_instances', 'generate_successor_instance', " +
     "'evaluate_recurrence', 'drain_event_outbox', 'register_scheduler_jobs', 'requeue_dead_letter', " +
-    "'immediate_automation_correlation'";
+    "'immediate_automation_correlation', " +
+    // IMP-051: the sched.alerts.evaluate job function (AUTO-ALR-01…03).
+    "'evaluate_alerts'";
 
   it('SECURITY DEFINER set exactly where required (API-SEC-03 inventory)', () => {
     // Definer: the DEC-J recursion helpers (IMP-012), the IMP-013 audit
@@ -1133,6 +1185,9 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
     // the pure date-arithmetic helpers (recurrence_period_anchor/label/
     // due_date), and immediate_automation_correlation (a pure GUC read +
     // mint with no table access) are INVOKER (crv_guard_update precedent).
+    // IMP-051: evaluate_alerts is definer (it writes the grant-closed
+    // alerts/scheduler tables and derives actor/correlation server-side,
+    // owned by the migration role, owner-only EXECUTE).
     const definer = rows(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.prosecdef and proname in (${ALL_FNS})`);
     expect(definer).toEqual([
@@ -1158,6 +1213,7 @@ describe('IMP-012/013/020/021/030/031 catalog — helper-function security prope
       'decide_review_item',
       'drain_event_outbox',
       'engagements_validate_responsibility',
+      'evaluate_alerts',
       'evaluate_recurrence',
       'event_publish_trg',
       'generate_profile_instances',

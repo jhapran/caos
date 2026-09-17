@@ -101,6 +101,22 @@ const RL = {
   plain: '6d000000-0000-4000-8000-000000000c01', // requires_explicit_ack=false
   ack: '6d000000-0000-4000-8000-000000000c02', // requires_explicit_ack=true
   firmB: '6d000000-0000-4000-8000-000000000c03',
+  // IMP-051 HRR-06=A — per-target rule identities so the independent command
+  // fixtures are structurally valid under the dedupe index; p2..p11 replicate
+  // RL.plain's posture (requires_explicit_ack=false), a2/a3 replicate RL.ack's
+  // (requires_explicit_ack=true) — the ONLY rule attribute the commands read.
+  p2: '6d000000-0000-4000-8000-000000000c04',
+  p3: '6d000000-0000-4000-8000-000000000c05',
+  p4: '6d000000-0000-4000-8000-000000000c06',
+  p5: '6d000000-0000-4000-8000-000000000c07',
+  p6: '6d000000-0000-4000-8000-000000000c08',
+  p7: '6d000000-0000-4000-8000-000000000c09',
+  p8: '6d000000-0000-4000-8000-000000000c0a',
+  p9: '6d000000-0000-4000-8000-000000000c0b',
+  p10: '6d000000-0000-4000-8000-000000000c0c',
+  p11: '6d000000-0000-4000-8000-000000000c0d',
+  a2: '6d000000-0000-4000-8000-000000000c0e',
+  a3: '6d000000-0000-4000-8000-000000000c0f',
 };
 const AL = {
   ackTarget: '6d000000-0000-4000-8000-000000000d01', // active, RL.plain — acknowledge + replay
@@ -109,13 +125,13 @@ const AL = {
   resolvedStaged: '6d000000-0000-4000-8000-000000000d04', // resolved (manual) — invalid_state probes
   snoozeTarget: '6d000000-0000-4000-8000-000000000d05', // active — snooze validation/replay/update
   snoozeFromAck: '6d000000-0000-4000-8000-000000000d06', // acknowledged — snooze preserves stamps
-  resolveActive: '6d000000-0000-4000-8000-000000000d07', // active, RL.plain — resolve + replay
-  resolveSnoozed: '6d000000-0000-4000-8000-000000000d08', // snoozed (future), RL.plain — resolve
+  resolveActive: '6d000000-0000-4000-8000-000000000d07', // active, RL.p6 (plain posture) — resolve + replay
+  resolveSnoozed: '6d000000-0000-4000-8000-000000000d08', // snoozed (future), RL.p7 (plain posture) — resolve
   gatedActive: '6d000000-0000-4000-8000-000000000d09', // active, RL.ack — ack-gate denial
-  gatedFlow: '6d000000-0000-4000-8000-000000000d0a', // active, RL.ack — ack→snooze→resolve
+  gatedFlow: '6d000000-0000-4000-8000-000000000d0a', // active, RL.a2 (ack posture) — ack→snooze→resolve
   hidden: '6d000000-0000-4000-8000-000000000d0b', // active, instance I.managed (senior-readable)
-  expired: '6d000000-0000-4000-8000-000000000d0c', // snoozed, EXPIRED until, no stamps, RL.plain
-  expiredAck: '6d000000-0000-4000-8000-000000000d0d', // snoozed, EXPIRED until, ack stamps, RL.ack
+  expired: '6d000000-0000-4000-8000-000000000d0c', // snoozed, EXPIRED until, no stamps, RL.p8 (plain posture)
+  expiredAck: '6d000000-0000-4000-8000-000000000d0d', // snoozed, EXPIRED until, ack stamps, RL.a3 (ack posture)
   firmB: '6d000000-0000-4000-8000-000000000d0e', // FB alert
   replayEdge: '6d000000-0000-4000-8000-000000000d0f', // active — expired-snooze identical-replay edge
   fltExpiredActive: '6d000000-0000-4000-8000-000000000d10', // snoozed, EXPIRED, no ack stamps — adapter filter proof
@@ -190,7 +206,22 @@ function seedFixture() {
     insert into public.alert_rules (id, firm_id, rule_key, name, severity, requires_explicit_ack) values
       ('${RL.plain}', '${FA}', 'filing_due_soon', 'Filing due soon', 'warning',  false),
       ('${RL.ack}',   '${FA}', 'risk_escalation', 'Risk escalation', 'critical', true),
-      ('${RL.firmB}', '${FB}', 'filing_due_soon', 'Filing due soon', 'warning',  false);
+      ('${RL.firmB}', '${FB}', 'filing_due_soon', 'Filing due soon', 'warning',  false),
+      -- IMP-051 HRR-06=A — per-target rule identities make the independent
+      -- command fixtures structurally valid under the dedupe index; each
+      -- target's requires_explicit_ack posture is preserved.
+      ('${RL.p2}',  '${FA}', 'cmd_p2',  'Command plain p2',  'warning',  false),
+      ('${RL.p3}',  '${FA}', 'cmd_p3',  'Command plain p3',  'warning',  false),
+      ('${RL.p4}',  '${FA}', 'cmd_p4',  'Command plain p4',  'warning',  false),
+      ('${RL.p5}',  '${FA}', 'cmd_p5',  'Command plain p5',  'warning',  false),
+      ('${RL.p6}',  '${FA}', 'cmd_p6',  'Command plain p6',  'warning',  false),
+      ('${RL.p7}',  '${FA}', 'cmd_p7',  'Command plain p7',  'warning',  false),
+      ('${RL.p8}',  '${FA}', 'cmd_p8',  'Command plain p8',  'warning',  false),
+      ('${RL.p9}',  '${FA}', 'cmd_p9',  'Command plain p9',  'warning',  false),
+      ('${RL.p10}', '${FA}', 'cmd_p10', 'Command plain p10', 'warning',  false),
+      ('${RL.p11}', '${FA}', 'cmd_p11', 'Command plain p11', 'warning',  false),
+      ('${RL.a2}',  '${FA}', 'cmd_a2',  'Command ack a2',    'critical', true),
+      ('${RL.a3}',  '${FA}', 'cmd_a3',  'Command ack a3',    'critical', true);
 
     -- Alert fixtures are plain operator INSERTs (the write guard restricts
     -- UPDATE only); staged rows carry CHECK-consistent stamp sets.
@@ -200,35 +231,35 @@ function seedFixture() {
     values
       ('${AL.ackTarget}',      '${FA}', '${RL.plain}', 'warning',  'ALR ack target',       '${C.managed}', null,          'active',
        null, null, null, null, null, null),
-      ('${AL.snoozedStamped}', '${FA}', '${RL.plain}', 'warning',  'ALR snoozed stamped',  '${C.managed}', null,          'snoozed',
+      ('${AL.snoozedStamped}', '${FA}', '${RL.p2}',    'warning',  'ALR snoozed stamped',  '${C.managed}', null,          'snoozed',
        '${PARTNER_A}', '${STAGED_ACK_AT}', '${STAGED_UNTIL}', null, null, null),
-      ('${AL.snoozedFresh}',   '${FA}', '${RL.plain}', 'info',     'ALR snoozed fresh',    '${C.managed}', null,          'snoozed',
+      ('${AL.snoozedFresh}',   '${FA}', '${RL.p3}',    'info',     'ALR snoozed fresh',    '${C.managed}', null,          'snoozed',
        null, null, '${STAGED_UNTIL}', null, null, null),
       ('${AL.resolvedStaged}', '${FA}', '${RL.plain}', 'critical', 'ALR resolved staged',  '${C.managed}', null,          'resolved',
        null, null, null, '${PARTNER_A}', '${STAGED_ACK_AT}', 'manual'),
-      ('${AL.snoozeTarget}',   '${FA}', '${RL.plain}', 'info',     'ALR snooze target',    '${C.managed}', null,          'active',
+      ('${AL.snoozeTarget}',   '${FA}', '${RL.p4}',    'info',     'ALR snooze target',    '${C.managed}', null,          'active',
        null, null, null, null, null, null),
-      ('${AL.snoozeFromAck}',  '${FA}', '${RL.plain}', 'info',     'ALR snooze from ack',  '${C.managed}', null,          'acknowledged',
+      ('${AL.snoozeFromAck}',  '${FA}', '${RL.p5}',    'info',     'ALR snooze from ack',  '${C.managed}', null,          'acknowledged',
        '${MANAGER_A}', '${STAGED_ACK_AT}', null, null, null, null),
-      ('${AL.resolveActive}',  '${FA}', '${RL.plain}', 'warning',  'ALR resolve active',   '${C.managed}', null,          'active',
+      ('${AL.resolveActive}',  '${FA}', '${RL.p6}',    'warning',  'ALR resolve active',   '${C.managed}', null,          'active',
        null, null, null, null, null, null),
-      ('${AL.resolveSnoozed}', '${FA}', '${RL.plain}', 'warning',  'ALR resolve snoozed',  '${C.managed}', null,          'snoozed',
+      ('${AL.resolveSnoozed}', '${FA}', '${RL.p7}',    'warning',  'ALR resolve snoozed',  '${C.managed}', null,          'snoozed',
        null, null, '${STAGED_UNTIL}', null, null, null),
       ('${AL.gatedActive}',    '${FA}', '${RL.ack}',   'critical', 'ALR gated active',     '${C.managed}', null,          'active',
        null, null, null, null, null, null),
-      ('${AL.gatedFlow}',      '${FA}', '${RL.ack}',   'critical', 'ALR gated flow',       '${C.managed}', null,          'active',
+      ('${AL.gatedFlow}',      '${FA}', '${RL.a2}',    'critical', 'ALR gated flow',       '${C.managed}', null,          'active',
        null, null, null, null, null, null),
       ('${AL.hidden}',         '${FA}', '${RL.plain}', 'info',     'ALR senior-visible',   '${C.managed}', '${I.managed}', 'active',
        null, null, null, null, null, null),
-      ('${AL.expired}',        '${FA}', '${RL.plain}', 'warning',  'ALR expired snooze',   '${C.managed}', null,          'snoozed',
+      ('${AL.expired}',        '${FA}', '${RL.p8}',    'warning',  'ALR expired snooze',   '${C.managed}', null,          'snoozed',
        null, null, '${EXPIRED_UNTIL}', null, null, null),
-      ('${AL.expiredAck}',     '${FA}', '${RL.ack}',   'critical', 'ALR expired ack snooze', '${C.managed}', null,        'snoozed',
+      ('${AL.expiredAck}',     '${FA}', '${RL.a3}',    'critical', 'ALR expired ack snooze', '${C.managed}', null,        'snoozed',
        '${MANAGER_A}', '${STAGED_ACK_AT}', '${EXPIRED_UNTIL}', null, null, null),
-      ('${AL.replayEdge}',     '${FA}', '${RL.plain}', 'info',     'ALR replay edge',      '${C.managed}', null,          'active',
+      ('${AL.replayEdge}',     '${FA}', '${RL.p9}',    'info',     'ALR replay edge',      '${C.managed}', null,          'active',
        null, null, null, null, null, null),
-      ('${AL.fltExpiredActive}', '${FA}', '${RL.plain}', 'warning', 'ALR filter expired active', '${C.managed}', null,      'snoozed',
+      ('${AL.fltExpiredActive}', '${FA}', '${RL.p10}', 'warning', 'ALR filter expired active', '${C.managed}', null,      'snoozed',
        null, null, '${EXPIRED_UNTIL}', null, null, null),
-      ('${AL.fltExpiredAcked}', '${FA}', '${RL.plain}', 'critical', 'ALR filter expired acked', '${C.managed}', null,       'snoozed',
+      ('${AL.fltExpiredAcked}', '${FA}', '${RL.p11}', 'critical', 'ALR filter expired acked', '${C.managed}', null,       'snoozed',
        '${MANAGER_A}', '${STAGED_ACK_AT}', '${EXPIRED_UNTIL}', null, null, null),
       ('${AL.firmB}',          '${FB}', '${RL.firmB}', 'warning',  'ALR firm B',           '${C.firmB}',   null,          'active',
        null, null, null, null, null, null);

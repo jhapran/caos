@@ -26,6 +26,11 @@
  *                representability invariant (a persisted snooze whose
  *                snoozed_until has PASSED is storable as-is — SCH-18
  *                snooze-expiry read derivation, TEST-API-18 schema half).
+ *                IMP-051 extension (same IDs): the corrected resolved
+ *                clause (manual ⇒ human resolved_by; auto ⇒ resolved_by
+ *                NULL) + the HRR-06=A alerts_nonresolved_dedupe_unique
+ *                structural dedupe index (presence and behavior, HRR-09=A
+ *                retrigger shape).
  *
  * All assertions run as the postgres operator via psql — the owner role
  * proves each invariant holds WITHOUT RLS (RLS is never the integrity
@@ -63,6 +68,12 @@ const I = {
 };
 const RL = {
   a1: '6b000000-0000-4000-8000-000000000401', // firm A rule
+  // Extra single-table firm A rules (IMP-051 HRR-06=A repair): staged
+  // non-resolved probe rows need pairwise-distinct (rule, client, instance)
+  // dedupe identities under alerts_nonresolved_dedupe_unique.
+  a2: '6b000000-0000-4000-8000-000000000402',
+  a3: '6b000000-0000-4000-8000-000000000403',
+  a4: '6b000000-0000-4000-8000-000000000404',
   b1: '6b000000-0000-4000-8000-000000000411', // firm B rule (same rule_key — legal cross-firm)
 };
 const AL = {
@@ -101,11 +112,13 @@ function cleanFixture() {
   `);
 }
 
-/** Minimal valid active alert insert (rule + client linked, firm A). */
-function activeAlert(severity: string, title: string): string {
+/** Minimal valid active alert insert (rule + client linked, firm A). The
+ *  rule is a parameter because the HRR-06=A dedupe index allows only one
+ *  non-resolved alert per (firm, rule, client, instance) identity. */
+function activeAlert(severity: string, title: string, rule: string = RL.a1): string {
   return `
     insert into public.alerts (firm_id, alert_rule_id, severity, title, client_id)
-    values ('${FIRM_A}', '${RL.a1}', '${severity}', '${title}', '${C.a1}');
+    values ('${FIRM_A}', '${rule}', '${severity}', '${title}', '${C.a1}');
   `;
 }
 
@@ -140,6 +153,9 @@ beforeAll(() => {
 
     insert into public.alert_rules (id, firm_id, rule_key, name, severity) values
       ('${RL.a1}', '${FIRM_A}', 'filing_due_soon', 'Filing due soon', 'warning'),
+      ('${RL.a2}', '${FIRM_A}', 'filing_due_soon_a2', 'Filing due soon (probe A2)', 'warning'),
+      ('${RL.a3}', '${FIRM_A}', 'filing_due_soon_a3', 'Filing due soon (probe A3)', 'warning'),
+      ('${RL.a4}', '${FIRM_A}', 'filing_due_soon_a4', 'Filing due soon (probe A4)', 'warning'),
       ('${RL.b1}', '${FIRM_B}', 'filing_due_soon', 'Filing due soon', 'critical');
 
     insert into public.alerts (id, firm_id, alert_rule_id, severity, title, client_id)
@@ -242,11 +258,11 @@ describe('TEST-SCH-26 — alert_rules structure', () => {
   });
 
   it('no seed rows ship with the migration (D3 ruling; AUTO-OQ-04 open)', () => {
-    // After cleanup of THIS suite's two fixture rules, the table holds no
+    // After cleanup of THIS suite's five fixture rules, the table holds no
     // package-seeded rows at all (other suites' fixtures are deleted by
     // their own teardowns; the sequential runner makes this exact).
     expect(
-      psql(`select count(*) from public.alert_rules where id not in ('${RL.a1}', '${RL.b1}');`).trim(),
+      psql(`select count(*) from public.alert_rules where id not in ('${RL.a1}', '${RL.a2}', '${RL.a3}', '${RL.a4}', '${RL.b1}');`).trim(),
     ).toBe('0');
   });
 });
@@ -306,8 +322,14 @@ describe('TEST-SCH-27 — alerts structure', () => {
   });
 
   it('exact vocabularies: severity, status, resolution_type CHECKs (SCH-18)', () => {
+    // Distinct firm-A rules per accepted probe row: the HRR-06=A dedupe
+    // index admits only one non-resolved alert per (firm, rule, client,
+    // instance) identity (AL.min already occupies the RL.a1 identity).
+    const sevRules = [RL.a2, RL.a3, RL.a4];
+    let sevIdx = 0;
     for (const severity of ['info', 'warning', 'critical']) {
-      const res = attempt(activeAlert(severity, `ALR sev ${severity}`));
+      const res = attempt(activeAlert(severity, `ALR sev ${severity}`, sevRules[sevIdx]));
+      sevIdx += 1;
       expect(res.ok, severity).toBe(true);
     }
     const badSev = attempt(activeAlert('urgent', 'ALR bad severity'));
@@ -326,18 +348,21 @@ describe('TEST-SCH-27 — alerts structure', () => {
     // fail the lifecycle CHECK — asserted in TEST-SCH-29; here the plain
     // status vocabulary probes use fully-consistent rows.
     expect(good.ok).toBe(false); // inconsistent stamp sets rejected (23514)
+    // The three non-resolved rows get distinct rules (NULL client/instance)
+    // so their dedupe identities are pairwise distinct under the HRR-06=A
+    // partial unique index; the resolved row is outside the index scope.
     const vocab = attempt(`
       insert into public.alerts
-        (firm_id, severity, title, status, acknowledged_by, acknowledged_at,
+        (firm_id, alert_rule_id, severity, title, status, acknowledged_by, acknowledged_at,
          snoozed_until, resolved_by, resolved_at, resolution_type)
       values
-        ('${FIRM_A}', 'info', 'ALR st active', 'active',
+        ('${FIRM_A}', '${RL.a2}', 'info', 'ALR st active', 'active',
          null, null, null, null, null, null),
-        ('${FIRM_A}', 'info', 'ALR st ack', 'acknowledged',
+        ('${FIRM_A}', '${RL.a3}', 'info', 'ALR st ack', 'acknowledged',
          '${MANAGER_A}', now(), null, null, null, null),
-        ('${FIRM_A}', 'info', 'ALR st snoozed', 'snoozed',
+        ('${FIRM_A}', '${RL.a4}', 'info', 'ALR st snoozed', 'snoozed',
          null, null, now() + interval '1 day', null, null, null),
-        ('${FIRM_A}', 'info', 'ALR st resolved', 'resolved',
+        ('${FIRM_A}', null, 'info', 'ALR st resolved', 'resolved',
          null, null, null, '${PARTNER_A}', now(), 'manual');
     `);
     expect(vocab.ok).toBe(true);
@@ -385,13 +410,19 @@ describe('TEST-SCH-27 — alerts structure', () => {
     ]);
   });
 
-  it('spec indexes exist (SCH-18: the queue + the raised-at scan)', () => {
+  it('spec indexes exist (SCH-18: the queue + the raised-at scan; HRR-06=A non-resolved dedupe)', () => {
     const idxdef = psql(`
       select indexname || ':' || indexdef from pg_indexes
       where schemaname = 'public' and tablename = 'alerts' order by 1;
     `);
     expect(idxdef).toContain('alerts_queue_idx:CREATE INDEX alerts_queue_idx ON public.alerts USING btree (firm_id, status, severity)');
     expect(idxdef).toContain('alerts_raised_idx:CREATE INDEX alerts_raised_idx ON public.alerts USING btree (firm_id, raised_at)');
+    // IMP-051 HRR-06=A: partial UNIQUE over the approved business dedupe
+    // identity, NULLS NOT DISTINCT, restricted to the non-resolved states.
+    expect(idxdef).toContain(
+      'alerts_nonresolved_dedupe_unique:CREATE UNIQUE INDEX alerts_nonresolved_dedupe_unique ON public.alerts USING btree (firm_id, alert_rule_id, client_id, compliance_instance_id) NULLS NOT DISTINCT',
+    );
+    expect(idxdef).toContain(`WHERE (status = ANY (ARRAY['active'::text, 'acknowledged'::text, 'snoozed'::text]))`);
   });
 
   it('RLS posture: enabled AND forced, one scoped-select policy per table, SELECT-only browser grants', () => {
@@ -574,19 +605,67 @@ describe('TEST-SCH-29 — alerts lifecycle-field CHECK, write guard, expiry post
     }
   });
 
+  it('corrected resolved clause (IMP-051): manual requires a human resolved_by, auto requires resolved_by NULL', () => {
+    // Unresolved rows carrying resolution stamps stay rejected — that side
+    // of the CHECK is unchanged by IMP-051 and remains covered by the
+    // stamp-consistency matrix above (preserved, deliberately not
+    // duplicated here). Resolved rows sit OUTSIDE the dedupe index scope,
+    // so the accepted probes below may share one identity.
+    const rejected: Array<[string, string]> = [
+      // manual resolution without a human resolver
+      ['manual without resolved_by', `null, now(), 'manual'`],
+      // auto resolution must not masquerade as an auth.users human actor
+      ['auto carrying resolved_by', `'${PARTNER_A}', now(), 'auto'`],
+      // resolved without resolved_at, either resolution type
+      ['manual without resolved_at', `'${PARTNER_A}', null, 'manual'`],
+      ['auto without resolved_at', `null, null, 'auto'`],
+    ];
+    for (const [label, cols] of rejected) {
+      const res = attempt(`
+        insert into public.alerts
+          (firm_id, severity, title, status, resolved_by, resolved_at, resolution_type)
+        values ('${FIRM_A}', 'info', 'ALR lc probe', 'resolved', ${cols});
+      `);
+      expect(res.ok, label).toBe(false);
+      expect(res.code, label).toBe('23514');
+    }
+    const accepted: Array<[string, string]> = [
+      ['manual with a human resolver', `'${PARTNER_A}', now(), 'manual'`],
+      ['auto with resolved_by NULL', `null, now(), 'auto'`],
+    ];
+    for (const [label, cols] of accepted) {
+      const res = attempt(`
+        insert into public.alerts
+          (firm_id, severity, title, status, resolved_by, resolved_at, resolution_type)
+        values ('${FIRM_A}', 'info', 'ALR lc probe', 'resolved', ${cols});
+      `);
+      expect(res.ok, label).toBe(true);
+    }
+    psql(`
+      delete from public.event_outbox
+      where firm_id = '${FIRM_A}'
+        and payload ->> 'alert_id' in (
+          select a.id::text from public.alerts a
+          where a.firm_id = '${FIRM_A}' and a.title = 'ALR lc probe');
+      delete from public.alerts where firm_id = '${FIRM_A}' and title = 'ALR lc probe';
+    `);
+  });
+
   it('an expired persisted snooze is storable as-is (SCH-18: expiry is a READ derivation; IMP-042 writes none)', () => {
+    // Distinct rules per row: both are non-resolved, so the HRR-06=A dedupe
+    // index requires distinct (rule, client, instance) identities.
     const res = attempt(`
-      insert into public.alerts (firm_id, severity, title, status, snoozed_until)
-      values ('${FIRM_A}', 'info', 'ALR expired snooze', 'snoozed', now() - interval '1 hour');
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, status, snoozed_until)
+      values ('${FIRM_A}', '${RL.a1}', 'info', 'ALR expired snooze', 'snoozed', now() - interval '1 hour');
     `);
     expect(res.ok).toBe(true);
     // … including with a preserved acknowledgement stamp (ack → snooze →
     // expiry reads as acknowledged adapter-side).
     const resAck = attempt(`
       insert into public.alerts
-        (firm_id, severity, title, status, acknowledged_by, acknowledged_at, snoozed_until)
+        (firm_id, alert_rule_id, severity, title, status, acknowledged_by, acknowledged_at, snoozed_until)
       values
-        ('${FIRM_A}', 'info', 'ALR expired snooze ack', 'snoozed',
+        ('${FIRM_A}', '${RL.a2}', 'info', 'ALR expired snooze ack', 'snoozed',
          '${MANAGER_A}', now() - interval '2 hours', now() - interval '1 hour');
     `);
     expect(resAck.ok).toBe(true);
@@ -630,5 +709,91 @@ describe('TEST-SCH-29 — alerts lifecycle-field CHECK, write guard, expiry post
       rollback;
     `);
     expect(commanded.ok).toBe(true);
+  });
+
+  it('dedupe behavior (HRR-06=A): one non-resolved alert per (firm, rule, client, instance); resolved rows outside scope (HRR-09=A)', () => {
+    // AL.min is the fixture's active (FIRM_A, RL.a1, C.a1, NULL) alert — a
+    // SECOND non-resolved row with the same identity is structurally
+    // rejected, in every non-resolved status.
+    const dupCases: Array<[string, string]> = [
+      ['active', `'active', null, null, null`],
+      ['acknowledged', `'acknowledged', '${MANAGER_A}', now(), null`],
+      ['snoozed', `'snoozed', null, null, now() + interval '1 day'`],
+    ];
+    for (const [label, stamps] of dupCases) {
+      const res = attempt(`
+        insert into public.alerts
+          (firm_id, alert_rule_id, severity, title, client_id, status,
+           acknowledged_by, acknowledged_at, snoozed_until)
+        values ('${FIRM_A}', '${RL.a1}', 'info', 'ALR dedupe dup', '${C.a1}', ${stamps});
+      `);
+      expect(res.ok, label).toBe(false);
+      expect(res.code, label).toBe('23505');
+    }
+
+    // NULLS NOT DISTINCT: two all-NULL subject identities under the same
+    // rule collide exactly like non-NULL identities.
+    const firstNull = attempt(`
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, status)
+      values ('${FIRM_A}', '${RL.a2}', 'info', 'ALR dedupe null one', 'active');
+    `);
+    expect(firstNull.ok).toBe(true);
+    const secondNull = attempt(`
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, status)
+      values ('${FIRM_A}', '${RL.a2}', 'info', 'ALR dedupe null two', 'active');
+    `);
+    expect(secondNull.ok).toBe(false);
+    expect(secondNull.code).toBe('23505');
+
+    // A resolved row is OUTSIDE the index scope: an active row with the
+    // same identity is accepted alongside it.
+    const resolvedRow = attempt(`
+      insert into public.alerts
+        (firm_id, alert_rule_id, severity, title, client_id, status, resolved_at, resolution_type)
+      values ('${FIRM_A}', '${RL.a3}', 'info', 'ALR dedupe resolved', '${C.a1}', 'resolved', now(), 'auto');
+    `);
+    expect(resolvedRow.ok).toBe(true);
+    const activeBesideResolved = attempt(`
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, client_id)
+      values ('${FIRM_A}', '${RL.a3}', 'info', 'ALR dedupe active', '${C.a1}');
+    `);
+    expect(activeBesideResolved.ok).toBe(true);
+
+    // HRR-09=A retrigger shape: once the active row is resolved (operator
+    // update under the SCH-18 single-writer marker, mirroring the Layer-B
+    // commands' own guarded write path), a FRESH active row with the same
+    // identity is accepted.
+    const base = attempt(`
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, client_id)
+      values ('${FIRM_A}', '${RL.a4}', 'warning', 'ALR dedupe retrigger', '${C.a1}');
+    `);
+    expect(base.ok).toBe(true);
+    psql(`
+      do $$
+      begin
+        perform set_config('app.alert_transition_command', '1', true);
+        perform set_config('app.audit_skip_trigger', '1', true);
+        update public.alerts
+        set status = 'resolved', resolution_type = 'auto', resolved_at = now(), resolved_by = null
+        where firm_id = '${FIRM_A}' and title = 'ALR dedupe retrigger';
+      end
+      $$;
+    `);
+    const retrigger = attempt(`
+      insert into public.alerts (firm_id, alert_rule_id, severity, title, client_id)
+      values ('${FIRM_A}', '${RL.a4}', 'warning', 'ALR dedupe retrigger fresh', '${C.a1}');
+    `);
+    expect(retrigger.ok).toBe(true);
+
+    // Clean up the staged rows plus their outbox publication records (the
+    // alerts_publish_event trigger fires on INSERT and on status->resolved).
+    psql(`
+      delete from public.event_outbox
+      where firm_id = '${FIRM_A}'
+        and payload ->> 'alert_id' in (
+          select a.id::text from public.alerts a
+          where a.firm_id = '${FIRM_A}' and a.title like 'ALR dedupe%');
+      delete from public.alerts where firm_id = '${FIRM_A}' and title like 'ALR dedupe%';
+    `);
   });
 });
