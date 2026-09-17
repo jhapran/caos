@@ -12,9 +12,8 @@
   evaluation
 - IMP-051 implementation checkpoint: `8e8464a`
   (`IMP-051: materialize deadlines and evaluate alerts`)
-- IMP-051 closure checkpoint: this commit (`docs: close IMP-051 …` — the
-  hash is recorded post-commit per the closure-pointer reconcile
-  convention; see the IMP-050 precedent)
+- IMP-051 closure checkpoint: `be51b5d`
+  (`docs: close IMP-051 deadline materialization and alerts`)
 - IMP-051 pre-implementation normative checkpoints (rulings record):
   `712cf8e` (`IMP-051: reconcile package contract rulings`) and
   `8a82136` (`IMP-051: record pre-implementation rulings`)

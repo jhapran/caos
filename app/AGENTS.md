@@ -370,8 +370,8 @@ Ruling R6 required.
 IMP-051 (deadline materialization & alert evaluation) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-18; implementation
 checkpoint `8e8464a` `IMP-051: materialize deadlines and evaluate
-alerts`; closure checkpoint: this closure commit — hash recorded
-post-commit per the closure-pointer reconcile convention). The migration
+alerts`; closure checkpoint `be51b5d` `docs: close IMP-051 deadline
+materialization and alerts`). The migration
 `20260916000000_alert_evaluation.sql` corrects the SCH-18 resolved
 clause (explicit `resolution_type IS NOT NULL`; manual ⇒ human
 `resolved_by`, auto ⇒ `resolved_by IS NULL` — AUD-ACT-05, no synthetic
