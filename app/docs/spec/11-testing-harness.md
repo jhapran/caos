@@ -623,6 +623,54 @@ instance, one event). Extensions:
   basis with UTC-persisted timestamps (AUTO-REC-10); the board reflects
   the operative `due_date` and never rewrites immutable
   `calculated_due_date` provenance (SCH-12).
+- **TEST-API-21 (newly allocated, IMP-061 final contract reconciliation
+  2026-09-19):** the API-R0-SRC structured-search contract — exactly the
+  six approved domains (client, legal_entity, registration, task,
+  compliance_instance, staff); the provider-neutral hit projection
+  (kind/id/label/sub/href plus status/badge and the masked-identifier
+  projection); server-side caps (5 per kind / 20 global, no pagination);
+  deterministic ordering (identifier exact before identifier prefix,
+  textual prefix before substring-only, stable canonical-key tie-break);
+  masked identifier display (type + last four only); truthful Offboarded
+  indication; a truthful empty result is not an error; error surfaces
+  follow API-ERR-01/02.
+- **TEST-API-22 (newly allocated, IMP-061 final contract reconciliation
+  2026-09-19):** search tenant isolation / no existence leakage
+  (API-ERR-02, RLS-TEN-02) — Firm A/Firm B collisions return only own-firm
+  hits; cross-firm denial; hidden and nonexistent targets are
+  indistinguishable; a forged `x-active-firm` selector grants nothing
+  (RLS-CTX-02/RLS-MECH-01); anonymous callers are denied.
+- **TEST-API-23 (newly allocated, IMP-061 final contract reconciliation
+  2026-09-19):** search input security and matching semantics
+  (IMP061-R3/R4) — the server-side 2-character minimum never enumerates
+  tenant data for empty/one-character input; identifiers match
+  exact/prefix only (no substring); textual names/operational labels match
+  case-insensitive substring with prefix ranked ahead of substring-only;
+  `%`, `_`, backslash, quote/operator-looking and equivalent
+  special-character input is treated literally with deterministic
+  escaping — no uncontrolled wildcard/filter injection.
+- **TEST-API-24 (newly allocated, IMP-061 final contract reconciliation
+  2026-09-19):** search role-visibility matrix — partner firm-wide;
+  manager portfolio scope (RLS-STF-03); senior/article assigned-work
+  visibility (RLS-STF-04); billing receives no client/instance hits;
+  the active-firm staff roster pin (ACTIVE `firm_memberships` only);
+  the IMP061-M1 (= M1-A) compliance-instance cases — explicit
+  period-label search coverage for partner, manager, senior/article, and
+  billing, with no compliance-type-name leakage for roles lacking
+  `compliance_types` visibility and no loss of otherwise-visible
+  instances from the composition structure (no INNER JOIN removal).
+
+**IMP-061 harness wiring (future obligation — recorded at contract
+reconciliation 2026-09-19; NO harness code is edited at contract time):**
+per the standing repository convention — each live data-backed domain
+surface carries its own integration suite wired into the standing Harness
+Gate (e.g. IMP-051 `tests/integration/deadlines/` →
+`deadlines-integration`; IMP-060 `tests/integration/dashboard/` →
+`dashboard-integration`) — IMP-061 introduces a dedicated search
+integration phase (`tests/integration/search/`, executing
+TEST-API-21…24) wired into `scripts/harness/gate.mjs` during
+implementation. Extending an existing domain phase was rejected: no
+existing phase owns a cross-domain search surface.
 
 ## Security family (TEST-SEC-*)
 
@@ -659,6 +707,13 @@ instance, one event). Extensions:
 11. **TEST-E2E-11** authorization-denied scenario (e.g. billing role
     blocked from compliance detail; cross-firm URL access denied);
 12. **TEST-E2E-12** logout.
+13. **TEST-E2E-13** live Command Palette structured search — **owned by
+    IMP-061** (allocated at the IMP-061 final contract reconciliation
+    2026-09-19): open with the existing shortcut; live search across the
+    six API-R0-SRC domains; navigate to the canonical destination; masked
+    identifier rendering; offboarded badge; zero-result state;
+    loading/error behavior where safely testable; no fixture fallback in
+    live mode; representative role coverage.
 
 No UI-permutation coverage; everything else is component/API level.
 

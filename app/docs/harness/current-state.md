@@ -50,7 +50,22 @@ Remaining formal R0 packages:
 
 ## 3. Current / Next Package
 
-- Current: none in flight — IMP-060 — Command Centre & Morning Brief
+- Current: IMP-061 — Structured global search — CONTRACT PHASE
+  (2026-09-19): contract discovery PASS; preliminary rulings finalized;
+  local spike PASS; fresh independent spike review PASS (CRITICAL=0,
+  HIGH=0, MEDIUM=2 — MEDIUM-1 resolved as IMP061-M1 = M1-A; MEDIUM-2
+  resolved by not citing the unretained superuser pg_trgm planner
+  evidence and recording no numerical threshold; LOW=4 historical
+  spike-quality observations, none a production vulnerability); final
+  human rulings IMP061-R1…R10 + IMP061-M1 APPROVED and recorded
+  normatively in `07` API-R0-SRC, `11` (TEST-API-21…24, TEST-E2E-13),
+  and the `12` IMP-061 package contract. Implementation remains NOT
+  STARTED and NOT AUTHORIZED — no implementation checkpoint exists; no
+  migration has been created; no hosted/production change has been made;
+  the production SECURITY INVOKER structured-search function lands only
+  through a version-controlled migration after separate implementation
+  authorization.
+- Last CLOSED package: IMP-060 — Command Centre & Morning Brief
   live data — CLOSED (human package-closure approval 2026-09-19).
   Acceptance record: primary implementation PASS; focused
   runtime/harness PASS; fresh independent implementation/security
@@ -64,9 +79,9 @@ Remaining formal R0 packages:
   dashboard integration 25/25; Playwright smoke 16/16; all
   security/cleanliness phases PASS); hosted staging acceptance PASS at
   hosted revision `d78cfe7` (see §4/§6/§6f); production untouched.
-- Next: IMP-061 — Structured global search — NOT
-  STARTED and NOT AUTHORIZED (begins only with an explicit
-  implementation instruction; IMP-060 closure does not authorize it).
+- Next after IMP-061: IMP-062 — Limited Realtime — NOT STARTED and NOT
+  AUTHORIZED (begins only after IMP-061 closure and an explicit
+  implementation instruction).
 - Historical pre-implementation record for IMP-060 (kept for
   rationale): all pre-implementation human decisions were RESOLVED and
   recorded before implementation — the H1–H8 human-approved rulings,
@@ -750,7 +765,9 @@ Remaining formal R0 packages:
   must be recomputed at fixture provisioning time.
 - Production untouched — NOT promoted, NOT authorized; no production
   verification claimed. Statutory default activation NOT performed.
-  IMP-061 NOT STARTED.
+  IMP-061 implementation NOT STARTED — IMP-061 is in CONTRACT PHASE
+  (final human rulings recorded 2026-09-19; see §3); implementation
+  remains NOT AUTHORIZED.
 
 ## 7. Permanent Architecture Boundaries
 
@@ -835,6 +852,13 @@ Remaining formal R0 packages:
   separate approved definitions/scope decisions. API-OQ-02 remains OPEN
   outside the IMP-060 read-model surfaces (resolved for those surfaces
   only, 2026-09-19).
+- IMP-061 deferred search domains (final human ruling IMP061-R2,
+  2026-09-19 — deferrals, not open blockers): contacts, phone search,
+  email search, document search, invoice search, client-portal search,
+  semantic search, embeddings, RAG, and pgvector are OUT of IMP-061 and
+  are not pulled forward; search indexing / pg_trgm is to be
+  re-evaluated at materially larger per-firm data volumes using fresh
+  measurement (no numerical threshold is established).
 - Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
   Auth config — ops decision); performance advisors

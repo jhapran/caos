@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02, API-OQ-04, AUTO-OQ-04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **AUTO-OQ-01/02/03 are RESOLVED by human ruling 2026-09-11 (IMP-050 architecture amendment, recorded normatively in `09` and `06`): pg_cron + hardened in-database scheduler/job functions is the final R0 scheduler (pg_net not required for R0; HTTP/Edge scheduling deferred to R1+); the transactional outbox is the final event-publication mechanism (direct invocation rejected for R0; schema contracts SCH-33/34/35 in `06`); the recurrence look-ahead default is 90 calendar days (configurable) on an Asia/Kolkata business-date basis with UTC-persisted timestamps. AUTO-SCH-02 is recorded PASS (LOCAL/HOSTED/OVERALL); hosted pg_cron is available (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` remains a future explicit human gate.** **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **API-OQ-03 is RESOLVED (2026-09-19): IMP-060 pre-implementation package-contract recording — human-approved B-count (RLS-respecting per-section exact-count reads with limited row fetches only where an approved derivation genuinely requires rows) selected over the composite SECURITY INVOKER RPC and B-fetch candidates on the measured local representative-volume benchmark (all three candidates passed three-way semantic/security validation); recorded normatively in `07` (API-R0-DASH + API-OQ matrix) and in the IMP-060 package section below; hosted-network behavior is validated at hosted staging acceptance.** **API-OQ-02 is RESOLVED for the IMP-060 read-model surfaces (2026-09-19): scalar aggregate counts need no pagination; existing list contracts keep their already-approved pagination; any genuinely new paginated list uses the API-CONV-02 default 50 / maximum 200.** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02, API-OQ-04, AUTO-OQ-04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **AUTO-OQ-01/02/03 are RESOLVED by human ruling 2026-09-11 (IMP-050 architecture amendment, recorded normatively in `09` and `06`): pg_cron + hardened in-database scheduler/job functions is the final R0 scheduler (pg_net not required for R0; HTTP/Edge scheduling deferred to R1+); the transactional outbox is the final event-publication mechanism (direct invocation rejected for R0; schema contracts SCH-33/34/35 in `06`); the recurrence look-ahead default is 90 calendar days (configurable) on an Asia/Kolkata business-date basis with UTC-persisted timestamps. AUTO-SCH-02 is recorded PASS (LOCAL/HOSTED/OVERALL); hosted pg_cron is available (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` remains a future explicit human gate.** **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **API-OQ-03 is RESOLVED (2026-09-19): IMP-060 pre-implementation package-contract recording — human-approved B-count (RLS-respecting per-section exact-count reads with limited row fetches only where an approved derivation genuinely requires rows) selected over the composite SECURITY INVOKER RPC and B-fetch candidates on the measured local representative-volume benchmark (all three candidates passed three-way semantic/security validation); recorded normatively in `07` (API-R0-DASH + API-OQ matrix) and in the IMP-060 package section below; hosted-network behavior is validated at hosted staging acceptance.** **API-OQ-02 is RESOLVED for the IMP-060 read-model surfaces (2026-09-19): scalar aggregate counts need no pagination; existing list contracts keep their already-approved pagination; any genuinely new paginated list uses the API-CONV-02 default 50 / maximum 200.** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020). **IMP-061 is in CONTRACT PHASE (2026-09-19): final human rulings IMP061-R1…R10 + IMP061-M1 APPROVED and recorded normatively in `07` API-R0-SRC, `11` (TEST-API-21…24, TEST-E2E-13), and the IMP-061 package contract below; contract discovery PASS, local spike PASS, fresh independent spike review PASS (CRITICAL=0/HIGH=0; MEDIUM=2 resolved into the contract; LOW=4 historical spike-quality observations); implementation remains NOT AUTHORIZED — no implementation checkpoint, no migration, no hosted/production change.**
 
 ## Purpose
 
@@ -1505,29 +1505,160 @@ IMP-051 = COMPLETE/CLOSED (live deadline read-model foundation).
 
 **IMP-061 — Structured global search**
 
-- **Purpose:** Server-side structured search across clients, entities,
-  registrations, tasks, instances per `07` search contracts — scoped by
-  the caller's firm and role visibility.
-- **Requirement IDs:** `07` search contract (structured global search);
-  API-SEC-*; RLS visibility inheritance.
-- **TEST-* IDs:** TEST-API-* (search authorization: no existence leakage
-  across tenants).
-- **Dependencies:** IMP-060.
-- **Allowed scope:** search RPC/views + palette wiring (existing ⌘K UI
-  swapped to the adapter).
-- **Non-goals:** full-text document search; pgvector/semantic search
-  (deferred).
-- **Expected files/areas:** `supabase/`, `src/data/`,
-  `src/components/CommandPalette` wiring.
-- **Entry criteria:** read models green.
+- **Status (2026-09-19):** CONTRACT PHASE — contract discovery PASS;
+  preliminary rulings finalized; local spike PASS; fresh independent spike
+  review PASS (CRITICAL=0, HIGH=0, MEDIUM=2 — both resolved into this
+  contract; LOW=4 historical spike-quality observations, none a production
+  vulnerability); final human rulings IMP061-R1…R10 + IMP061-M1 APPROVED
+  2026-09-19 and recorded normatively here and in `07` API-R0-SRC / `11`
+  (TEST-API-21…24, TEST-E2E-13). **IMPLEMENTATION REMAINS NOT AUTHORIZED
+  — no implementation checkpoint exists, no migration has been created,
+  no hosted/production change has been made; implementation begins only
+  after fresh independent contract review plus an explicit implementation
+  instruction.**
+- **Purpose:** server-side structured global search under the caller's
+  firm/role visibility (`07` API-R0-SRC), wired into the existing ⌘K
+  Command Palette.
+- **Requirement IDs:** `07` API-R0-SRC (expanded at this reconciliation);
+  API-SEC-01…04; API-ERR-01/02; API-CONV-01/05; API-ARCH-01/02; RLS
+  visibility inheritance (RLS-CTX-01/02, RLS-MECH-01, RLS-TEN-02,
+  RLS-STF-03/04, RLS-CIN-01, RLS-CTY-01, RLS-MEM-01/RLS-PRF-01);
+  AUD-SEC-01/02 (query-material redaction).
+- **TEST-* IDs:** TEST-API-21 (shape / six-domain behavior / caps /
+  deterministic ordering / masked identifiers / offboarded status /
+  truthful empty+error), TEST-API-22 (tenant isolation / no existence
+  leakage), TEST-API-23 (input security & matching semantics),
+  TEST-API-24 (role visibility matrix incl. M1-A period-label cases),
+  TEST-E2E-13 (live Command Palette structured search) — allocated in `11`
+  at this reconciliation; existing TEST-API-01…20 and TEST-E2E-01…12
+  semantics preserved.
+- **Dependencies:** IMP-060 (CLOSED 2026-09-19 — entry satisfied).
+- **Approved scope (IMP061-R1 — final):** exactly six searchable domains
+  — clients, legal entities, registrations, tasks, compliance instances,
+  staff display names (ACTIVE `firm_memberships` of the selected active
+  firm). This reconciles the former entity-set contradiction (the card
+  listed tasks/instances but not staff; API-R0-SRC listed staff but not
+  tasks/instances) — the final set is exactly these six.
+- **Non-goals (IMP061-R2 — final; do not pull forward):** contacts, phone
+  search, email search, document search, invoice search, client-portal
+  search, semantic search, embeddings, RAG, pgvector; pagination in the
+  Command Palette; any product ranking semantics beyond the approved
+  ordering rules.
+- **Matching (IMP061-R3 — final = R3-B HYBRID):** identifiers exact /
+  prefix only (NO substring); textual names / operational labels
+  case-insensitive substring with prefix ranked ahead of substring-only;
+  literal input treatment with deterministic server-side escaping of `%`,
+  `_`, backslash, quote/operator-looking and equivalent special
+  characters; minimum live-data query length 2 (IMP061-R4 — final:
+  empty/one-char input MUST NOT enumerate tenant data; page/navigation
+  shortcuts may still appear, client-side).
+- **Caps / ordering (IMP061-R5 — final):** max 5 per kind, max 20
+  globally, server-side; no pagination; deterministic ordering —
+  identifier exact before identifier prefix where applicable, textual
+  prefix before substring-only, then a stable non-product technical
+  tie-break on canonical key/id (an implementation determinism rule, not
+  a relevance judgment). NO numerical future scaling threshold is
+  established.
+- **Architecture (IMP061-R8 — final = R8-B SECURITY INVOKER
+  COMPOSITION):** React → `@/data` search service → ONE structured-search
+  database function → ordinary caller RLS. SECURITY INVOKER (NOT SECURITY
+  DEFINER); server-derived/revalidated active firm; no authorization from
+  a caller-provided firm_id; active-firm roster pin for staff
+  (IMP061-R6 — ACTIVE `firm_memberships` of the selected active firm);
+  server-side min-length guard, caps, deterministic ordering, identifier
+  masking (IMP061-R7 — display identifier type + last four only; the full
+  value remains available only on the authorized destination surface),
+  truthful offboarded status (IMP061-R10 — searchable if RLS-authorized,
+  explicitly labeled Offboarded), literal wildcard/filter escaping;
+  normal `authenticated` EXECUTE grant only as required; no browser
+  service-role; no RLS bypass. Query privacy (IMP061-R9): application-owned
+  telemetry / audit events / application error reporting MUST NOT persist
+  raw search terms — redact/omit sensitive query material; no control is
+  claimed over provider/platform infrastructure logs beyond the
+  application contract.
+- **Compliance-instance search (IMP061-M1 — final = M1-A):**
+  senior/article search compliance instances only through fields already
+  visible under their ordinary current RLS/read contract; NO new
+  compliance-type-name projection is created for search; compliance type
+  names a role cannot ordinarily read MUST NOT leak through search; the
+  production composition MUST NOT use an INNER JOIN to
+  `compliance_types` that removes otherwise-visible compliance instances
+  — an RLS-safe structure (LEFT JOIN with NULL-safe matching/label
+  shaping, or an equivalent branch structure) is contractually required so
+  that period-label matching survives without `compliance_types`
+  visibility, hidden type names are not leaked, and ordinary
+  compliance-instance visibility is unchanged. Partner/manager type-name
+  matching availability follows ordinary current RLS (not expanded to
+  normalize results across roles); explicit per-role period-label tests
+  required (TEST-API-24).
+- **Database consequence:** R3 requires NO new search index at the
+  measured representative R0 scale (pg_trgm NOT required for IMP-061);
+  R8 WILL require one version-controlled migration for the production
+  SECURITY INVOKER structured-search function during implementation —
+  that migration is NOT authorized now.
+- **Benchmark record (factual; independently accepted conclusions
+  only):** measured locally — fan-out topology: 8 requests in the
+  measured topology, local p50 ≈ 94–96 ms; SECURITY INVOKER
+  single-function topology: 1 request, local p50 ≈ 111–129 ms. Fan-out
+  had the lower LOCAL loopback p50; the invoker was NOT proven faster
+  locally; hosted performance was NOT measured and any hosted latency
+  inversion is only a hypothesis — hosted performance must later be
+  checked during hosted acceptance. NO hosted superiority is claimed for
+  either approach; the R8-B choice rests on the approved combined
+  security, contract-enforcement, topology, maintainability and evidence
+  analysis — not a hosted-speed claim. Spike-review corrections
+  incorporated: the benchmark artifact used an INNER JOIN despite the
+  handback saying LEFT JOIN, so senior/article period-label matching
+  could have disappeared (MEDIUM-1 → resolved by IMP061-M1 = M1-A:
+  RLS-safe LEFT JOIN/equivalent + explicit per-role period-label tests);
+  the claimed superuser pg_trgm planner counter-evidence was not retained
+  in the reviewable artifacts and is NOT cited as verified evidence, and
+  no numerical ("10x"-style) future threshold is recorded (MEDIUM-2). The
+  LOW findings (raw latency samples not retained; report.md stub; setup
+  comment said 9 profiles vs 8; the actual PostgREST embedded expansion
+  lacked a captured query plan) are historical spike-quality observations,
+  not production vulnerabilities.
+- **pg_trgm / index record:** pg_trgm was absent before the spike;
+  temporary pg_trgm/indexes were exercised locally; RLS-context query
+  plans did NOT select the temporary trigram indexes at the
+  representative measured scale; pg_trgm and the temporary indexes were
+  cleaned up; pg_trgm is NOT required for IMP-061 at the measured R0
+  scale; search indexing / pg_trgm is to be RE-EVALUATED at materially
+  larger per-firm data volumes using fresh measurement — no numerical
+  threshold is established.
+- **Harness contract (future obligation — recorded in `11`; NO harness
+  code edited at contract time):** per the standing repository convention
+  (IMP-051 `deadlines-integration`, IMP-060 `dashboard-integration`),
+  IMP-061 introduces a dedicated search integration phase
+  (`tests/integration/search/`, executing TEST-API-21…24) wired into the
+  standing Harness Gate during implementation; extending an existing
+  domain phase was rejected — no existing phase owns a cross-domain
+  search surface. `scripts/harness/gate.mjs` is NOT edited at contract
+  time.
+- **Expected files/areas (identified only — NOT created or edited by this
+  recording):** `supabase/migrations/` (the R8 function —
+  implementation-time only), `src/data/search/` (provider-neutral
+  service, five-file convention), `src/components/CommandPalette` wiring,
+  `tests/integration/search/`, Playwright TEST-E2E-13.
+- **Entry criteria:** IMP-060 read models green (satisfied); fresh
+  independent contract review PASS plus an explicit human implementation
+  instruction.
 - **Acceptance criteria:** Firm B user cannot surface Firm A records by
-  id, name, or suggestion; result shaping per contract.
-- **Verification:** CI-equivalent + TEST-API-*.
+  id, name, or suggestion; result shaping per API-R0-SRC (caps,
+  deterministic ordering, masked identifiers, Offboarded labelling);
+  role-visibility matrix proven (TEST-API-24); input-security semantics
+  proven (TEST-API-23); tenant isolation proven (TEST-API-22).
+- **Verification:** CI-equivalent + TEST-API-21…24 + TEST-E2E-13 +
+  Harness Gate with the search-integration phase.
 - **Exit criteria:** search live with isolation proven.
-- **Human approval:** no.
-- **Git checkpoint:** `feat: structured global search`.
-- **Rollback concern:** read-only.
-- **Open/provisional dependency:** none.
+- **Human approval:** no (the package carries no additional human-approval
+  gate; this contract reconciliation itself does NOT authorize
+  implementation).
+- **Git checkpoint:** `feat: structured global search` (implementation-time
+  only).
+- **Rollback concern:** read-only; the function is additive.
+- **Open/provisional dependency:** none — R3/R8/M1 are RESOLVED by the
+  final human rulings recorded above.
 
 ---
 
@@ -1674,10 +1805,12 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | TEST-RLS-SUP-01 | IMP-012 (shape), IMP-072 (operations) |
 | TEST-SCH-01…20 | IMP-010, IMP-020, IMP-030, IMP-031, IMP-040 (TEST-SCH-01 dependency-acyclicity implementation coverage and TEST-SCH-15…20 owned by IMP-040; TEST-SCH-02 shared — earlier package coverage remains regression; TEST-SCH-12/13/14 owned by IMP-031) |
 | TEST-AUD-01…11 | IMP-013, extended per domain package |
-| TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-040 (API-R0-TSK contract tests), IMP-060, IMP-061, IMP-062 |
+| TEST-API-01…10 | IMP-014, IMP-022, IMP-031 (API-R0-CCP/API-R0-CIN contract tests), IMP-040 (API-R0-TSK contract tests), IMP-060, IMP-062 |
+| TEST-API-21…24 | IMP-061 (allocated at the IMP-061 final contract reconciliation 2026-09-19) |
 | TEST-AUTO-01…15 | IMP-050, IMP-051 |
 | TEST-MIG-01…15 | IMP-003, IMP-014, IMP-070, IMP-071 |
 | TEST-E2E-01…12 | IMP-001 (skeleton), flows land with their packages (TEST-E2E-07 owned by IMP-042); full pass at IMP-071 |
+| TEST-E2E-13 | IMP-061 (allocated at the IMP-061 final contract reconciliation 2026-09-19) |
 | TEST-SEC-01…05 | IMP-011, IMP-012, IMP-013 |
 | TEST-OPS-01…10 | IMP-071, IMP-072 |
 

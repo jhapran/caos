@@ -504,9 +504,19 @@ deterministic domain fixtures (Asia/Kolkata-relative fixture due dates
 must be recomputed at provisioning time). Production untouched; no
 production verification claimed.
 
-Next package: IMP-061 — Structured global search (NOT
-STARTED, NOT AUTHORIZED — begins only with an explicit implementation
-instruction; IMP-060 closure does not authorize it).
+Next package: IMP-061 — Structured global search — CONTRACT PHASE
+(2026-09-19): final human rulings IMP061-R1…R10 + IMP061-M1 APPROVED and
+recorded normatively in `docs/spec/07-api-contract.md` (API-R0-SRC),
+`docs/spec/11-testing-harness.md` (TEST-API-21…24, TEST-E2E-13), and
+`docs/spec/12-release-0-plan.md` (IMP-061 package contract); contract
+discovery PASS, local spike PASS, fresh independent spike review PASS
+(CRITICAL=0/HIGH=0; MEDIUM=2 resolved into the contract; LOW=4 historical
+spike-quality observations). IMPLEMENTATION REMAINS NOT AUTHORIZED — no
+implementation checkpoint exists, no migration has been created, no
+hosted/production change has been made; the production SECURITY INVOKER
+structured-search function lands only through a normal version-controlled
+migration after separate implementation authorization. IMP-062 not
+started.
 
 Authoritative sources:
 

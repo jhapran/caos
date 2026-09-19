@@ -249,7 +249,7 @@ REPLACE / DEMO-ONLY (API-INV-01).
 | `getComplianceMaster` | Compliance catalogue | EVOLVE | Merged view: system defaults + firm overrides shadowing per TEN-07 (RLS-CTY-01) |
 | `getAggregates` / `fetchAggregates` / `useLiveAggregates` | Command Centre / Morning Brief counters | REPLACE | live Command Centre / Morning Brief counters via the API-R0-DASH B-count read model (RLS-respecting per-section exact counts — API-OQ-03 resolved 2026-09-19); fixture `AGGREGATES` has no production counterpart (DM-X-03) |
 | `fetchDependencyClients` | Client Dependency board (48 rows) | REPLACE | Server-derived "waiting on client" read model over instances in `information_requested` + waiting tasks (API-R0-DLN); not a stored fixture |
-| `searchAll` | ⌘K palette (clients, compliance, pages) | REPLACE | Structured global search RPC (API-R0-SRC) covering clients, identifiers (registrations.value, SCH-07 index), staff; page shortcuts stay client-side |
+| `searchAll` | ⌘K palette (clients, compliance, pages) | REPLACE | Structured global search (API-R0-SRC — exactly six domains: clients, legal entities, registrations, tasks, compliance instances, staff display names) via one SECURITY INVOKER structured-search function under caller RLS; masked identifiers; page shortcuts stay client-side |
 | `askCaos` | Canned assistant answers | DEMO-ONLY | No R0 production counterpart; real AI deferred (DEC-C, `20-ai-services.md`) |
 | `withLatency` | Simulated latency wrapper | DEMO-ONLY | Fixture-adapter internal; absent from the Supabase adapter |
 | `matchAskQuery`, `SUGGESTED_QUESTIONS`, `FALLBACK_ANSWER` | Ask CAOS fixture internals | DEMO-ONLY | — |
@@ -601,13 +601,125 @@ authorization/not-found semantics and API-SEC-* function security.
   cards — H7; a standalone `/dependency` page stays deferred unless
   separately approved). No new metrics beyond this approved set; no
   cross-tenant aggregation.
-- **API-R0-SRC — structured global search.** Search RPC over clients (name),
-  registrations (identifier values, SCH-07 index), legal entities, staff
-  display names; returns typed hits mirroring today's `SearchHit` shape
-  (kind/id/label/sub/href). Page-shortcut hits remain client-side. Results
-  are computed under the caller's RLS context (API-SEC-01) — search can
-  never leak cross-tenant rows (RLS-TEN-02), and hit existence follows
-  API-ERR-02 (no existence oracle).
+- **API-R0-SRC — structured global search (IMP-061 final contract
+  reconciliation 2026-09-19 — final human rulings IMP061-R1…R10 +
+  IMP061-M1 recorded normatively here and in the `12` IMP-061 package
+  contract).** Server-side structured global search behind the ⌘K Command
+  Palette, scoped by the caller's firm and role visibility.
+  - **Searchable domains (IMP061-R1 — final):** exactly six —
+    `client`, `legal_entity`, `registration`, `task`,
+    `compliance_instance`, `staff` (staff = display names of ACTIVE
+    `firm_memberships` of the selected active firm). This reconciles the
+    former package-card/API-R0-SRC entity-set difference; no other domain
+    is searchable in IMP-061.
+  - **Deferred domains (IMP061-R2 — final):** contacts, phone search,
+    email search, document search, invoice search, client-portal search,
+    semantic search, embeddings, RAG, pgvector — none are pulled forward
+    into IMP-061.
+  - **Request:** a query string only. Server-side minimum length 2
+    characters (IMP061-R4): empty or one-character input MUST NOT
+    enumerate live tenant records (the guard returns no live hits); the UI
+    MAY show navigation/page shortcuts only, and page-shortcut hits remain
+    client-side. There is NO caller-authoritative `firm_id` parameter
+    (API-CONV-05) — the active firm is the server-revalidated
+    `x-active-firm` context (RLS-CTX-01/02, RLS-MECH-01); a
+    caller-supplied firm id grants nothing. No kind-filter parameter is
+    introduced — no existing contract supports or requires one.
+  - **Matching (IMP061-R3 — final = R3-B HYBRID):** identifiers
+    (registration `value`s, SCH-07) match exact or prefix only — NO
+    substring matching on identifiers. Textual names / operational labels
+    (client names, legal-entity names, task titles, compliance-instance
+    `period_label` and other already-authorized instance fields, staff
+    display names) match case-insensitive substring; prefix matches remain
+    valid and rank ahead of substring-only matches. User input is treated
+    literally: `%`, `_`, backslash, quote/operator-looking input and
+    equivalent special characters must not become uncontrolled
+    wildcard/filter syntax; escaping is deterministic and server-side.
+  - **Result projection (provider-neutral DTO, API-CONV-01):** extends
+    the established `SearchHit` shape — `kind` (the six domain kinds; page
+    shortcuts stay a client-side concern), `id`, `label`, `sub`
+    (secondary/context line, existing UI convention), `href` (canonical
+    navigation destination) — plus status/badge information where required
+    (the Offboarded indicator, IMP061-R10) and, for registration hits, the
+    masked identifier projection (IMP061-R7). A match class
+    (exact / prefix / substring) may be carried where needed for
+    deterministic ordering. React component types are not bound to
+    database row DTOs.
+  - **Limits (IMP061-R5 — final):** at most 5 hits per kind and 20 hits
+    globally, enforced server-side; NO pagination in the IMP-061 Command
+    Palette.
+  - **Ordering (deterministic, IMP061-R3/R5):** identifier exact matches
+    before identifier prefix matches where applicable; textual prefix
+    matches before substring-only matches; after the approved match
+    ordering, a stable non-product technical tie-break on the canonical
+    key/id — an implementation determinism rule, not a relevance judgment.
+    No additional product ranking semantics are introduced.
+  - **Authorization (IMP061-R6 — final):** ordinary caller RLS remains
+    authoritative — search NEVER broadens row visibility (API-SEC-01,
+    RLS-TEN-02). The active firm is derived/revalidated server-side from
+    the untrusted `x-active-firm` selector against the live membership on
+    every execution (RLS-CTX-02, RLS-MECH-01); a caller-supplied firm id
+    grants no authority. Staff search is pinned to ACTIVE
+    `firm_memberships` of the selected active firm — suspended/removed/
+    invited memberships are not searchable staff hits. Search composes no
+    SECURITY DEFINER projection RPCs (e.g. the billing identity
+    projections) — visibility is exactly ordinary table RLS; a role
+    without table visibility receives no hits of that kind. Hit existence
+    follows API-ERR-02 — no existence oracle, no cross-tenant leakage.
+  - **Identifier privacy (IMP061-R7 — final):** matching MAY use the full
+    authorized identifier value, but search hit labels/subtitles display
+    the masked identifier only — identifier type + last four characters;
+    the full value remains available only on the authorized destination
+    surface (e.g. Client 360).
+  - **Offboarded clients (IMP061-R10 — final):** clients whose rows
+    remain visible under the caller's ordinary RLS stay searchable when
+    offboarded; the hit explicitly indicates Offboarded (status/badge).
+    Search neither re-hides what RLS shows nor shows what RLS hides
+    (DM-04 list defaults unchanged).
+  - **Compliance instances (IMP061-M1 — final = M1-A):** senior/article
+    users search compliance instances only through fields already visible
+    under their ordinary current RLS/read contract (RLS-CIN-01,
+    RLS-STF-04): `period_label` and other already-authorized instance
+    fields may be searched; NO new compliance-type-name projection is
+    created for search; compliance type names a role cannot ordinarily
+    read MUST NOT leak through search. The production composition MUST NOT
+    use an INNER JOIN to `compliance_types` that removes otherwise-visible
+    compliance instances — an RLS-safe structure is contractually required
+    (LEFT JOIN with NULL-safe matching/label shaping, or an equivalent
+    branch structure) such that period-label matching survives without
+    `compliance_types` visibility, hidden type names are not leaked, and
+    ordinary compliance-instance visibility remains unchanged. For
+    partner/manager, ordinary current RLS determines whether type-name
+    matching is available (RLS-CTY-01 implemented posture:
+    super_admin/partner/manager read the merged catalogue;
+    senior/article/billing do not); current RLS is NOT expanded merely to
+    normalize results across roles. Explicit per-role period-label tests
+    are required (TEST-API-24).
+  - **Architecture (IMP061-R8 — final = R8-B SECURITY INVOKER
+    COMPOSITION):** React → `@/data` search service → one
+    structured-search database function → ordinary caller RLS. The
+    function is SECURITY INVOKER (NOT SECURITY DEFINER — API-SEC-01/03);
+    server-derived/revalidated active firm; active-firm roster pin for
+    staff; server-side min-length guard, caps, deterministic ordering,
+    identifier masking, truthful offboarded status, and literal
+    wildcard/filter escaping; normal `authenticated` EXECUTE grant only as
+    required; no browser service-role (API-SEC-02); no RLS bypass. The
+    production function is NOT created at contract time — it lands through
+    a normal version-controlled migration only after separate
+    implementation authorization.
+  - **Query logging (IMP061-R9 — final):** application-owned telemetry,
+    audit events, and application error reporting MUST NOT persist raw
+    search terms — sensitive query material is redacted/omitted
+    (AUD-SEC-01/02 posture). No control is claimed over provider/platform
+    infrastructure logs beyond the application contract.
+  - **Errors:** a truthful empty result is a normal collection result,
+    never an error (API-ERR-02); failures use the API-ERR-01 taxonomy;
+    hidden/nonexistent distinctions never leak existence.
+  - **Data layer:** React → `@/data` search service → Supabase/PostgREST
+    RPC; the fixture/live data-source contract is retained (fixture
+    adapter serves the demo palette behind the same provider-neutral
+    contract; live mode has no fixture fallback, MIG-DS-05); the Command
+    Palette never imports Supabase directly (API-ARCH-01).
 - **API-R0-AUD — audit-history reads.** Read-only audit queries for
   partner/super_admin (RLS-AUD-01): per-object history, per-actor history,
   support-access history (AUD-SUP-03). Cursor-paginated (API-CONV-02).
