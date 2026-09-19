@@ -603,8 +603,9 @@ authorization/not-found semantics and API-SEC-* function security.
   cross-tenant aggregation.
 - **API-R0-SRC — structured global search (IMP-061 final contract
   reconciliation 2026-09-19 — final human rulings IMP061-R1…R10 +
-  IMP061-M1 recorded normatively here and in the `12` IMP-061 package
-  contract).** Server-side structured global search behind the ⌘K Command
+  IMP061-M1, plus IMP061-R11 APPROVED 2026-09-20, recorded normatively
+  here and in the `12` IMP-061 package contract).** Server-side
+  structured global search behind the ⌘K Command
   Palette, scoped by the caller's firm and role visibility.
   - **Searchable domains (IMP061-R1 — final):** exactly six —
     `client`, `legal_entity`, `registration`, `task`,
@@ -638,13 +639,44 @@ authorization/not-found semantics and API-SEC-* function security.
   - **Result projection (provider-neutral DTO, API-CONV-01):** extends
     the established `SearchHit` shape — `kind` (the six domain kinds; page
     shortcuts stay a client-side concern), `id`, `label`, `sub`
-    (secondary/context line, existing UI convention), `href` (canonical
-    navigation destination) — plus status/badge information where required
+    (secondary/context line, existing UI convention) — plus an OPTIONAL
+    navigation destination (`href`, null when no truthful destination
+    exists — IMP061-R11 below), plus status/badge information where required
     (the Offboarded indicator, IMP061-R10) and, for registration hits, the
     masked identifier projection (IMP061-R7). A match class
     (exact / prefix / substring) may be carried where needed for
     deterministic ordering. React component types are not bound to
     database row DTOs.
+  - **Navigation (IMP061-R11 — final = R11-A OPTIONAL TRUTHFUL
+    NAVIGATION, human ruling 2026-09-20):** searchability and
+    navigability are distinct — a valid search result MAY carry no
+    navigation destination, and a hit MUST NOT carry a fabricated,
+    misleading, role-invalid, or unavailable destination merely to be
+    clickable. IMP-061 does NOT create any new page/detail surface solely
+    to make a hit navigable. Final six-kind destination matrix:
+    `client` → `/clients/:clientId`; `legal_entity` → the authorized
+    parent Client 360 surface (`/clients/:clientId`); `registration` →
+    the authorized parent Client 360 surface (`/clients/:clientId`) — a
+    raw/full registration identifier NEVER appears in any destination;
+    `task` → NO destination in R0 (`/my-work` is caller-owned actionable
+    work, NOT a general task-detail destination; no task-detail route is
+    introduced); `compliance_instance` → NO destination in R0
+    (`/compliance/:id` is ModuleGated in live mode, and the parent
+    Client 360 is not role-safe — senior/article may legitimately see an
+    instance while lacking Client 360 visibility; no instance-detail
+    route is introduced); `staff` → NO destination in R0 (no
+    staff/team/profile surface exists; none is introduced). Command
+    Palette behavior: a navigable hit shows the normal navigation
+    affordance and click/Enter navigates (the palette closes after
+    successful navigation); a non-navigable hit remains a valid visible
+    result but shows NO false navigation affordance, click/Enter do NOT
+    navigate, and the palette does NOT close as though navigation
+    occurred (a neutral no-destination indication is an implementation
+    detail; keyboard behavior stays deterministic and accessible; no new
+    product action is introduced for non-navigable hits). A null
+    destination reveals nothing beyond the already-visible hit. R11
+    changes navigation only — R1…R10 and M1-A are unchanged (no new RLS
+    grant, no new route authorization).
   - **Limits (IMP061-R5 — final):** at most 5 hits per kind and 20 hits
     globally, enforced server-side; NO pagination in the IMP-061 Command
     Palette.

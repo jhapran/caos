@@ -504,19 +504,31 @@ deterministic domain fixtures (Asia/Kolkata-relative fixture due dates
 must be recomputed at provisioning time). Production untouched; no
 production verification claimed.
 
-Next package: IMP-061 — Structured global search — CONTRACT PHASE
-(2026-09-19): final human rulings IMP061-R1…R10 + IMP061-M1 APPROVED and
-recorded normatively in `docs/spec/07-api-contract.md` (API-R0-SRC),
+Next package: IMP-061 — Structured global search — IMPLEMENTATION
+AUTHORIZED / PAUSED FOR R11 CONTRACT AMENDMENT (2026-09-20): final human
+rulings IMP061-R1…R10 + IMP061-M1 APPROVED 2026-09-19 and recorded
+normatively in `docs/spec/07-api-contract.md` (API-R0-SRC),
 `docs/spec/11-testing-harness.md` (TEST-API-21…24, TEST-E2E-13), and
 `docs/spec/12-release-0-plan.md` (IMP-061 package contract); contract
 discovery PASS, local spike PASS, fresh independent spike review PASS
 (CRITICAL=0/HIGH=0; MEDIUM=2 resolved into the contract; LOW=4 historical
-spike-quality observations). IMPLEMENTATION REMAINS NOT AUTHORIZED — no
-implementation checkpoint exists, no migration has been created, no
+spike-quality observations). Explicit human implementation authorization
+was subsequently GRANTED; primary implementation discovery STOPPED cleanly
+before any code — route/destination discovery found no truthful existing
+destination for the `staff` search kind and no fully role-truthful
+destination for `task` / `compliance_instance`; the repository remained
+completely clean. Final human ruling IMP061-R11 = R11-A (OPTIONAL TRUTHFUL
+NAVIGATION) APPROVED 2026-09-20: a search hit carries an OPTIONAL
+navigation destination — `client` / `legal_entity` / `registration`
+navigate to `/clients/:clientId`; `task` / `compliance_instance` /
+`staff` are searchable but non-navigable in R0; no new route or page is
+introduced. IMPLEMENTATION EXECUTION IS PAUSED pending the R11 contract
+reconciliation, a fresh independent R11 contract-amendment review, and an
+amendment Git checkpoint — no implementation checkpoint exists, no
+migration has been created, no test/harness implementation exists, no
 hosted/production change has been made; the production SECURITY INVOKER
 structured-search function lands only through a normal version-controlled
-migration after separate implementation authorization. IMP-062 not
-started.
+migration during execution. IMP-062 not started.
 
 Authoritative sources:
 

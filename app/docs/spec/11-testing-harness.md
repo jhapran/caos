@@ -624,16 +624,24 @@ instance, one event). Extensions:
   the operative `due_date` and never rewrites immutable
   `calculated_due_date` provenance (SCH-12).
 - **TEST-API-21 (newly allocated, IMP-061 final contract reconciliation
-  2026-09-19):** the API-R0-SRC structured-search contract — exactly the
+  2026-09-19; navigation amended by IMP061-R11 = R11-A, 2026-09-20):** the
+  API-R0-SRC structured-search contract — exactly the
   six approved domains (client, legal_entity, registration, task,
   compliance_instance, staff); the provider-neutral hit projection
-  (kind/id/label/sub/href plus status/badge and the masked-identifier
-  projection); server-side caps (5 per kind / 20 global, no pagination);
+  (kind/id/label/sub plus the OPTIONAL navigation destination, status/badge,
+  and the masked-identifier projection); server-side caps (5 per kind / 20
+  global, no pagination);
   deterministic ordering (identifier exact before identifier prefix,
   textual prefix before substring-only, stable canonical-key tie-break);
   masked identifier display (type + last four only); truthful Offboarded
   indication; a truthful empty result is not an error; error surfaces
-  follow API-ERR-01/02.
+  follow API-ERR-01/02. Navigation (R11-A): the navigation destination may
+  be null; a `client` hit carries `/clients/:clientId`; `legal_entity` and
+  `registration` hits carry the authorized parent `/clients/:clientId`;
+  `task`, `compliance_instance`, and `staff` hits carry NO destination; a
+  raw/full registration identifier never appears in any destination; all
+  six domains remain represented subject to ordinary RLS regardless of
+  destination presence.
 - **TEST-API-22 (newly allocated, IMP-061 final contract reconciliation
   2026-09-19):** search tenant isolation / no existence leakage
   (API-ERR-02, RLS-TEN-02) — Firm A/Firm B collisions return only own-firm
@@ -709,8 +717,14 @@ existing phase owns a cross-domain search surface.
 12. **TEST-E2E-12** logout.
 13. **TEST-E2E-13** live Command Palette structured search — **owned by
     IMP-061** (allocated at the IMP-061 final contract reconciliation
-    2026-09-19): open with the existing shortcut; live search across the
-    six API-R0-SRC domains; navigate to the canonical destination; masked
+    2026-09-19; navigation amended by IMP061-R11 = R11-A, 2026-09-20):
+    open with the existing shortcut; live search across the
+    six API-R0-SRC domains; successful navigation through a genuinely
+    navigable result (e.g. a client hit to `/clients/:clientId`); truthful
+    rendering of non-navigable task, compliance_instance, and staff
+    results — no ArrowRight/false navigation affordance on a
+    non-navigable hit, click does not navigate, Enter does not navigate,
+    and the palette does not close as though navigation succeeded; masked
     identifier rendering; offboarded badge; zero-result state;
     loading/error behavior where safely testable; no fixture fallback in
     live mode; representative role coverage.

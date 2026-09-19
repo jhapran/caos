@@ -50,21 +50,35 @@ Remaining formal R0 packages:
 
 ## 3. Current / Next Package
 
-- Current: IMP-061 — Structured global search — CONTRACT PHASE
-  (2026-09-19): contract discovery PASS; preliminary rulings finalized;
-  local spike PASS; fresh independent spike review PASS (CRITICAL=0,
-  HIGH=0, MEDIUM=2 — MEDIUM-1 resolved as IMP061-M1 = M1-A; MEDIUM-2
-  resolved by not citing the unretained superuser pg_trgm planner
-  evidence and recording no numerical threshold; LOW=4 historical
-  spike-quality observations, none a production vulnerability); final
-  human rulings IMP061-R1…R10 + IMP061-M1 APPROVED and recorded
-  normatively in `07` API-R0-SRC, `11` (TEST-API-21…24, TEST-E2E-13),
-  and the `12` IMP-061 package contract. Implementation remains NOT
-  STARTED and NOT AUTHORIZED — no implementation checkpoint exists; no
-  migration has been created; no hosted/production change has been made;
-  the production SECURITY INVOKER structured-search function lands only
-  through a version-controlled migration after separate implementation
-  authorization.
+- Current: IMP-061 — Structured global search — IMPLEMENTATION
+  AUTHORIZED / PAUSED FOR R11 CONTRACT AMENDMENT (2026-09-20): contract
+  discovery PASS; preliminary rulings finalized; local spike PASS; fresh
+  independent spike review PASS (CRITICAL=0, HIGH=0, MEDIUM=2 — MEDIUM-1
+  resolved as IMP061-M1 = M1-A; MEDIUM-2 resolved by not citing the
+  unretained superuser pg_trgm planner evidence and recording no
+  numerical threshold; LOW=4 historical spike-quality observations, none
+  a production vulnerability); final human rulings IMP061-R1…R10 +
+  IMP061-M1 APPROVED 2026-09-19 and recorded normatively in `07`
+  API-R0-SRC, `11` (TEST-API-21…24, TEST-E2E-13), and the `12` IMP-061
+  package contract. Explicit human IMPLEMENTATION AUTHORIZATION was
+  subsequently GRANTED; primary implementation discovery then STOPPED
+  cleanly before any code — route/destination discovery found no
+  truthful existing destination for the `staff` search kind and no
+  fully role-truthful destination for `task` / `compliance_instance`;
+  the repository remained completely clean. Final human ruling
+  IMP061-R11 = R11-A (OPTIONAL TRUTHFUL NAVIGATION) APPROVED 2026-09-20:
+  the hit navigation destination is OPTIONAL — `client` /
+  `legal_entity` / `registration` navigate to `/clients/:clientId`;
+  `task` / `compliance_instance` / `staff` are searchable but
+  non-navigable in R0; no new route or page is introduced — recorded
+  normatively in `07` API-R0-SRC, `11` (TEST-API-21, TEST-E2E-13), and
+  `12`. Implementation execution is PAUSED pending (1) the R11 contract
+  reconciliation, (2) a fresh independent R11 contract-amendment review,
+  and (3) an amendment Git checkpoint. No implementation source,
+  migration, or test/harness implementation exists; no hosted/production
+  change has been made; the production SECURITY INVOKER
+  structured-search function lands only through a version-controlled
+  migration during execution.
 - Last CLOSED package: IMP-060 — Command Centre & Morning Brief
   live data — CLOSED (human package-closure approval 2026-09-19).
   Acceptance record: primary implementation PASS; focused
@@ -765,9 +779,11 @@ Remaining formal R0 packages:
   must be recomputed at fixture provisioning time.
 - Production untouched — NOT promoted, NOT authorized; no production
   verification claimed. Statutory default activation NOT performed.
-  IMP-061 implementation NOT STARTED — IMP-061 is in CONTRACT PHASE
-  (final human rulings recorded 2026-09-19; see §3); implementation
-  remains NOT AUTHORIZED.
+  IMP-061 implementation NOT STARTED at the time of this record (final
+  human rulings recorded 2026-09-19) — see §3 for the live IMP-061
+  state (implementation authorization since GRANTED; execution PAUSED
+  for the IMP061-R11 = R11-A contract amendment; no code, migration, or
+  hosted change).
 
 ## 7. Permanent Architecture Boundaries
 
