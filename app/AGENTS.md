@@ -421,8 +421,8 @@ obligation-period isolation).
 IMP-060 (Command Centre & Morning Brief live data) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-19; implementation
 checkpoint `d78cfe7` `IMP-060: live Command Centre and Morning Brief
-read models`; closure checkpoint: this closure commit — hash recorded
-post-commit per the closure-pointer reconcile convention). API-OQ-03 is
+read models`; closure checkpoint: `f51ff717b28f093fb94b95dc6e58f829742aea66`).
+API-OQ-03 is
 RESOLVED = human-approved B-COUNT (2026-09-19, recorded normatively in
 `07` API-R0-DASH and `12`): RLS-respecting per-section exact-count
 reads for the scalar aggregates, with limited row fetches ONLY where an

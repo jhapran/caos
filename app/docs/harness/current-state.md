@@ -12,9 +12,8 @@
   data
 - IMP-060 implementation checkpoint: `d78cfe7`
   (`IMP-060: live Command Centre and Morning Brief read models`)
-- IMP-060 closure checkpoint: this commit (`docs: close IMP-060 …` — the
-  hash is recorded post-commit per the closure-pointer reconcile
-  convention; see the IMP-050/IMP-051 precedent)
+- IMP-060 closure checkpoint: `f51ff717b28f093fb94b95dc6e58f829742aea66`
+  (`docs: close IMP-060 …`; see the IMP-050/IMP-051 precedent)
 - IMP-060 hosted staging acceptance: PASS (see §4/§6/§6f)
 - IMP-051 closure checkpoint: `be51b5d`
   (`docs: close IMP-051 deadline materialization and alerts`)
