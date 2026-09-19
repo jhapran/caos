@@ -7,17 +7,20 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human package-closure approval date: 2026-09-18
-- Last CLOSED package: IMP-051 — Deadline materialization & alert
-  evaluation
-- IMP-051 implementation checkpoint: `8e8464a`
-  (`IMP-051: materialize deadlines and evaluate alerts`)
+- Human package-closure approval date: 2026-09-19
+- Last CLOSED package: IMP-060 — Command Centre & Morning Brief live
+  data
+- IMP-060 implementation checkpoint: `d78cfe7`
+  (`IMP-060: live Command Centre and Morning Brief read models`)
+- IMP-060 closure checkpoint: this commit (`docs: close IMP-060 …` — the
+  hash is recorded post-commit per the closure-pointer reconcile
+  convention; see the IMP-050/IMP-051 precedent)
+- IMP-060 hosted staging acceptance: PASS (see §4/§6/§6f)
 - IMP-051 closure checkpoint: `be51b5d`
   (`docs: close IMP-051 deadline materialization and alerts`)
 - IMP-051 pre-implementation normative checkpoints (rulings record):
   `712cf8e` (`IMP-051: reconcile package contract rulings`) and
   `8a82136` (`IMP-051: record pre-implementation rulings`)
-- IMP-051 hosted staging acceptance: PASS (see §4/§6/§6e)
 - `origin/main` intentionally remains unchanged at `0bb3db6`
 - Production has NOT been promoted
 
@@ -25,7 +28,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (21 / 27, 77.78%):
+Completed (22 / 27, 81.48%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -38,26 +41,52 @@ Completed (21 / 27, 77.78%):
   signals; human package-closure approval 2026-09-13)
 - IMP-051 (Automation & Deadlines — deadline materialization & alert
   evaluation; human package-closure approval 2026-09-18)
+- IMP-060 (Application Read Models — Command Centre & Morning Brief
+  live data; human package-closure approval 2026-09-19)
 
 Remaining formal R0 packages:
 
-- IMP-060, IMP-061, IMP-062 (Application Read Models)
+- IMP-061, IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: none in flight — IMP-051 — Deadline materialization & alert
-  evaluation — CLOSED (human package-closure approval 2026-09-18).
-  Acceptance record: final local runtime PASS (corrected migration
-  `20260916000000_alert_evaluation.sql`; TEST-SCH-29; automation
-  integration 51/51; targeted audit 15/15 incl. TEST-AUD-03; deadline
-  integration 10/10; deadline unit tests; `npm run verify`; full Harness
-  Gate PASS 24/24 phases including the new deadlines-integration phase);
-  final post-runtime independent review PASS; post-checkpoint independent
-  verification PASS; hosted staging acceptance PASS (see §4/§6/§6e).
-- Next: IMP-060 — Command Centre & Morning Brief live data — NOT
+- Current: none in flight — IMP-060 — Command Centre & Morning Brief
+  live data — CLOSED (human package-closure approval 2026-09-19).
+  Acceptance record: primary implementation PASS; focused
+  runtime/harness PASS; fresh independent implementation/security
+  review PASS after the bounded MEDIUM-1 correction (the dashboard
+  integration suite was initially absent from the standing Harness Gate
+  — corrected by wiring `tests/integration/dashboard/` into the gate;
+  fresh independent correction review PASS); independent full Harness
+  Gate PASS — 25 standing gate phases passed, and the final canonical
+  run artifact contains 26 PASS records because stack-stop cleanup is
+  recorded when the gate itself starts the stack (unit 354/354;
+  dashboard integration 25/25; Playwright smoke 16/16; all
+  security/cleanliness phases PASS); hosted staging acceptance PASS at
+  hosted revision `d78cfe7` (see §4/§6/§6f); production untouched.
+- Next: IMP-061 — Structured global search — NOT
   STARTED and NOT AUTHORIZED (begins only with an explicit
-  implementation instruction; IMP-051 closure does not authorize it).
+  implementation instruction; IMP-060 closure does not authorize it).
+- Historical pre-implementation record for IMP-060 (kept for
+  rationale): all pre-implementation human decisions were RESOLVED and
+  recorded before implementation — the H1–H8 human-approved rulings,
+  the API-OQ-02 surface ruling (resolved for the IMP-060 read-model
+  surfaces only: scalar aggregate counts need no special pagination;
+  existing list contracts keep their approved pagination; new paginated
+  lists default 50 / max 200 per API-CONV-02 — API-OQ-02 remains OPEN
+  elsewhere), and API-OQ-03 RESOLVED = human-approved B-COUNT
+  (RLS-respecting per-section exact-count reads for scalar aggregates
+  with limited row fetches only where an approved derivation requires
+  rows; B-fetch NOT selected; the composite-RPC candidate NOT selected;
+  no aggregate SECURITY DEFINER; decided on the measured local
+  representative-volume benchmark — all three candidates passed
+  three-way semantic/security validation; evidence
+  `scripts/spikes/api-oq-03/`, decision evidence only; recorded
+  normatively in `07` API-R0-DASH / the API-OQ matrix and in the `12`
+  IMP-060 package contract). Deferred scope stayed deferred (H2
+  attention total, H4 Team Overload, H5 billing/revenue tile, H6
+  AI/composite Attention List, standalone `/dependency` page).
 - Historical pre-implementation record for IMP-051 (kept for
   rationale): all pre-implementation human decisions were RESOLVED and
   normatively recorded before implementation (HRR-01…HRR-12, human
@@ -123,6 +152,10 @@ Remaining formal R0 packages:
 - Latest migration: `20260916000000_alert_evaluation.sql` (IMP-051)
 - Hosted staging migration ledger: 12 migrations, local == remote
   through `20260916000000` (12 / 12)
+- IMP-060 adds NO migration, NO base table, NO view, NO policy — the
+  schema/RLS posture below is unchanged by IMP-060 (its read model is
+  application-side B-count composition over existing RLS-protected
+  tables and the IMP-051 security_invoker views)
 - Application public tables: 24 (CURRENT on hosted staging and local —
   unchanged by IMP-051: DEADLINE_MODEL=DERIVED adds NO base table; the
   deadline read model is two security_invoker views,
@@ -204,10 +237,16 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
-- Accepted implementation checkpoint: `1f3db3e` (deployed bundle proven
-  byte-identical to a clean local build of that Git HEAD with the staging
-  environment)
-- Deployment: Published / human browser acceptance PASS 2026-09-07
+- Accepted implementation checkpoint: `d78cfe7`
+  (`IMP-060: live Command Centre and Morning Brief read models` —
+  deployed on Netlify staging; hosted staging revision verified == this
+  SHA at IMP-060 acceptance, revision match YES). Historical: IMP-042's
+  `1f3db3e` (deployed bundle proven byte-identical to a clean local
+  build of that Git HEAD with the staging environment) was the accepted
+  checkpoint through IMP-051.
+- Deployment: Published / IMP-060 hosted staging acceptance PASS
+  2026-09-19 at revision `d78cfe7` (see §6f). Historical: human browser
+  acceptance PASS 2026-09-07
   (44/44 browser-gate checks: role-scoped My Work per persona, TEST-E2E-07
   task transition + authorized manager reassignment, TEST-E2E-09
   four-bucket rendering, alert bell RLS visibility incl. truthful known
@@ -255,17 +294,41 @@ Remaining formal R0 packages:
   600 and shell-syntax PASS; its values are never recorded.
 - IMP-050 ships no browser surface; Netlify staging state is unchanged
   from IMP-042 closure (bundle checkpoint `1f3db3e` remains the latest
-  published UI bundle).
-- Dedicated staging test identities (durable testing note): the 8
-  synthetic `imp041-*` Supabase Auth users remain for future acceptance
-  gates, each with a verified TOTP factor enrolled during the IMP-041
-  browser gate through the supported UI flow. Correction to earlier
-  process reporting: an intermediate gate report claimed MFA was
-  untouched; that was inaccurate for these dedicated synthetic identities
-  (verified factors WERE enrolled on them). Protected human MFA was
-  untouched throughout. No passwords, TOTP secrets, or codes are recorded
-  in the repository. The original `stg-*` baseline identities are
-  preserved.
+  published UI bundle). (IMP-060 later published the `d78cfe7` UI
+  bundle — see the accepted-checkpoint bullet above and §6f.)
+- Dedicated staging test identities (durable testing note, reconciled
+  at IMP-060 closure 2026-09-19): the 8 durable synthetic `imp041-*`
+  Supabase Auth users remain, as do the 4 baseline `stg-*` identities.
+  Of the imp041 identities, the 5 IMP-060 acceptance identities
+  (imp041-partner-a, imp041-manager-reviewer-a, imp041-senior-a,
+  imp041-billing-a, imp041-partner-b) now carry one verified REPLACEMENT
+  TOTP factor each, enrolled for the IMP-060 acceptance; the 3 unused
+  imp041 identities retain their prior factor state (a verified TOTP
+  factor enrolled during the IMP-041 browser gate through the supported
+  UI flow). **Critical credential fact: the replacement TOTP factor
+  secrets were intentionally destroyed after acceptance — the five
+  replacement factors are NOT immediately usable for future automated
+  acceptance.** A future acceptance gate may therefore need a newly
+  authorized bounded MFA reset/re-enrollment operation. No passwords,
+  TOTP secrets, or codes are recorded in the repository or this file.
+  Correction to earlier process reporting (retained): an intermediate
+  IMP-041 gate report claimed MFA was untouched; that was inaccurate
+  for these dedicated synthetic identities (verified factors WERE
+  enrolled on them). Protected human MFA was untouched throughout.
+  Tenant-core truth at IMP-060 closure: the five IMP041 profiles
+  (IMP041 Partner A, IMP041 Manager A, IMP041 Senior A, IMP041 Billing
+  A, IMP041 Partner B) were retained non-destructively because the
+  persistence expectation was ambiguous, but the temporary IMP-060
+  fixture `firm_memberships` were removed at teardown — the retained
+  profiles do NOT currently hold their IMP-060 acceptance firm
+  power/context; final baseline `firm_memberships` are the original
+  staging baseline set. The temporary IMP-060 deterministic domain
+  fixture (firms, memberships, clients, legal entities, compliance
+  instances, tasks, review items, alerts) was fully removed — staging
+  domain state returned to the prior baseline. Future IMP-060-like
+  hosted acceptance requiring nonzero role-differentiated truth may
+  need bounded deterministic domain re-provisioning and bounded
+  restoration of synthetic memberships/context.
 
 ## 6a. Work-Management Enforcement Facts (IMP-040 — durable)
 
@@ -583,6 +646,113 @@ Remaining formal R0 packages:
   any automatic deployment of the staging commit does not widen package
   scope.
 
+## 6f. Command Centre & Morning Brief Read-Model Facts (IMP-060 — durable; CLOSED 2026-09-19)
+
+- Architecture (API-OQ-03 RESOLVED 2026-09-19 = human-approved
+  B-COUNT, recorded normatively in `07` API-R0-DASH and the `12`
+  IMP-060 package contract): RLS-respecting per-section exact-count
+  reads for the scalar aggregates (task counts by state, deadline risk,
+  review pending, active alerts — the approved API-R0-DASH live set,
+  no additional aggregate metrics), with limited row fetches ONLY where
+  an approved derivation genuinely requires row-level fields — the
+  TEST-API-18 effective-active alert derivation and the IMP-051
+  `deadline_board` view for deadline risk. B-fetch is NOT the aggregate
+  implementation; the composite-RPC candidate was NOT selected; NO
+  aggregate SECURITY DEFINER exists. Decision basis: the local
+  representative-volume benchmark (`scripts/spikes/api-oq-03/` —
+  decision evidence only, NOT a normative production harness); all
+  three candidates passed three-way semantic/security validation;
+  hosted-network behavior was validated at hosted staging acceptance.
+- Live semantics (human rulings H1–H8, preserved exactly): Compliance
+  Health is live `compliance_instances` state truth (H1); no invented
+  Morning Brief attention total (H2 — the fixture total is
+  deferred/removed in live mode); only directly named approved counters
+  live — at-risk deadlines, pending reviews, active alerts — NO
+  synthetic On-Track metric (H3); Team Overload (H4), the live
+  billing/revenue tile (H5 — no R0 billing data source; no fabricated
+  currency/invoice/billing/revenue values), and the AI/composite
+  Attention List (H6) remain DEFERRED; live Deadline Board, deadline
+  group/client drill-down, and the Command Centre deadline/dependency
+  cards sit on the IMP-051 read models (H7 — a standalone `/dependency`
+  page stays deferred unless separately approved); H8 is the API-OQ-03
+  measurement basis. No H9 or further product ruling exists.
+- API-OQ-02 partial resolution (preserved scope): resolved for the
+  IMP-060 read-model surfaces ONLY — scalar aggregate counts need no
+  special pagination; existing list contracts retain their
+  already-approved pagination; any genuinely new paginated list
+  defaults 50 / max 200 (API-CONV-02). API-OQ-02 remains OPEN
+  elsewhere.
+- Data path: the provider-neutral `dashboardService` behind `@/data`
+  (`src/data/dashboard/` — five-file convention, read-only contract;
+  no naming hazard — no legacy flat `src/data/dashboard.ts` exists).
+  Command Centre freshness is API-RT-02 (refetch-on-mutate /
+  refetch-on-focus) — NO realtime, NO polling. Every count executes
+  under the signed-in caller's RLS context with the unchanged
+  `x-active-firm` selector contract (context selection, never
+  authorization); no browser service-role; tenant visibility never
+  widened.
+- Harness Gate: the dashboard-integration phase
+  (`tests/integration/dashboard/` via `npm run test:dashboard`) was
+  wired into the standing gate — the MEDIUM-1 correction (the suite was
+  initially absent from the standing Harness Gate), independently
+  re-reviewed PASS. Final accounting: 25 standing gate phases passed;
+  the final canonical machine artifact contains 26 PASS records because
+  stack-stop cleanup is recorded when the gate itself starts the local
+  stack (NOT "26 normal gate phases"). Final independent run evidence:
+  dashboard-integration PASS (dashboard integration tests 25/25), unit
+  354/354, Playwright smoke 16/16, all security/cleanliness phases
+  PASS.
+- Review chain: primary implementation PASS; focused runtime/harness
+  PASS; fresh independent implementation/security review PASS after the
+  bounded MEDIUM-1 correction; fresh independent correction review
+  PASS; independent full Harness Gate PASS. Human package-closure
+  approval 2026-09-19 — CLOSED.
+- Hosted staging acceptance: PASS — frontend
+  `https://staging.caos.datafabric.in`, Supabase project ref
+  `pyrniumcjcvagjygheyu`, hosted revision == implementation checkpoint
+  `d78cfe7` (revision match YES). Acceptance covered materially:
+  Command Centre, Morning Brief, Deadline Board, deadline drill-down,
+  and the dependency card; partner, manager, senior, and billing roles;
+  cross-tenant isolation; forged active-firm isolation; anonymous
+  denial; live-data mode with no fixture fallback; no unapproved
+  composite metrics; no billing/revenue fabrication; deferred scope
+  remains deferred; nonzero hosted B-count behavior; loading behavior.
+- Accepted LOW findings (none an implementation blocker; do not
+  reopen): LOW-1 — GoTrue admin list-users does not include
+  authoritative MFA factor details; per-user admin GET is required for
+  factor inventory (no incorrect mutation occurred — the procedure was
+  corrected before state-changing decisions relied on the bad reading).
+  LOW-2 — hosted cron `sched.alerts.evaluate` can normalize
+  expired-snooze fixture rows at the daily run; future hosted
+  acceptance that depends on expired-snooze fixtures should provision
+  and exercise them within the appropriate same-day window. LOW-3 — two
+  temporary /tmp-only acceptance-script assertion-oracle defects (a
+  CSS-uppercased caption checked case-sensitively; a broad "DASH"
+  substring cross-firm assertion also matching legitimate Firm B
+  fixture names) — acceptance-tooling defects, not application defects;
+  both corrected and re-proven green.
+- Acceptance write reconciliation: planned physical hosted writes 209,
+  actual physical hosted writes 209, unplanned writes 0. No production
+  write. No schema change. No migration. No statutory/default-rule
+  activation (AUTO-OQ-04 remains OPEN).
+- Durable acceptance limitations (operational lessons, not unresolved
+  product requirements): (1) hosted rendered error UI has no safe
+  non-mutating injection mechanism — hosted rendered-error injection
+  remained NOT_SAFELY_EXERCISABLE; already-passed local component
+  evidence remains authoritative for the error states; (2) future
+  automated hosted acceptance cannot assume the five retained
+  replacement TOTP factors are usable — their secrets were
+  intentionally destroyed (see §6 dedicated-identities note); (3)
+  future nonzero hosted acceptance may need bounded re-provisioning of
+  synthetic firm memberships/context and deterministic domain fixture
+  rows (the temporary IMP-060 fixture was fully removed; the five
+  IMP041 profiles were retained non-destructively but hold no IMP-060
+  acceptance memberships); (4) Asia/Kolkata-relative fixture due dates
+  must be recomputed at fixture provisioning time.
+- Production untouched — NOT promoted, NOT authorized; no production
+  verification claimed. Statutory default activation NOT performed.
+  IMP-061 NOT STARTED.
+
 ## 7. Permanent Architecture Boundaries
 
 - Data flow: React → `@/data` → fixture OR Supabase adapter. No direct
@@ -658,6 +828,14 @@ Remaining formal R0 packages:
   snooze-expiry normalization: IMPLEMENTED by IMP-051 (CLOSED
   2026-09-18 — see §6e); IMP-042 had shipped persistence, manual
   transitions, and the My Work surface only.
+- IMP-060 deferred scope (CLOSED 2026-09-19 — see §6f; deferrals, not
+  open blockers): the Morning Brief composite attention total (H2),
+  Team Overload (H4), the live billing/revenue tile (H5 — no approved
+  R0 billing data source), the AI/composite Attention List (H6), and a
+  standalone `/dependency` page (H7) each remain deferred pending
+  separate approved definitions/scope decisions. API-OQ-02 remains OPEN
+  outside the IMP-060 read-model surfaces (resolved for those surfaces
+  only, 2026-09-19).
 - Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
   Auth config — ops decision); performance advisors

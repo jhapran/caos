@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-051 (CLOSED 2026-09-18; see the status block
+hosted staging through IMP-060 (CLOSED 2026-09-19; see the status block
 below and `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,8 +25,8 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-051 (CLOSED
-2026-09-18); the Supabase track
+Implementation packages have landed through IMP-060 (CLOSED
+2026-09-19); the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
 document future behavior as if it exists. When a section below describes
@@ -278,17 +278,18 @@ event publication (`alert.created`/`alert.resolved`) to IMP-050
 (AUTO-OQ-02). Coverage: TEST-SCH-26…29, TEST-RLS-ALR-*/ARL-*,
 TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
-Release-0 state through IMP-051 (CLOSED 2026-09-18 — human
-package-closure approval): 21 / 27 formal R0 packages
+Release-0 state through IMP-060 (CLOSED 2026-09-19 — human
+package-closure approval): 22 / 27 formal R0 packages
 complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030, IMP-031,
-IMP-040, IMP-041, IMP-042, IMP-050, IMP-051; 77.78%).
+IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060; 81.48%).
 Migrations run through `20260916000000_alert_evaluation.sql`
-(hosted staging ledger 12/12, local == remote through `20260916000000`).
+(hosted staging ledger 12/12, local == remote through `20260916000000`;
+IMP-060 adds NO migration).
 Application public tables: 24 — CURRENT on local and hosted staging
 (RLS enabled 24/24, FORCE RLS 20 — SCH-33/SCH-35 forced, SCH-34 enabled
 not forced — policies 51; IMP-051 adds NO base table — the deadline read
-model is two security_invoker views — so the Ruling 2026-09-12 R8
-posture is unchanged).
+model is two security_invoker views — and IMP-060 adds NO table or view,
+so the Ruling 2026-09-12 R8 posture is unchanged).
 
 IMP-050 (recurrence generation & scheduler signals) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-13; implementation
@@ -417,9 +418,95 @@ Runtime-found defects corrected en route and independently re-reviewed
 boolean `::text` representation; the TEST-AUD-03 evaluator fixture's
 obligation-period isolation).
 
-Next package: IMP-060 — Command Centre & Morning Brief live data (NOT
+IMP-060 (Command Centre & Morning Brief live data) is COMPLETE and
+CLOSED (human package-closure approval 2026-09-19; implementation
+checkpoint `d78cfe7` `IMP-060: live Command Centre and Morning Brief
+read models`; closure checkpoint: this closure commit — hash recorded
+post-commit per the closure-pointer reconcile convention). API-OQ-03 is
+RESOLVED = human-approved B-COUNT (2026-09-19, recorded normatively in
+`07` API-R0-DASH and `12`): RLS-respecting per-section exact-count
+reads for the scalar aggregates, with limited row fetches ONLY where an
+approved derivation genuinely requires row-level fields (the TEST-API-18
+effective-active alert derivation; the IMP-051 `deadline_board` view
+for deadline risk) — B-fetch NOT selected, the composite-RPC candidate
+NOT selected, NO aggregate SECURITY DEFINER introduced; decided on the
+local representative-volume benchmark (`scripts/spikes/api-oq-03/` —
+decision evidence only, not a normative harness). The H1–H8 human
+rulings are implemented: live Compliance Health from
+`compliance_instances` state truth (H1 — fixture task-category semantics
+NOT preserved); no invented Morning Brief attention total (H2); only
+directly named approved counters live — at-risk deadlines, pending
+reviews, active alerts — NO synthetic On-Track metric (H3); Team
+Overload (H4), the live billing/revenue tile (H5 — no R0 billing source,
+no fabricated values), and the AI/composite Attention List (H6)
+DEFERRED; live Deadline Board, deadline group/client drill-down, and
+the Command Centre deadline/dependency cards on the IMP-051 read models
+(H7 — a standalone `/dependency` page stays deferred). API-OQ-02 is
+resolved for the IMP-060 read-model surfaces ONLY (scalar aggregates
+need no special pagination; existing lists keep their approved
+pagination; new lists default 50 / max 200) and remains OPEN elsewhere.
+The provider-neutral `dashboardService` sits behind `@/data`
+(`src/data/dashboard/` — five-file convention, read-only contract per
+API-R0-DASH; no naming hazard here — no legacy flat
+`src/data/dashboard.ts` exists). Command Centre freshness is API-RT-02:
+refetch-on-mutate / refetch-on-focus — NO realtime, NO polling. The
+Harness Gate gained the dashboard-integration phase
+(`tests/integration/dashboard/` via `npm run test:dashboard`) — 25
+standing gate phases; the final canonical run artifact contains 26 PASS
+records because stack-stop cleanup is recorded when the gate itself
+starts the stack (do not describe this as 26 normal phases). Primary
+implementation PASS; focused runtime/harness PASS; fresh independent
+implementation/security review PASS after the bounded MEDIUM-1
+correction (the dashboard integration suite was initially absent from
+the standing Harness Gate — corrected by wiring it into
+`scripts/harness/gate.mjs`; fresh independent correction review PASS);
+independent full Harness Gate PASS (unit 354/354, dashboard integration
+25/25, Playwright smoke 16/16, all security/cleanliness phases PASS).
+Hosted staging acceptance PASS (frontend
+`https://staging.caos.datafabric.in`, Supabase project ref
+`pyrniumcjcvagjygheyu`, hosted revision == `d78cfe7`): Command Centre,
+Morning Brief, Deadline Board, deadline drill-down, and the dependency
+card across partner/manager/senior/billing roles; cross-tenant and
+forged-active-firm isolation; anonymous denial; live-data mode with no
+fixture fallback; no unapproved composite metrics; no billing/revenue
+fabrication; deferred scope remains deferred; nonzero hosted B-count
+behavior; loading behavior. Hosted rendered-error injection remained
+NOT_SAFELY_EXERCISABLE (accepted limitation — no safe non-mutating
+hosted mechanism exists; already-passed local component evidence covers
+the error states). Three accepted LOW findings (none an implementation
+blocker): LOW-1 — GoTrue admin list-users does not include authoritative
+MFA factor details (per-user admin GET is required for factor
+inventory; the procedure was corrected before state-changing decisions
+relied on the bad reading); LOW-2 — hosted `sched.alerts.evaluate` can
+normalize expired-snooze fixture rows at the daily run (future
+snooze-fixture acceptance must provision/exercise within the same-day
+window); LOW-3 — two temporary /tmp-only acceptance-script
+assertion-oracle defects (a CSS-uppercased caption checked
+case-sensitively; a broad "DASH" cross-firm substring assertion also
+matching legitimate Firm B fixture names) — acceptance-tooling defects,
+not application defects, corrected and re-proven green. Acceptance
+write reconciliation: planned == actual physical hosted writes 209/209,
+unplanned 0; NO production write, NO schema change, NO migration, NO
+statutory/default-rule activation (AUTO-OQ-04 remains OPEN). The
+temporary IMP-060 deterministic acceptance fixture (firms, memberships,
+clients, legal entities, compliance instances, tasks, review items,
+alerts) was fully removed — staging domain state returned to the prior
+baseline; five IMP041 profiles were retained non-destructively
+(persistence expectation was ambiguous) but do NOT retain their IMP-060
+acceptance firm memberships/context; five acceptance identities
+(imp041-partner-a, imp041-manager-reviewer-a, imp041-senior-a,
+imp041-billing-a, imp041-partner-b) now carry one verified REPLACEMENT
+TOTP factor each whose secrets were intentionally destroyed after
+acceptance — they are NOT immediately usable, so a future acceptance
+gate may need a newly authorized bounded MFA reset/re-enrollment plus
+bounded re-provisioning of synthetic memberships/context and
+deterministic domain fixtures (Asia/Kolkata-relative fixture due dates
+must be recomputed at provisioning time). Production untouched; no
+production verification claimed.
+
+Next package: IMP-061 — Structured global search (NOT
 STARTED, NOT AUTHORIZED — begins only with an explicit implementation
-instruction; IMP-051 closure does not authorize it).
+instruction; IMP-060 closure does not authorize it).
 
 Authoritative sources:
 
@@ -672,7 +759,7 @@ Current fixture modules:
 Production-path modules (IMP-011 auth; IMP-014 boundary + tenancy skeleton;
 IMP-020 client hierarchy; IMP-021 engagements; IMP-022 client360; IMP-030
 compliance rules; IMP-031 compliance instances; IMP-040 tasks; IMP-041
-review; IMP-042 alerts + mywork):
+review; IMP-042 alerts + mywork; IMP-060 dashboard):
 
 - `source.ts` — THE single data-source selection boundary: `getDataSource()`
   (cached, fail-closed) and `validateStartupConfig()` (called once by
@@ -703,8 +790,8 @@ review; IMP-042 alerts + mywork):
   under RLS + the `list_client_identities()` RPC; the selector in
   `clientHierarchyService.ts` picks once via `getDataSource()`.
 - `engagements/`, `client360/`, `complianceRules/`, `complianceInstances/`,
-  `tasks/`, `review/`, `alerts/`, `mywork/` — the same five-file domain
-  convention (`types.ts` +
+  `tasks/`, `review/`, `alerts/`, `mywork/`, `dashboard/` — the same
+  five-file domain convention (`types.ts` +
   `fixture.ts` + `supabase.ts` + `<domain>Service.ts` + `index.ts`):
   a provider-neutral service contract, a demo bridge fixture adapter, and
   a plain-PostgREST-under-RLS Supabase adapter whose privileged operations
@@ -714,7 +801,12 @@ review; IMP-042 alerts + mywork):
   fallback (see the IMP-041 status paragraph above). `alerts/`'s
   `subscribeAlerts` is the same approved fallback for the bell badge (D2
   ruling; see the IMP-042 status paragraph). `mywork/` is read-only by
-  contract (API-R0-MWK) — no write surface at all.
+  contract (API-R0-MWK) — no write surface at all. `dashboard/`
+  (IMP-060, API-R0-DASH) is likewise read-only: B-count per-section
+  exact-count reads with limited derivation row fetches, NO aggregate
+  SECURITY DEFINER, NO realtime, NO polling (API-RT-02
+  refetch-on-mutate/refetch-on-focus); no naming hazard — no legacy flat
+  `src/data/dashboard.ts` exists.
   NOTE the `tasks/` naming hazard: the legacy flat fixture module
   `src/data/tasks.ts` shadows the folder — import the service via the
   barrel (`@/data`), never via `@/data/tasks`.
