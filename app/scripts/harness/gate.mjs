@@ -9,7 +9,7 @@
  *   → schema integration → audit integration → client-hierarchy adapter contract
  *   → engagement adapter contract → Client 360 composite contract
  *   → review/alerts/My Work integration → automation (IMP-050) integration
- *   → deadlines (IMP-051) integration
+ *   → deadlines (IMP-051) integration → dashboard (IMP-060) integration
  *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
@@ -199,6 +199,14 @@ async function main() {
   // phase above).
   currentPhase = 'deadlines-integration';
   run('deadlines-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/deadlines');
+
+  // IMP-060: dashboard aggregate read-model contract (TEST-API-04…08 for the
+  // API-R0-DASH B-count surfaces against the real stack — caller-scoped
+  // exact counts per role, no-definer/catalog posture, TEST-API-18
+  // active-alert derivation and TEST-API-20 deadline-risk alignment;
+  // underlying table schema/RLS/audit coverage runs in the phases above).
+  currentPhase = 'dashboard-integration';
+  run('dashboard-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/dashboard');
 
   currentPhase = 'build';
   run('build', 'npm run build');

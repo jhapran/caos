@@ -1,0 +1,1147 @@
+{
+  "meta": {
+    "date": "2026-09-18T21:31:20.340Z",
+    "runs": 60,
+    "warmup": 10,
+    "bVariants": [
+      "fetch",
+      "counts"
+    ],
+    "completed": "2026-09-18T21:37:12.650Z",
+    "gateFailure": false
+  },
+  "dataset": {
+    "firms": 2,
+    "clients_per_firm": 200,
+    "compliance_instances_per_firm": 5000,
+    "tasks_per_firm": 10000,
+    "review_items_per_firm": 1000,
+    "alerts_per_firm": 500
+  },
+  "gates": [
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][PARTNER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=10000 instances=5000 pending_reviews=600 active_alerts=350 at_risk=2000",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][MANAGER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=4750 instances=1250 pending_reviews=150 active_alerts=350 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][SENIOR_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=2500 instances=1250 pending_reviews=150 active_alerts=88 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][BILLING_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=0 instances=0 pending_reviews=0 active_alerts=0 at_risk=0",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][A-partner -> B context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][B-partner -> A context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][B-partner own firm]",
+      "expected": "10000 tasks (firm-wide B)",
+      "observed": "10000 tasks",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][SUSPENDED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][REMOVED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][PARTNER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=10000 instances=5000 pending_reviews=600 active_alerts=350 at_risk=2000",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][MANAGER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=4750 instances=1250 pending_reviews=150 active_alerts=350 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][SENIOR_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=2500 instances=1250 pending_reviews=150 active_alerts=88 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][BILLING_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=0 instances=0 pending_reviews=0 active_alerts=0 at_risk=0",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][A-partner -> B context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][B-partner -> A context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][B-partner own firm]",
+      "expected": "10000 tasks (firm-wide B)",
+      "observed": "10000 tasks",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][SUSPENDED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][REMOVED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_counts][PARTNER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=10000 instances=5000 pending_reviews=600 active_alerts=350 at_risk=2000",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_counts][MANAGER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=4750 instances=1250 pending_reviews=150 active_alerts=350 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_counts][SENIOR_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=2500 instances=1250 pending_reviews=150 active_alerts=88 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_counts][BILLING_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=0 instances=0 pending_reviews=0 active_alerts=0 at_risk=0",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_counts][A-partner -> B context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_counts][B-partner -> A context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_counts][B-partner own firm]",
+      "expected": "10000 tasks (firm-wide B)",
+      "observed": "10000 tasks",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_counts][SUSPENDED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_counts][REMOVED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A vs B_fetch][MANAGER_A]",
+      "expected": "identical counters",
+      "observed": "equal",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A vs B_counts][MANAGER_A]",
+      "expected": "identical counters",
+      "observed": "equal",
+      "pass": true
+    }
+  ],
+  "groundTruth": {
+    "PARTNER_A": {
+      "tasks_by_status": {
+        "open": 1400,
+        "in_progress": 1400,
+        "waiting": 1200,
+        "submitted": 1200,
+        "returned": 1200,
+        "approved": 1200,
+        "done": 1200,
+        "cancelled": 1200
+      },
+      "instances_by_state": {
+        "not_started": 600,
+        "information_requested": 600,
+        "information_received": 600,
+        "preparation": 600,
+        "internal_review": 600,
+        "client_approval": 400,
+        "ready_to_file": 400,
+        "filed": 400,
+        "acknowledgement_received": 400,
+        "closed": 400
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 2000,
+        "total_instances": 5000
+      },
+      "pending_reviews": 600,
+      "active_alerts": 350
+    },
+    "MANAGER_A": {
+      "tasks_by_status": {
+        "open": 665,
+        "in_progress": 665,
+        "waiting": 570,
+        "submitted": 570,
+        "returned": 570,
+        "approved": 570,
+        "done": 570,
+        "cancelled": 570
+      },
+      "instances_by_state": {
+        "not_started": 150,
+        "information_requested": 150,
+        "information_received": 150,
+        "preparation": 150,
+        "internal_review": 150,
+        "client_approval": 100,
+        "ready_to_file": 100,
+        "filed": 100,
+        "acknowledgement_received": 100,
+        "closed": 100
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 500,
+        "total_instances": 1250
+      },
+      "pending_reviews": 150,
+      "active_alerts": 350
+    },
+    "SENIOR_A": {
+      "tasks_by_status": {
+        "open": 350,
+        "in_progress": 350,
+        "waiting": 300,
+        "submitted": 300,
+        "returned": 300,
+        "approved": 300,
+        "done": 300,
+        "cancelled": 300
+      },
+      "instances_by_state": {
+        "not_started": 150,
+        "information_requested": 150,
+        "information_received": 150,
+        "preparation": 150,
+        "internal_review": 150,
+        "client_approval": 100,
+        "ready_to_file": 100,
+        "filed": 100,
+        "acknowledgement_received": 100,
+        "closed": 100
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 500,
+        "total_instances": 1250
+      },
+      "pending_reviews": 150,
+      "active_alerts": 88
+    },
+    "BILLING_A": {
+      "tasks_by_status": {
+        "open": 0,
+        "in_progress": 0,
+        "waiting": 0,
+        "submitted": 0,
+        "returned": 0,
+        "approved": 0,
+        "done": 0,
+        "cancelled": 0
+      },
+      "instances_by_state": {
+        "not_started": 0,
+        "information_requested": 0,
+        "information_received": 0,
+        "preparation": 0,
+        "internal_review": 0,
+        "client_approval": 0,
+        "ready_to_file": 0,
+        "filed": 0,
+        "acknowledgement_received": 0,
+        "closed": 0
+      },
+      "deadline": {
+        "groups": 0,
+        "at_risk_instances": 0,
+        "total_instances": 0
+      },
+      "pending_reviews": 0,
+      "active_alerts": 0
+    }
+  },
+  "benchmarks": {
+    "PARTNER_A": {
+      "A": {
+        "n": 60,
+        "min": 190.58,
+        "p50": 194.62,
+        "p95": 222.32,
+        "mean": 202.2,
+        "max": 230.71,
+        "roundTrips": 1,
+        "payloadBytes": 542
+      },
+      "B_fetch": {
+        "n": 60,
+        "min": 472.03,
+        "p50": 534.87,
+        "p95": 606.18,
+        "mean": 542.42,
+        "max": 643.78,
+        "roundTrips": 21,
+        "payloadBytes": 461635,
+        "perSection": {
+          "alerts": {
+            "ms": 12.22,
+            "trips": 1,
+            "bytes": 37568,
+            "rows": 500
+          },
+          "reviews": {
+            "ms": 59.08,
+            "trips": 2,
+            "bytes": 24600,
+            "rows": 1000
+          },
+          "deadline": {
+            "ms": 120.97,
+            "trips": 1,
+            "bytes": 2493,
+            "rows": 25
+          },
+          "instances": {
+            "ms": 209.68,
+            "trips": 6,
+            "bytes": 151992,
+            "rows": 5000
+          },
+          "tasks": {
+            "ms": 495.43,
+            "trips": 11,
+            "bytes": 244982,
+            "rows": 10000
+          }
+        }
+      },
+      "B_counts": {
+        "n": 60,
+        "min": 94.23,
+        "p50": 104.54,
+        "p95": 126.3,
+        "mean": 110.63,
+        "max": 127.97,
+        "roundTrips": 22,
+        "payloadBytes": 9391,
+        "perSection": {
+          "instance:client_approval": {
+            "ms": 5.93,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:not_started": {
+            "ms": 7.2,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:ready_to_file": {
+            "ms": 9.57,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:submitted": {
+            "ms": 11.01,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:acknowledgement_received": {
+            "ms": 11.22,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:cancelled": {
+            "ms": 11.43,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:waiting": {
+            "ms": 11.87,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:active": {
+            "ms": 12.27,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:open": {
+            "ms": 12.8,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:in_progress": {
+            "ms": 13.46,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:snoozed": {
+            "ms": 13.63,
+            "trips": 1,
+            "bytes": 6858
+          },
+          "instance:filed": {
+            "ms": 14.54,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:approved": {
+            "ms": 19.55,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:done": {
+            "ms": 19.6,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_received": {
+            "ms": 19.59,
+            "trips": 1,
+            "bytes": 2
+          },
+          "reviews:pending": {
+            "ms": 19.53,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:returned": {
+            "ms": 19.76,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:closed": {
+            "ms": 19.97,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:preparation": {
+            "ms": 20.63,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_requested": {
+            "ms": 20.73,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:internal_review": {
+            "ms": 21.74,
+            "trips": 1,
+            "bytes": 2
+          },
+          "deadline": {
+            "ms": 102.59,
+            "trips": 1,
+            "bytes": 2493
+          }
+        }
+      }
+    },
+    "MANAGER_A": {
+      "A": {
+        "n": 60,
+        "min": 593.58,
+        "p50": 602.3,
+        "p95": 607.39,
+        "mean": 602.09,
+        "max": 608.57,
+        "roundTrips": 1,
+        "payloadBytes": 533
+      },
+      "B_fetch": {
+        "n": 60,
+        "min": 763.1,
+        "p50": 772.2,
+        "p95": 778.96,
+        "mean": 772.13,
+        "max": 780.41,
+        "roundTrips": 10,
+        "payloadBytes": 200534,
+        "perSection": {
+          "alerts": {
+            "ms": 12.62,
+            "trips": 1,
+            "bytes": 37568,
+            "rows": 500
+          },
+          "reviews": {
+            "ms": 46.09,
+            "trips": 1,
+            "bytes": 6147,
+            "rows": 250
+          },
+          "deadline": {
+            "ms": 154.61,
+            "trips": 1,
+            "bytes": 2458,
+            "rows": 25
+          },
+          "instances": {
+            "ms": 167.43,
+            "trips": 2,
+            "bytes": 37996,
+            "rows": 1250
+          },
+          "tasks": {
+            "ms": 771.55,
+            "trips": 5,
+            "bytes": 116365,
+            "rows": 4750
+          }
+        }
+      },
+      "B_counts": {
+        "n": 60,
+        "min": 154.27,
+        "p50": 195.26,
+        "p95": 205.51,
+        "mean": 190.45,
+        "max": 212.28,
+        "roundTrips": 22,
+        "payloadBytes": 9356,
+        "perSection": {
+          "instance:acknowledgement_received": {
+            "ms": 25.12,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:preparation": {
+            "ms": 34.64,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_received": {
+            "ms": 34.88,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_requested": {
+            "ms": 35.1,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:returned": {
+            "ms": 53.52,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:done": {
+            "ms": 53.66,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:submitted": {
+            "ms": 53.91,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:waiting": {
+            "ms": 54.35,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:snoozed": {
+            "ms": 55.06,
+            "trips": 1,
+            "bytes": 6858
+          },
+          "instance:closed": {
+            "ms": 55.42,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:filed": {
+            "ms": 55.61,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:ready_to_file": {
+            "ms": 56.38,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:active": {
+            "ms": 56.48,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:cancelled": {
+            "ms": 74.83,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:client_approval": {
+            "ms": 77.33,
+            "trips": 1,
+            "bytes": 2
+          },
+          "reviews:pending": {
+            "ms": 85.44,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:not_started": {
+            "ms": 86.65,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:internal_review": {
+            "ms": 87.13,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:approved": {
+            "ms": 88.04,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:in_progress": {
+            "ms": 94.27,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:open": {
+            "ms": 107.57,
+            "trips": 1,
+            "bytes": 2
+          },
+          "deadline": {
+            "ms": 196.47,
+            "trips": 1,
+            "bytes": 2458
+          }
+        }
+      }
+    },
+    "SENIOR_A": {
+      "A": {
+        "n": 60,
+        "min": 646.37,
+        "p50": 652.15,
+        "p95": 657.34,
+        "mean": 652.79,
+        "max": 682.08,
+        "roundTrips": 1,
+        "payloadBytes": 532
+      },
+      "B_fetch": {
+        "n": 60,
+        "min": 669.42,
+        "p50": 685.65,
+        "p95": 709.96,
+        "mean": 686.75,
+        "max": 716.1,
+        "roundTrips": 8,
+        "payloadBytes": 117233,
+        "perSection": {
+          "reviews": {
+            "ms": 41.64,
+            "trips": 1,
+            "bytes": 6148,
+            "rows": 250
+          },
+          "alerts": {
+            "ms": 53.29,
+            "trips": 1,
+            "bytes": 9387,
+            "rows": 125
+          },
+          "deadline": {
+            "ms": 187.25,
+            "trips": 1,
+            "bytes": 2458,
+            "rows": 25
+          },
+          "instances": {
+            "ms": 305.32,
+            "trips": 2,
+            "bytes": 37996,
+            "rows": 1250
+          },
+          "tasks": {
+            "ms": 688.44,
+            "trips": 3,
+            "bytes": 61244,
+            "rows": 2500
+          }
+        }
+      },
+      "B_counts": {
+        "n": 60,
+        "min": 180.49,
+        "p50": 216.71,
+        "p95": 224.75,
+        "mean": 212.33,
+        "max": 229.44,
+        "roundTrips": 22,
+        "payloadBytes": 4260,
+        "perSection": {
+          "instance:internal_review": {
+            "ms": 25.95,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:client_approval": {
+            "ms": 41.71,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:submitted": {
+            "ms": 46.29,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:preparation": {
+            "ms": 46.36,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:waiting": {
+            "ms": 46.61,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:returned": {
+            "ms": 47.01,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:done": {
+            "ms": 47.11,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:cancelled": {
+            "ms": 47.25,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:approved": {
+            "ms": 47.38,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:open": {
+            "ms": 53.92,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:in_progress": {
+            "ms": 53.96,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:snoozed": {
+            "ms": 55.24,
+            "trips": 1,
+            "bytes": 1762
+          },
+          "instance:closed": {
+            "ms": 63.21,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_requested": {
+            "ms": 65.04,
+            "trips": 1,
+            "bytes": 2
+          },
+          "reviews:pending": {
+            "ms": 66.58,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:not_started": {
+            "ms": 69.17,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:filed": {
+            "ms": 69.59,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_received": {
+            "ms": 69.74,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:acknowledgement_received": {
+            "ms": 71.19,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:ready_to_file": {
+            "ms": 72.09,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:active": {
+            "ms": 77.3,
+            "trips": 1,
+            "bytes": 2
+          },
+          "deadline": {
+            "ms": 221.23,
+            "trips": 1,
+            "bytes": 2458
+          }
+        }
+      }
+    },
+    "BILLING_A": {
+      "A": {
+        "n": 60,
+        "min": 393.31,
+        "p50": 397.56,
+        "p95": 422.24,
+        "mean": 399.58,
+        "max": 425.12,
+        "roundTrips": 1,
+        "payloadBytes": 487
+      },
+      "B_fetch": {
+        "n": 60,
+        "min": 200,
+        "p50": 209.28,
+        "p95": 238.05,
+        "mean": 216.05,
+        "max": 241.9,
+        "roundTrips": 5,
+        "payloadBytes": 10,
+        "perSection": {
+          "alerts": {
+            "ms": 15.62,
+            "trips": 1,
+            "bytes": 2,
+            "rows": 0
+          },
+          "reviews": {
+            "ms": 34.06,
+            "trips": 1,
+            "bytes": 2,
+            "rows": 0
+          },
+          "instances": {
+            "ms": 143.12,
+            "trips": 1,
+            "bytes": 2,
+            "rows": 0
+          },
+          "deadline": {
+            "ms": 143.2,
+            "trips": 1,
+            "bytes": 2,
+            "rows": 0
+          },
+          "tasks": {
+            "ms": 209.06,
+            "trips": 1,
+            "bytes": 2,
+            "rows": 0
+          }
+        }
+      },
+      "B_counts": {
+        "n": 60,
+        "min": 109.76,
+        "p50": 133.73,
+        "p95": 147.01,
+        "mean": 133.72,
+        "max": 148.12,
+        "roundTrips": 22,
+        "payloadBytes": 44,
+        "perSection": {
+          "instance:ready_to_file": {
+            "ms": 14.67,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_requested": {
+            "ms": 18.54,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:not_started": {
+            "ms": 18.7,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:snoozed": {
+            "ms": 20.63,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:client_approval": {
+            "ms": 28.28,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:approved": {
+            "ms": 32.99,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:submitted": {
+            "ms": 33.53,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:returned": {
+            "ms": 33.59,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:waiting": {
+            "ms": 33.72,
+            "trips": 1,
+            "bytes": 2
+          },
+          "alerts:active": {
+            "ms": 35.74,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:acknowledgement_received": {
+            "ms": 37.58,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:in_progress": {
+            "ms": 38.18,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:cancelled": {
+            "ms": 38.06,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:filed": {
+            "ms": 39.99,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:closed": {
+            "ms": 43.15,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:information_received": {
+            "ms": 47.77,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:preparation": {
+            "ms": 50.79,
+            "trips": 1,
+            "bytes": 2
+          },
+          "reviews:pending": {
+            "ms": 51.83,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:done": {
+            "ms": 57.23,
+            "trips": 1,
+            "bytes": 2
+          },
+          "instance:internal_review": {
+            "ms": 58.82,
+            "trips": 1,
+            "bytes": 2
+          },
+          "task:open": {
+            "ms": 65.65,
+            "trips": 1,
+            "bytes": 2
+          },
+          "deadline": {
+            "ms": 147.37,
+            "trips": 1,
+            "bytes": 2
+          }
+        }
+      }
+    }
+  },
+  "plans": {
+    "A:PARTNER_A:rpc": {
+      "planningMs": 0.028,
+      "executionMs": 191.747,
+      "scans": []
+    },
+    "B:PARTNER_A:tasks": {
+      "planningMs": 0.639,
+      "executionMs": 6.798,
+      "scans": [
+        "Index Scan on tasks using tasks_firm_id_unique",
+        "Index Scan on clients using clients_owner_partner_idx"
+      ]
+    },
+    "B:PARTNER_A:instances": {
+      "planningMs": 0.73,
+      "executionMs": 6.654,
+      "scans": [
+        "Index Scan on compliance_instances using cin_firm_id_unique",
+        "Index Scan on clients using clients_owner_partner_idx"
+      ]
+    },
+    "B:PARTNER_A:deadline_board": {
+      "planningMs": 2.454,
+      "executionMs": 86.001,
+      "scans": [
+        "Subquery Scan on undefined",
+        "Index Scan on compliance_instances using cin_firm_type_period_idx",
+        "Index Scan on clients using clients_owner_partner_idx",
+        "Index Scan on compliance_types using compliance_types_pkey"
+      ]
+    },
+    "B:PARTNER_A:reviews_pending": {
+      "planningMs": 0.901,
+      "executionMs": 0.076,
+      "scans": [
+        "Index Scan on review_items using review_items_queue_idx",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Index Scan on tasks using tasks_firm_id_unique",
+        "Index Scan on clients using clients_firm_id_unique"
+      ]
+    },
+    "B:PARTNER_A:alerts": {
+      "planningMs": 1.231,
+      "executionMs": 3.699,
+      "scans": [
+        "Index Scan on alerts using alerts_raised_idx",
+        "Index Scan on compliance_instances using cin_firm_id_unique",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Index Scan on tasks using tasks_instance_idx",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Bitmap Heap Scan on compliance_instances",
+        "Bitmap Index Scan on undefined using cin_client_period_idx",
+        "Bitmap Index Scan on undefined using cin_firm_type_period_idx",
+        "Index Scan on clients using clients_firm_id_unique"
+      ]
+    },
+    "A:MANAGER_A:rpc": {
+      "planningMs": 0.028,
+      "executionMs": 604.814,
+      "scans": []
+    },
+    "B:MANAGER_A:tasks": {
+      "planningMs": 1.276,
+      "executionMs": 35.557,
+      "scans": [
+        "Index Scan on tasks using tasks_firm_id_unique",
+        "Index Scan on clients using clients_owner_partner_idx"
+      ]
+    },
+    "B:MANAGER_A:instances": {
+      "planningMs": 0.718,
+      "executionMs": 22.951,
+      "scans": [
+        "Index Scan on compliance_instances using cin_firm_id_unique",
+        "Index Scan on clients using clients_owner_partner_idx"
+      ]
+    },
+    "B:MANAGER_A:deadline_board": {
+      "planningMs": 1.321,
+      "executionMs": 130.876,
+      "scans": [
+        "Subquery Scan on undefined",
+        "Index Scan on compliance_instances using cin_firm_type_period_idx",
+        "Index Scan on clients using clients_owner_partner_idx",
+        "Index Scan on compliance_types using compliance_types_pkey"
+      ]
+    },
+    "B:MANAGER_A:reviews_pending": {
+      "planningMs": 1.567,
+      "executionMs": 0.096,
+      "scans": [
+        "Index Scan on review_items using review_items_queue_idx",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Index Scan on tasks using tasks_firm_id_unique",
+        "Index Scan on clients using clients_firm_id_unique"
+      ]
+    },
+    "B:MANAGER_A:alerts": {
+      "planningMs": 2.428,
+      "executionMs": 7.44,
+      "scans": [
+        "Index Scan on alerts using alerts_raised_idx",
+        "Index Scan on compliance_instances using cin_firm_id_unique",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Index Scan on tasks using tasks_instance_idx",
+        "Index Scan on clients using clients_firm_id_unique",
+        "Bitmap Heap Scan on compliance_instances",
+        "Bitmap Index Scan on undefined using cin_client_period_idx",
+        "Bitmap Index Scan on undefined using cin_firm_type_period_idx",
+        "Index Scan on clients using clients_firm_id_unique"
+      ]
+    }
+  },
+  "failures": [],
+  "cleanup": {
+    "status": "PASS"
+  }
+}

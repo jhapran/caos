@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "date": "2026-09-18T19:35:41.316Z",
+    "runs": 60,
+    "warmup": 10,
+    "bVariants": [
+      "fetch",
+      "counts"
+    ],
+    "completed": "2026-09-18T19:35:42.453Z",
+    "gateFailure": false
+  },
+  "dataset": {},
+  "gates": [],
+  "groundTruth": {},
+  "benchmarks": {},
+  "plans": {},
+  "failures": [],
+  "cleanup": {}
+}

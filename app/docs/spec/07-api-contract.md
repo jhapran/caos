@@ -1,7 +1,7 @@
 # 07 — API Contract (Application Data Access)
 
 - **Status:** Approved (Batch 4)
-- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-02…04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01. API-OQ-01 resolved 2026-09-05 — R0 `review_items.type` vocabulary frozen, SCH-17 CHECK.)
+- **Approval status:** Approved (Batch 4). Open/provisional items remain as recorded: API-OQ-02 (per-surface values only), API-OQ-04. (DEC-J resolved 2026-09-01 — live membership lookup, `05` RLS-MECH-01. API-OQ-01 resolved 2026-09-05 — R0 `review_items.type` vocabulary frozen, SCH-17 CHECK. **API-OQ-03 resolved 2026-09-19 — human-approved: B-count, RLS-respecting per-section exact-count reads with limited row fetches only where an approved derivation requires rows; B-fetch and the composite-RPC candidate are NOT the aggregate implementation (API-R0-DASH; IMP-060 package contract in `12`).**)
 
 ## Purpose
 
@@ -247,7 +247,7 @@ REPLACE / DEMO-ONLY (API-INV-01).
 | `getFirm` | Firm identity/settings | EVOLVE | `firms` read (RLS-FRM-01); settings write is an admin RPC (RLS-AAL-01) |
 | `getTeam` | Team list (owners, assignees) | EVOLVE | `firm_memberships` ⋈ `profiles` read (RLS-MEM-01/RLS-PRF-01) |
 | `getComplianceMaster` | Compliance catalogue | EVOLVE | Merged view: system defaults + firm overrides shadowing per TEN-07 (RLS-CTY-01) |
-| `getAggregates` / `fetchAggregates` / `useLiveAggregates` | Command Centre / Morning Brief counters | REPLACE | Command-centre aggregate RPC/view computing live counts (API-R0-DASH); fixture `AGGREGATES` has no production counterpart (DM-X-03) |
+| `getAggregates` / `fetchAggregates` / `useLiveAggregates` | Command Centre / Morning Brief counters | REPLACE | live Command Centre / Morning Brief counters via the API-R0-DASH B-count read model (RLS-respecting per-section exact counts — API-OQ-03 resolved 2026-09-19); fixture `AGGREGATES` has no production counterpart (DM-X-03) |
 | `fetchDependencyClients` | Client Dependency board (48 rows) | REPLACE | Server-derived "waiting on client" read model over instances in `information_requested` + waiting tasks (API-R0-DLN); not a stored fixture |
 | `searchAll` | ⌘K palette (clients, compliance, pages) | REPLACE | Structured global search RPC (API-R0-SRC) covering clients, identifiers (registrations.value, SCH-07 index), staff; page shortcuts stay client-side |
 | `askCaos` | Canned assistant answers | DEMO-ONLY | No R0 production counterpart; real AI deferred (DEC-C, `20-ai-services.md`) |
@@ -557,14 +557,50 @@ authorization/not-found semantics and API-SEC-* function security.
   (read model over instances); client-dependency board (instances in
   `information_requested`, waiting tasks, ageing derived server-side,
   DM-X-03).
-- **API-R0-DASH — Command Centre & Morning Brief.** Aggregate RPC/view over
-  live tables producing the section counters the UI renders today (task
-  counts by state, deadline risk, review pending, active alerts) — the
-  production replacement for `AGGREGATES`/`useLiveAggregates`. **Security
-  per API-SEC-01/03:** results are computed for the caller under RLS —
+- **API-R0-DASH — Command Centre & Morning Brief.** Aggregate read model
+  over live tables producing the section counters the UI renders today
+  (task counts by state, deadline risk, review pending, active alerts) —
+  the production replacement for `AGGREGATES`/`useLiveAggregates`.
+  **Architecture (API-OQ-03 RESOLVED 2026-09-19, human-approved =
+  B-count):** RLS-respecting per-section exact-count reads for the scalar
+  aggregates, composed behind `@/data`, with limited row fetches ONLY
+  where an approved derivation genuinely requires row-level fields — the
+  effective-active alert derivation (an exact count of directly active
+  persisted alerts plus a limited fetch of snoozed rows whose row data
+  determines whether they are effectively active — the exact TEST-API-18
+  read derivation, IMP-042/IMP-051 semantics unchanged; no new alert
+  lifecycle formula) and the IMP-051 `deadline_board` view for deadline
+  risk. B-fetch (paged row-fetch counting) is NOT the aggregate
+  implementation, and the measured composite-RPC candidate was NOT
+  selected — no aggregate SECURITY DEFINER function is introduced. Every
+  count executes under the signed-in caller's RLS context; the
+  `x-active-firm` active-firm selector contract applies unchanged
+  (context selection, never authorization); no service-role credentials
+  in the browser; tenant visibility is never widened; scalar counts are
+  obtained without fetching entire source datasets. **Security per
+  API-SEC-01/03:** results are computed for the caller under RLS —
   manager/senior receive portfolio/assigned slices (RLS-STF-03/04);
-  revenue aggregates are partner/admin only (RLS matrix §11); no
-  firm-wide bypass via SECURITY DEFINER.
+  revenue aggregates are partner/admin only (RLS matrix §11) **where
+  applicable — R0 has no billing data source, so IMP-060 ships no live
+  billing/revenue tile (human ruling H5: deferred; no fabricated
+  currency/invoice/billing/revenue values)**; no firm-wide bypass via
+  SECURITY DEFINER. **R0 live semantics (human rulings H1–H8, recorded
+  normatively in `12` IMP-060):** Compliance Health is live
+  `compliance_instances` state truth (H1 — fixture task-category
+  semantics are NOT the live definition; task-state counts remain
+  separately permitted); the Morning Brief "items needing attention"
+  fixture total (e.g. 17) is deferred/removed in live mode pending a
+  separately approved definition (H2 — no invented composite formula);
+  only directly named approved counters — at-risk deadlines, pending
+  reviews, active alerts — are exposed live, with NO synthetic "On
+  Track" metric (H3); Team Overload (H4) and the AI/composite Attention
+  List (H6 — no hidden prioritization/ranking/weighting/composition
+  algorithm) are deferred; the deadline/dependency scope uses the
+  IMP-051 live read models (live Deadline Board, deadline group
+  drill-down, client drill-down, Command Centre deadline/dependency
+  cards — H7; a standalone `/dependency` page stays deferred unless
+  separately approved). No new metrics beyond this approved set; no
+  cross-tenant aggregation.
 - **API-R0-SRC — structured global search.** Search RPC over clients (name),
   registrations (identifier values, SCH-07 index), legal entities, staff
   display names; returns typed hits mirroring today's `SearchHit` shape
@@ -604,8 +640,8 @@ authorization/not-found semantics and API-SEC-* function security.
 | ID | Question | Owner | Status |
 |---|---|---|---|
 | API-OQ-01 (= SCH-OQ-02) | Production `review_items.type` vocabulary. The PRD provides no authoritative taxonomy; demo strings (`GST Reconciliation`, `TDS`, `ITR`, `Financial Statements`, `Audit Workpaper`) are **not** frozen as production values. The contract uses stable category keys + labels; final vocabulary is resolved **before schema-migration implementation** (with `06` if a CHECK list needs amending). | requester + product | **Resolved 2026-09-05 (IMP-041 contract closure):** R0 vocabulary frozen to exactly `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` — stable machine keys enforced by the SCH-17 CHECK; display labels are presentation metadata and may change without changing the stored key |
-| API-OQ-02 | Cursor vs offset pagination per board; exact page-size defaults per surface. | implementation | Open — convention fixed (API-CONV-02), per-surface values set during implementation |
-| API-OQ-03 | Whether the Command Centre aggregate contract is one composite RPC or per-section views (performance-driven). | harness gate | Open — measured on representative volume |
+| API-OQ-02 | Cursor vs offset pagination per board; exact page-size defaults per surface. | implementation | Open — convention fixed (API-CONV-02), per-surface values set during implementation; **resolved for the IMP-060 read-model surfaces 2026-09-19 (human ruling, recorded in `12`): scalar aggregate counts do NOT require special pagination; existing list contracts retain their already-approved pagination behavior; any genuinely new paginated list introduced later uses the API-CONV-02 default 50 / maximum 200 unless superseded by a later explicit ruling** |
+| API-OQ-03 | Whether the Command Centre aggregate contract is one composite RPC or per-section views (performance-driven). | harness gate | **Resolved 2026-09-19 (human ruling, IMP-060 pre-implementation package contract, recorded normatively in API-R0-DASH and `12`): B-count — RLS-respecting per-section exact-count reads for scalar aggregates, with limited row fetches only where an approved derivation genuinely requires row-level fields; measured on local representative volume (2 firms; per firm ≈200 clients / 5,000 compliance instances / 10,000 tasks / 1,000 review items / 500 alerts; roles partner/manager/senior/billing) where all three candidates — composite SECURITY INVOKER RPC, B-fetch, B-count — passed three-way semantic/security validation; B-fetch is NOT the aggregate implementation and the composite-RPC candidate was NOT selected; local-loopback latency does not guarantee hosted latency — hosted-network behavior is validated at hosted staging acceptance** |
 | API-OQ-04 (= SCH-OQ-03) | Persistence semantics of re-inviting a removed membership (new row vs status flip). The API already separates invite-new / resend-pending / reactivate-removed (API-R0-FRM); storage semantics stay open. | requester + schema/harness review | **Open** |
 
 ## Acceptance Criteria

@@ -18,6 +18,8 @@ import { defineConfig } from '@playwright/test';
  *   review-queue — IMP-041, TEST-E2E-08 (review submit → approve → return)
  *   my-work      — IMP-042, TEST-E2E-07 (task assignment + update) and
  *                  TEST-E2E-09 (My Work buckets render)
+ *   deadlines-command — IMP-060, TEST-E2E-10 (deadlines board + Command
+ *                  Centre + Morning Brief render live data)
  *
  * Browser binaries are intentionally NOT installed by IMP-001 — run
  * `npx playwright install chromium` before first use (Harness Gate / CI).
@@ -88,6 +90,17 @@ export default defineConfig({
             // runs never race review-queue (FIRM_B) or client360 (FIRM_A).
             name: 'my-work',
             testMatch: 'my-work.spec.ts',
+            expect: { timeout: 30_000 },
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
+          {
+            // IMP-060: TEST-E2E-10 (deadlines board + Command Centre +
+            // Morning Brief render live data; billing-role truthful zeros).
+            // Same 3100 supabase-mode server; the spec owns a private firm
+            // (a4300000-…) so project-parallel runs never race the other
+            // suites' fixtures.
+            name: 'deadlines-command',
+            testMatch: 'deadlines-command.spec.ts',
             expect: { timeout: 30_000 },
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },

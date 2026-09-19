@@ -1,10 +1,18 @@
 // Client-list drill-down (`/deadlines/:id/clients?filter=…`) — the canonical
 // "click 34 Blocked → filterable client list" destination. URL-driven filters,
 // search, owner/risk filters, bulk actions, real CSV export.
+//
+// IMP-060 (H7): in live (Supabase) mode this page reads ONE deadline board
+// group's compliance-instance rows through useDeadlineGroupInstances
+// (deadlinesService). Unknown/malformed group ids and empty scopes share ONE
+// identical not-found surface (API-ERR-02). All demo-only affordances
+// (nudges, reminder overlays, CSV export, risk-score/missing-docs/history
+// columns) are OFF in live mode.
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertCircle,
   Bell,
   Check,
   ChevronRight,
@@ -24,11 +32,14 @@ import StatusPill from '@/components/StatusPill';
 import {
   fetchDeadline,
   fetchDeadlineClients,
+  getDataSource,
   ownerOf,
+  parseDeadlineGroupId,
   useDemoStore,
 } from '@/data';
-import type { DeadlineClientRow, DeadlineGroup, Reminder } from '@/data';
-import { demoNowIso, fmtDate, relTo, riskTextClass } from './deadlines/utils';
+import type { DeadlineClientRow, DeadlineGroup, DeadlineInstanceRecord, Reminder } from '@/data';
+import { useDeadlineGroupInstances } from '@/hooks/useDeadlineData';
+import { demoNowIso, dueLabel, fmtDate, relTo, riskTextClass } from './deadlines/utils';
 import { cn } from '@/lib/utils';
 
 type FilterId = 'all' | 'ready' | 'blocked' | 'risk';
@@ -81,7 +92,8 @@ function downloadCsv(filename: string, header: string[], rows: string[][]): void
 export default function DeadlineClients() {
   const { id = '' } = useParams();
   // Remount on id change so per-group state (selection, nudges) resets cleanly.
-  return <DeadlineClientsInner key={id} id={id} />;
+  if (getDataSource() !== 'supabase') return <DeadlineClientsInner key={id} id={id} />;
+  return <LiveDeadlineClients key={id} id={id} />;
 }
 
 function DeadlineClientsInner({ id }: { id: string }) {
@@ -611,6 +623,292 @@ function DeadlineClientsInner({ id }: { id: string }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// --- Live (Supabase) track -----------------------------------------------------
+
+const LIVE_FILTERS: { id: FilterId; label: string; caption: string }[] = [
+  { id: 'all', label: 'All', caption: 'client obligations in this deadline group' },
+  { id: 'ready', label: 'Ready', caption: 'ready to file or filed' },
+  { id: 'blocked', label: 'Blocked', caption: 'awaiting client information' },
+  { id: 'risk', label: 'At Risk', caption: 'due or overdue and not yet filed' },
+];
+
+const LIVE_CLOSED_STATES = new Set(['filed', 'acknowledgement_received', 'closed']);
+
+function matchesLiveFilter(row: DeadlineInstanceRecord, f: FilterId): boolean {
+  if (f === 'blocked') return row.state === 'information_requested';
+  if (f === 'ready') return row.state === 'ready_to_file' || row.state === 'filed';
+  if (f === 'risk') return row.daysLeft <= 0 && !LIVE_CLOSED_STATES.has(row.state);
+  return true;
+}
+
+/** DM-SM-04 state → readable badge label (no fixture StatusPill mapping). */
+function stateLabel(state: string): string {
+  return state
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Live (Supabase) drill-down — one deadline board group's instance rows.
+ *  Read-only: no nudges, no exports, no fixture columns. */
+function LiveDeadlineClients({ id }: { id: string }) {
+  // useParams values are already URL-decoded by the router — id IS the
+  // canonical groupId ('<compliance_type_id>::<YYYY-MM-DD>').
+  const groupId = id;
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { data, loading, error, refetch } = useDeadlineGroupInstances(groupId);
+
+  const filter: FilterId = (LIVE_FILTERS.some((f) => f.id === params.get('filter'))
+    ? params.get('filter')
+    : 'all') as FilterId;
+
+  const rows = useMemo(() => data ?? [], [data]);
+  const parsed = useMemo(() => parseDeadlineGroupId(groupId), [groupId]);
+
+  const counts = useMemo(() => {
+    const c: Record<FilterId, number> = { all: rows.length, ready: 0, blocked: 0, risk: 0 };
+    for (const r of rows) {
+      if (matchesLiveFilter(r, 'blocked')) c.blocked += 1;
+      if (matchesLiveFilter(r, 'ready')) c.ready += 1;
+      if (matchesLiveFilter(r, 'risk')) c.risk += 1;
+    }
+    return c;
+  }, [rows]);
+
+  const visible = useMemo(() => rows.filter((r) => matchesLiveFilter(r, filter)), [rows, filter]);
+
+  const complianceName = rows[0]?.complianceName ?? null;
+  const dueDate = rows[0]?.dueDate ?? parsed?.dueDate ?? null;
+  const activeMeta = LIVE_FILTERS.find((f) => f.id === filter)!;
+
+  const setFilter = (f: FilterId) => {
+    setParams(f === 'all' ? {} : { filter: f });
+  };
+
+  const columns: Column<DeadlineInstanceRecord>[] = [
+    {
+      key: 'client',
+      header: 'Client',
+      sortValue: (r) => r.clientName ?? '',
+      render: (r) => (
+        <Link
+          to={`/clients/${r.clientId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-semibold text-ink hover:text-brand"
+        >
+          {r.clientName ?? '—'}
+        </Link>
+      ),
+    },
+    {
+      key: 'entity',
+      header: 'Entity',
+      sortValue: (r) => r.entityName ?? '',
+      render: (r) => <span className="text-ink-2">{r.entityName ?? '—'}</span>,
+    },
+    {
+      key: 'period',
+      header: 'Period',
+      sortValue: (r) => r.periodLabel,
+      render: (r) => <span className="text-ink-2">{r.periodLabel}</span>,
+    },
+    {
+      key: 'state',
+      header: 'State',
+      sortValue: (r) => r.state,
+      render: (r) => (
+        <span className="inline-flex items-center rounded-full bg-paper-deep px-2.5 py-0.5 text-[11px] leading-4 font-medium whitespace-nowrap text-ink-2">
+          {stateLabel(r.state)}
+        </span>
+      ),
+    },
+    {
+      key: 'due',
+      header: 'Due',
+      sortValue: (r) => r.dueDate,
+      render: (r) => (
+        <span>
+          <span className="block font-medium text-ink tnum">{fmtDate(r.dueDate)}</span>
+          <span className={cn('block text-[11px]', r.daysLeft <= 5 ? 'text-critical' : 'text-ink-3')}>
+            {dueLabel(r.daysLeft)}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: 'assignee',
+      header: 'Assignee',
+      sortValue: (r) => r.assigneeName ?? '',
+      render: (r) =>
+        r.assigneeName ? (
+          <span className="flex items-center gap-2">
+            <Avatar name={r.assigneeName} size="xs" />
+            <span className="text-ink-2">{r.assigneeName}</span>
+          </span>
+        ) : (
+          <span className="text-ink-3">—</span>
+        ),
+    },
+    {
+      key: 'reviewer',
+      header: 'Reviewer',
+      sortValue: (r) => r.reviewerName ?? '',
+      render: (r) => <span className="text-ink-2">{r.reviewerName ?? '—'}</span>,
+    },
+  ];
+
+  // ---- loading / error / not-found states ----
+  if (loading) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-line bg-card shadow-card">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-line/60 px-5 py-4 last:border-0">
+            <div className="h-4 w-4 animate-pulse rounded bg-paper-deep" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-44 animate-pulse rounded bg-paper-deep" />
+              <div className="h-2.5 w-28 animate-pulse rounded bg-paper-deep" />
+            </div>
+            <div className="h-6 w-6 animate-pulse rounded-full bg-paper-deep" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-card px-6 py-20 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-critical-soft">
+          <AlertCircle className="h-5 w-5 text-critical" strokeWidth={1.8} />
+        </span>
+        <p className="mt-4 text-[14px] font-medium text-ink">Could not load this deadline group</p>
+        <p className="mt-1 text-[13px] text-ink-3">{error.message}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-4 rounded-lg border border-line bg-card px-4 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:border-brand/40 hover:text-brand"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+  // API-ERR-02: unknown, malformed, out-of-scope, and empty groups share ONE
+  // identical not-found surface (the service returns [] for all of them).
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon={ShieldAlert}
+        title="Unknown deadline"
+        description="This deadline group doesn't exist or has no obligations in your scope."
+        action={{ label: 'Back to Deadlines', onClick: () => navigate('/deadlines') }}
+      />
+    );
+  }
+
+  return (
+    <div>
+      {/* Header — breadcrumb reconstructs the click path; filtered count echoed large */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }}>
+        <Breadcrumb
+          items={[
+            { label: 'Command Centre', href: '/command' },
+            { label: 'Deadlines', href: '/deadlines' },
+            ...(complianceName
+              ? [{ label: complianceName, href: `/deadlines/${encodeURIComponent(groupId)}/clients` }]
+              : []),
+            { label: activeMeta.label },
+          ]}
+        />
+        <div className="mt-3 flex items-start gap-5">
+          <div className="shrink-0 border-b-[3px] border-gold pb-1">
+            <span className="text-stat-xl text-ink">
+              <CountUp value={counts[filter]} duration={0.6} />
+            </span>
+          </div>
+          <div>
+            <h1 className="text-[24px] leading-8 font-semibold tracking-[-0.01em] text-ink">
+              {complianceName ? `${complianceName} — ${activeMeta.label} clients` : 'Deadline group'}
+            </h1>
+            <p className="mt-1 text-[13px] text-ink-3">
+              <span className="font-semibold text-ink-2">{counts[filter]} clients</span> · {activeMeta.caption}
+              {dueDate ? <> · due {fmtDate(dueDate)}</> : null}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Filter chips — live equivalents computed client-side over the group rows */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut', delay: 0.06 }}
+        className="mt-5 flex flex-wrap items-center gap-2"
+      >
+        {LIVE_FILTERS.map((f) => {
+          const active = f.id === filter;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              aria-pressed={active}
+              className={cn(
+                'relative rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors',
+                active ? 'text-white' : 'bg-card text-ink-2 hover:bg-paper-deep',
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="deadline-filter-pill"
+                  className="absolute inset-0 rounded-full bg-brand"
+                  transition={{ type: 'spring', duration: 0.45, bounce: 0.2 }}
+                />
+              )}
+              <span className="relative z-10">
+                {f.label}{' '}
+                <span className={cn('font-mono text-[11px] tnum', active ? 'text-white/80' : 'text-ink-3')}>
+                  {counts[f.id]}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </motion.div>
+
+      {/* Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut', delay: 0.12 }}
+        className="mt-4"
+      >
+        {visible.length === 0 ? (
+          <EmptyState
+            icon={PartyPopper}
+            title="No clients in this state — nice."
+            description={
+              filter === 'blocked'
+                ? 'Nothing is blocked on this deadline right now.'
+                : 'Try a different filter.'
+            }
+            action={{ label: 'Show all clients', onClick: () => setFilter('all') }}
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={visible}
+            rowKey={(r) => r.id}
+            onRowClick={(r) => navigate(`/clients/${r.clientId}`)}
+            pageSize={15}
+            caption={`${complianceName ?? 'Deadline group'}${dueDate ? ` · due ${fmtDate(dueDate)}` : ''} — ${activeMeta.label.toLowerCase()} client list`}
+          />
+        )}
+      </motion.div>
     </div>
   );
 }

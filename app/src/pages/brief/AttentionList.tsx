@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, RefreshCw, Sparkles } from 'lucide-react';
+import { CalendarClock, Check, RefreshCw, Sparkles } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
 import StatusPill from '@/components/StatusPill';
 import { prefersReducedMotion } from '@/components/CountUp';
-import { useDemoStore } from '@/data';
+import { getDataSource, useDemoStore } from '@/data';
 import { cn } from '@/lib/utils';
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
@@ -49,8 +50,18 @@ const ATTENTION: AttentionItem[] = [
 /**
  * Section 3 — "What needs my attention today?" AI morning answer.
  * Rows stream in sequentially (0.35s cadence); refresh replays the stream.
+ *
+ * IMP-060 (H6): the AI/composite Attention List is DEFERRED in live
+ * (Supabase) mode — an explicit deferred panel in the same visual frame, no
+ * ranking/scoring, no fixture rows.
  */
 export default function AttentionList() {
+  if (getDataSource() !== 'supabase') return <FixtureAttentionList />;
+  return <DeferredAttentionList />;
+}
+
+/** Fixture/demo track — unchanged. */
+function FixtureAttentionList() {
   const navigate = useNavigate();
   const { sendReminder } = useDemoStore();
   const [runId, setRunId] = useState(0);
@@ -161,6 +172,33 @@ export default function AttentionList() {
           </li>
         )}
       </ol>
+    </motion.section>
+  );
+}
+
+/** Live (Supabase) track — DEFERRED (H6): the AI morning answer arrives with
+ *  the AI release. Same visual frame, truthful deferred content. */
+function DeferredAttentionList() {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2, ease: EASE }}
+      aria-label="What needs my attention today"
+      className="relative overflow-hidden rounded-xl border border-violet/25 bg-card shadow-card"
+    >
+      <div className="flex items-center gap-2.5 border-b border-line px-5 py-3.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-soft text-violet">
+          <Sparkles className="h-4 w-4" strokeWidth={1.8} />
+        </span>
+        <span className="text-caption text-violet">Ask CAOS · Morning Answer</span>
+      </div>
+      <EmptyState
+        icon={CalendarClock}
+        title="Attention list — coming in a later release"
+        description="AI prioritisation of your morning items arrives with the AI release. Nothing here is fixture data."
+        className="rounded-none border-0 shadow-none"
+      />
     </motion.section>
   );
 }

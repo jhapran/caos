@@ -1,152 +1,164 @@
 {
   "gate": "CAOS Harness Gate (verify:harness)",
-  "startedAt": "2026-09-17T14:49:00.438Z",
+  "startedAt": "2026-09-19T00:11:37.804Z",
   "phases": [
     {
       "name": "preflight",
       "ok": true,
       "detail": "node v24.18.0, docker ok, supabase CLI ok, decision evidence present",
-      "durationMs": 837
+      "durationMs": 478
     },
     {
       "name": "stack-lifecycle",
       "ok": true,
-      "detail": "stack already running — will be left running afterwards",
-      "durationMs": 918
+      "detail": "stack started by gate via db:start (loopback network) — will be stopped afterwards",
+      "durationMs": 25904
     },
     {
       "name": "db-reset-seed",
       "ok": true,
       "detail": "  \"errors\": [], |   \"warnings\": [] | }",
-      "durationMs": 29921
+      "durationMs": 30402
     },
     {
       "name": "decision-evidence",
       "ok": true,
       "detail": "DEC-J = live membership lookup (05); AUD-OQ-02 = layered A+B+C (08); spike evidence committed",
-      "durationMs": 5
+      "durationMs": 6
     },
     {
       "name": "lint",
       "ok": true,
       "detail": "> my-app@0.0.0 lint | > eslint .",
-      "durationMs": 6047
+      "durationMs": 6664
     },
     {
       "name": "unit-tests",
       "ok": true,
-      "detail": "      Tests  320 passed (320) |    Start at  20:19:38 |    Duration  5.02s (transform 6.28s, setup 3.50s, import 11.66s, tests 9.52s, environment 15.69s)",
-      "durationMs": 5358
+      "detail": "      Tests  354 passed (354) |    Start at  05:42:41 |    Duration  5.52s (transform 9.24s, setup 4.18s, import 19.43s, tests 12.53s, environment 19.30s)",
+      "durationMs": 5869
     },
     {
       "name": "auth-integration",
       "ok": true,
-      "detail": "      Tests  31 passed (31) |    Start at  20:19:43 |    Duration  34.83s (transform 65ms, setup 7.63s, import 59ms, tests 26.67s, environment 0ms)",
-      "durationMs": 35067
+      "detail": "      Tests  31 passed (31) |    Start at  05:42:47 |    Duration  34.72s (transform 55ms, setup 7.06s, import 51ms, tests 27.13s, environment 0ms)",
+      "durationMs": 34938
     },
     {
       "name": "rls-integration",
       "ok": true,
-      "detail": "      Tests  303 passed (303) |    Start at  20:20:18 |    Duration  34.55s (transform 193ms, setup 8.37s, import 210ms, tests 25.36s, environment 0ms)",
-      "durationMs": 34790
+      "detail": "      Tests  303 passed (303) |    Start at  05:43:22 |    Duration  36.28s (transform 206ms, setup 9.17s, import 239ms, tests 26.25s, environment 0ms)",
+      "durationMs": 36512
     },
     {
       "name": "schema-integration",
       "ok": true,
-      "detail": "      Tests  201 passed (201) |    Start at  20:20:53 |    Duration  55.82s (transform 131ms, setup 8.41s, import 148ms, tests 46.65s, environment 0ms)",
-      "durationMs": 56037
+      "detail": "      Tests  201 passed (201) |    Start at  05:43:58 |    Duration  56.39s (transform 131ms, setup 9.34s, import 147ms, tests 46.31s, environment 0ms)",
+      "durationMs": 56611
     },
     {
       "name": "audit-integration",
       "ok": true,
-      "detail": "      Tests  114 passed (114) |    Start at  20:21:49 |    Duration  29.85s (transform 124ms, setup 7.46s, import 132ms, tests 21.74s, environment 0ms)",
-      "durationMs": 30073
+      "detail": "      Tests  114 passed (114) |    Start at  05:44:55 |    Duration  31.80s (transform 132ms, setup 8.39s, import 147ms, tests 22.70s, environment 0ms)",
+      "durationMs": 32035
     },
     {
       "name": "clients-integration",
       "ok": true,
-      "detail": "      Tests  12 passed (12) |    Start at  20:22:19 |    Duration  2.04s (transform 73ms, setup 955ms, import 72ms, tests 921ms, environment 0ms)",
-      "durationMs": 2260
+      "detail": "      Tests  12 passed (12) |    Start at  05:45:27 |    Duration  2.18s (transform 84ms, setup 965ms, import 84ms, tests 1.04s, environment 0ms)",
+      "durationMs": 2447
     },
     {
       "name": "engagements-integration",
       "ok": true,
-      "detail": "      Tests  10 passed (10) |    Start at  20:22:21 |    Duration  2.17s (transform 87ms, setup 949ms, import 87ms, tests 1.04s, environment 0ms)",
-      "durationMs": 2398
+      "detail": "      Tests  10 passed (10) |    Start at  05:45:29 |    Duration  2.33s (transform 89ms, setup 985ms, import 86ms, tests 1.16s, environment 0ms)",
+      "durationMs": 2564
     },
     {
       "name": "client360-integration",
       "ok": true,
-      "detail": "      Tests  9 passed (9) |    Start at  20:22:24 |    Duration  2.70s (transform 113ms, setup 1.04s, import 115ms, tests 1.46s, environment 0ms)",
-      "durationMs": 2931
+      "detail": "      Tests  9 passed (9) |    Start at  05:45:32 |    Duration  2.78s (transform 102ms, setup 1.02s, import 119ms, tests 1.54s, environment 0ms)",
+      "durationMs": 3010
     },
     {
       "name": "review-integration",
       "ok": true,
-      "detail": "      Tests  20 passed (20) |    Start at  20:22:27 |    Duration  69.77s (transform 81ms, setup 1.92s, import 79ms, tests 67.63s, environment 0ms)",
-      "durationMs": 70091
+      "detail": "      Tests  20 passed (20) |    Start at  05:45:35 |    Duration  70.40s (transform 92ms, setup 2.03s, import 96ms, tests 68.12s, environment 0ms)",
+      "durationMs": 70709
     },
     {
       "name": "alerts-integration",
       "ok": true,
-      "detail": "      Tests  30 passed (30) |    Start at  20:23:37 |    Duration  8.67s (transform 337ms, setup 957ms, import 425ms, tests 7.20s, environment 0ms)",
-      "durationMs": 8979
+      "detail": "      Tests  30 passed (30) |    Start at  05:46:46 |    Duration  9.07s (transform 380ms, setup 1.04s, import 464ms, tests 7.47s, environment 0ms)",
+      "durationMs": 9365
     },
     {
       "name": "mywork-integration",
       "ok": true,
-      "detail": "      Tests  13 passed (13) |    Start at  20:23:46 |    Duration  4.03s (transform 120ms, setup 988ms, import 173ms, tests 2.77s, environment 0ms)",
-      "durationMs": 4354
+      "detail": "      Tests  13 passed (13) |    Start at  05:46:55 |    Duration  4.14s (transform 118ms, setup 1.08s, import 144ms, tests 2.83s, environment 0ms)",
+      "durationMs": 4437
     },
     {
       "name": "automation-integration",
       "ok": true,
-      "detail": "      Tests  51 passed (51) |    Start at  20:23:50 |    Duration  35.02s (transform 92ms, setup 5.55s, import 92ms, tests 28.97s, environment 0ms)",
-      "durationMs": 35294
+      "detail": "      Tests  51 passed (51) |    Start at  05:47:00 |    Duration  35.67s (transform 97ms, setup 5.98s, import 98ms, tests 29.17s, environment 0ms)",
+      "durationMs": 35960
     },
     {
       "name": "deadlines-integration",
       "ok": true,
-      "detail": "      Tests  10 passed (10) |    Start at  20:24:26 |    Duration  3.18s (transform 130ms, setup 955ms, import 166ms, tests 1.97s, environment 0ms)",
-      "durationMs": 3475
+      "detail": "      Tests  10 passed (10) |    Start at  05:47:35 |    Duration  3.27s (transform 126ms, setup 1.02s, import 154ms, tests 2.00s, environment 0ms)",
+      "durationMs": 3555
+    },
+    {
+      "name": "dashboard-integration",
+      "ok": true,
+      "detail": "      Tests  25 passed (25) |    Start at  05:47:39 |    Duration  5.53s (transform 355ms, setup 971ms, import 446ms, tests 4.01s, environment 0ms)",
+      "durationMs": 5832
     },
     {
       "name": "build",
       "ok": true,
-      "detail": "dist/assets/useAuth-duPmN2uw.js  221.34 kB │ gzip:  58.65 kB | dist/assets/App-EjSf_OQC.js      940.20 kB │ gzip: 265.07 kB | ✓ built in 3.16s",
-      "durationMs": 7130
+      "detail": "dist/assets/useAuth-CQ9ZZpnO.js    221.34 kB │ gzip:  58.65 kB | dist/assets/App-eIQ3awBc.js      1,002.43 kB │ gzip: 274.49 kB | ✓ built in 3.37s",
+      "durationMs": 7611
     },
     {
       "name": "playwright-smoke",
       "ok": true,
-      "detail": "[11/12] [review-queue] › e2e/review-queue.spec.ts:255:1 › PASS C.1 — senior submits against assigned work; client server-derived; no decision controls | [12/12] [review-queue] › e2e/review-queue.spec.ts:308:1 › API-RT-07 — cross-session queue freshness without reload (polling fallback) |   12 passed (36.2s)",
-      "durationMs": 37433
+      "detail": "[15/16] [review-queue] › e2e/review-queue.spec.ts:255:1 › PASS C.1 — senior submits against assigned work; client server-derived; no decision controls | [16/16] [review-queue] › e2e/review-queue.spec.ts:308:1 › API-RT-07 — cross-session queue freshness without reload (polling fallback) |   16 passed (37.4s)",
+      "durationMs": 38801
     },
     {
       "name": "network-binding",
       "ok": true,
       "detail": "all published Supabase services bound to 127.0.0.1 (docker + ss verified)",
-      "durationMs": 27
+      "durationMs": 22
     },
     {
       "name": "mcp-regression",
       "ok": true,
       "detail": "local MCP initialize HTTP 200 (loopback)",
-      "durationMs": 984
+      "durationMs": 1410
     },
     {
       "name": "db-cleanliness",
       "ok": true,
       "detail": "no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family + review_items + alerts/alert_rules + event_outbox/scheduler_job_runs/scheduler_dead_letters (committed IMP-010/013/020/021/030/031/040/041/042/050 migrations); RLS posture verified (RLS on all 24, FORCE on 20 — SCH-33/SCH-35 forced, SCH-34 enabled-not-forced per Ruling R8 — 51 expected policies, zero browser grants on the automation records); 16 deterministic identities verified",
-      "durationMs": 1330
+      "durationMs": 1461
     },
     {
       "name": "secret-scan",
       "ok": true,
       "detail": "no service-role key or JWT secret in tracked files or dist/ (TEST-SEC-01 harness level)",
-      "durationMs": 25
+      "durationMs": 28
+    },
+    {
+      "name": "stack-stop",
+      "ok": true,
+      "detail": " | Stopping containers... | Stopped supabase local development setup.",
+      "durationMs": 11217
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-09-17T14:55:16.206Z"
+  "finishedAt": "2026-09-19T00:18:45.654Z"
 }

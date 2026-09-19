@@ -1,0 +1,263 @@
+{
+  "meta": {
+    "date": "2026-09-18T21:11:36.453Z",
+    "runs": 60,
+    "warmup": 10,
+    "bVariants": [
+      "fetch",
+      "counts"
+    ],
+    "completed": "2026-09-18T21:11:55.758Z",
+    "gateFailure": false
+  },
+  "dataset": {
+    "firms": 2,
+    "clients_per_firm": 200,
+    "compliance_instances_per_firm": 5000,
+    "tasks_per_firm": 10000,
+    "review_items_per_firm": 1000,
+    "alerts_per_firm": 500
+  },
+  "gates": [
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][PARTNER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=10000 instances=5000 pending_reviews=600 active_alerts=350 at_risk=2000",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][MANAGER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=4750 instances=1250 pending_reviews=150 active_alerts=350 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][SENIOR_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=2500 instances=1250 pending_reviews=150 active_alerts=88 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[A][BILLING_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=0 instances=0 pending_reviews=0 active_alerts=0 at_risk=0",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][A-partner -> B context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][B-partner -> A context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][B-partner own firm]",
+      "expected": "10000 tasks (firm-wide B)",
+      "observed": "10000 tasks",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][SUSPENDED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[A][REMOVED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][PARTNER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=10000 instances=5000 pending_reviews=600 active_alerts=350 at_risk=2000",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][MANAGER_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=4750 instances=1250 pending_reviews=150 active_alerts=350 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][SENIOR_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=2500 instances=1250 pending_reviews=150 active_alerts=88 at_risk=500",
+      "pass": true
+    },
+    {
+      "name": "SEMANTIC_EQUIVALENCE[B_fetch][BILLING_A]",
+      "expected": "counters == role-scoped ground truth",
+      "observed": "tasks=0 instances=0 pending_reviews=0 active_alerts=0 at_risk=0",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][A-partner -> B context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][B-partner -> A context]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][B-partner own firm]",
+      "expected": "10000 tasks (firm-wide B)",
+      "observed": "10000 tasks",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][SUSPENDED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    },
+    {
+      "name": "SECURITY[B_fetch][REMOVED_A]",
+      "expected": "all-zero counters",
+      "observed": "zeros",
+      "pass": true
+    }
+  ],
+  "groundTruth": {
+    "PARTNER_A": {
+      "tasks_by_status": {
+        "open": 1400,
+        "in_progress": 1400,
+        "waiting": 1200,
+        "submitted": 1200,
+        "returned": 1200,
+        "approved": 1200,
+        "done": 1200,
+        "cancelled": 1200
+      },
+      "instances_by_state": {
+        "not_started": 600,
+        "information_requested": 600,
+        "information_received": 600,
+        "preparation": 600,
+        "internal_review": 600,
+        "client_approval": 400,
+        "ready_to_file": 400,
+        "filed": 400,
+        "acknowledgement_received": 400,
+        "closed": 400
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 2000,
+        "total_instances": 5000
+      },
+      "pending_reviews": 600,
+      "active_alerts": 350
+    },
+    "MANAGER_A": {
+      "tasks_by_status": {
+        "open": 665,
+        "in_progress": 665,
+        "waiting": 570,
+        "submitted": 570,
+        "returned": 570,
+        "approved": 570,
+        "done": 570,
+        "cancelled": 570
+      },
+      "instances_by_state": {
+        "not_started": 150,
+        "information_requested": 150,
+        "information_received": 150,
+        "preparation": 150,
+        "internal_review": 150,
+        "client_approval": 100,
+        "ready_to_file": 100,
+        "filed": 100,
+        "acknowledgement_received": 100,
+        "closed": 100
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 500,
+        "total_instances": 1250
+      },
+      "pending_reviews": 150,
+      "active_alerts": 350
+    },
+    "SENIOR_A": {
+      "tasks_by_status": {
+        "open": 350,
+        "in_progress": 350,
+        "waiting": 300,
+        "submitted": 300,
+        "returned": 300,
+        "approved": 300,
+        "done": 300,
+        "cancelled": 300
+      },
+      "instances_by_state": {
+        "not_started": 150,
+        "information_requested": 150,
+        "information_received": 150,
+        "preparation": 150,
+        "internal_review": 150,
+        "client_approval": 100,
+        "ready_to_file": 100,
+        "filed": 100,
+        "acknowledgement_received": 100,
+        "closed": 100
+      },
+      "deadline": {
+        "groups": 25,
+        "at_risk_instances": 500,
+        "total_instances": 1250
+      },
+      "pending_reviews": 150,
+      "active_alerts": 88
+    },
+    "BILLING_A": {
+      "tasks_by_status": {
+        "open": 0,
+        "in_progress": 0,
+        "waiting": 0,
+        "submitted": 0,
+        "returned": 0,
+        "approved": 0,
+        "done": 0,
+        "cancelled": 0
+      },
+      "instances_by_state": {
+        "not_started": 0,
+        "information_requested": 0,
+        "information_received": 0,
+        "preparation": 0,
+        "internal_review": 0,
+        "client_approval": 0,
+        "ready_to_file": 0,
+        "filed": 0,
+        "acknowledgement_received": 0,
+        "closed": 0
+      },
+      "deadline": {
+        "groups": 0,
+        "at_risk_instances": 0,
+        "total_instances": 0
+      },
+      "pending_reviews": 0,
+      "active_alerts": 0
+    }
+  },
+  "benchmarks": {},
+  "plans": {},
+  "failures": [],
+  "cleanup": {
+    "status": "PASS"
+  }
+}

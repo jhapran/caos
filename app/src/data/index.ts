@@ -194,6 +194,19 @@ export type {
   DeadlineInstanceRecord,
   DeadlinesService,
 } from './deadlines/index';
+// --- IMP-060: Command Centre & Morning Brief aggregates (API-R0-DASH) ---------
+// B-count (API-OQ-03 resolved 2026-09-19): RLS-respecting per-section
+// exact-count reads; limited row fetches only for the TEST-API-18
+// active-alert derivation and the IMP-051 deadline_board view. No naming
+// hazard (no legacy flat dashboard module) — plain folder specifier.
+export { dashboardService } from './dashboard';
+export {
+  DASHBOARD_INSTANCE_STATES,
+  DASHBOARD_TASK_STATES,
+  emptyDashboardAggregates,
+  OPEN_INSTANCE_STATES,
+} from './dashboard';
+export type { DashboardAggregates, DashboardService } from './dashboard';
 // --- IMP-042: My Work (API-R0-MWK, DEC-L) --------------------------------------
 // No naming hazard (no legacy flat mywork module) — plain folder specifier,
 // the client360 convention.

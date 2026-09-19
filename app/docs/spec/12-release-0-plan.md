@@ -1,7 +1,7 @@
 # 12 — Release 0 Execution Plan
 
 - **Status:** Approved (Batch 6)
-- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02…04, AUTO-OQ-04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **AUTO-OQ-01/02/03 are RESOLVED by human ruling 2026-09-11 (IMP-050 architecture amendment, recorded normatively in `09` and `06`): pg_cron + hardened in-database scheduler/job functions is the final R0 scheduler (pg_net not required for R0; HTTP/Edge scheduling deferred to R1+); the transactional outbox is the final event-publication mechanism (direct invocation rejected for R0; schema contracts SCH-33/34/35 in `06`); the recurrence look-ahead default is 90 calendar days (configurable) on an Asia/Kolkata business-date basis with UTC-persisted timestamps. AUTO-SCH-02 is recorded PASS (LOCAL/HOSTED/OVERALL); hosted pg_cron is available (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` remains a future explicit human gate.** **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
+- **Approval status:** Approved (Batch 6). Open/provisional items remain open as tabulated in the Open / Provisional Dependency Matrix (AUD-OQ-01, RLS-OQ-04, API-OQ-02, API-OQ-04, AUTO-OQ-04, MIG-OQ-02/04, DEC-P, OPS-OQ-01…04, TEST-OQ-01…04). This document resolves none of them. **AUTO-OQ-01/02/03 are RESOLVED by human ruling 2026-09-11 (IMP-050 architecture amendment, recorded normatively in `09` and `06`): pg_cron + hardened in-database scheduler/job functions is the final R0 scheduler (pg_net not required for R0; HTTP/Edge scheduling deferred to R1+); the transactional outbox is the final event-publication mechanism (direct invocation rejected for R0; schema contracts SCH-33/34/35 in `06`); the recurrence look-ahead default is 90 calendar days (configurable) on an Asia/Kolkata business-date basis with UTC-persisted timestamps. AUTO-SCH-02 is recorded PASS (LOCAL/HOSTED/OVERALL); hosted pg_cron is available (default 1.6.4) but NOT installed — hosted `CREATE EXTENSION` remains a future explicit human gate.** **DEC-J is RESOLVED (2026-09-01): IMP-004 complete — live membership lookup selected (`05` RLS-MECH-01; evidence `docs/harness/dec-j-spike.md`).** **AUD-OQ-02 is RESOLVED (2026-09-01): IMP-005 complete — layered A+B+C audit-context propagation selected (`08` AUD-CTX-01; evidence `docs/harness/audit-context-spike.md`).** **API-OQ-01 is RESOLVED (2026-09-05): IMP-041 contract closure — R0 `review_items.type` vocabulary frozen to `gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper` (SCH-17 CHECK, `06`/`07`).** **API-OQ-03 is RESOLVED (2026-09-19): IMP-060 pre-implementation package-contract recording — human-approved B-count (RLS-respecting per-section exact-count reads with limited row fetches only where an approved derivation genuinely requires rows) selected over the composite SECURITY INVOKER RPC and B-fetch candidates on the measured local representative-volume benchmark (all three candidates passed three-way semantic/security validation); recorded normatively in `07` (API-R0-DASH + API-OQ matrix) and in the IMP-060 package section below; hosted-network behavior is validated at hosted staging acceptance.** **API-OQ-02 is RESOLVED for the IMP-060 read-model surfaces (2026-09-19): scalar aggregate counts need no pagination; existing list contracts keep their already-approved pagination; any genuinely new paginated list uses the API-CONV-02 default 50 / maximum 200.** **The Harness Gate is PASS — human approved 2026-09-01 (evidence commit `305d133`; exact committed-HEAD verified from a fresh detached worktree: 14/14 phases green; evidence `docs/harness/harness-gate.md`).** IMP-000…IMP-005 are all COMPLETE; the Harness Engineering phase is COMPLETE. **IMP-010 is COMPLETE (2026-09-01 — Git checkpoint `c913b9d`).** **IMP-011 is COMPLETE (2026-09-01 — Git checkpoint `8ea9c4a`).** **IMP-012 is COMPLETE (2026-09-01 — Git checkpoint `7f5c7b6`).** **IMP-013 is COMPLETE (2026-09-02 — Git checkpoint `3ee1e6d`).** **IMP-014 is COMPLETE (2026-09-02 — Git checkpoint `3fed76a`).** **IMP-020 is COMPLETE (2026-09-02 — Git checkpoint `1d7bbb1`).** **IMP-021 is COMPLETE (2026-09-03 — Git checkpoint `c38c758`).** IMP-022 is IMPLEMENTED (2026-09-03); acceptance checks green; awaiting human approval and Git checkpoint. **IMP-022 implementation interpretations recorded (2026-09-03):** (A) Client 360 composite is an application-side composition over plain RLS reads (`07` API-R0-CLI / DM-X-02) — deliberately NO aggregate SECURITY DEFINER RPC, so the composition cannot widen table RLS; (B) API-OQ-02 resolved for the client list: offset pagination, page size 50 (API-CONV-02 default); (C) RequireAuth bootstraps the single active-firm context from live memberships before first render (RLS-CTX-01/02) — context selection, not authorization; multi-firm switcher UI deferred; (D) senior/article/billing receive no composite (safe null per API-ERR-02); billing's IMP-020/021 projections stay separate; (E) deferred tabs (Compliance/Documents/Financials) render explicit deferred states; Communications is the DM-15-approved placeholder; (F) the active-firm bootstrap is identity-bound (cleared on logout / identity change / session replacement BEFORE the new identity's pages render) and the temporary R0 multi-firm default is deterministic — smallest ACTIVE firm id via `resolveDefaultActiveFirm` (RLS-CTX-02; switcher UI deferred to a later package). **IMP-021 implementation interpretations recorded (2026-09-02):** (A) manager engagement access is portfolio-scoped READ-ONLY via the owning client's designated manager — writes are partner+ per `05` RLS-ENG-01; (B) billing has no table access — letter-status-only projection via `list_engagement_letter_statuses()` (active-firm pinned, same predicate family as `05` RLS-A-04); (C) invalid `engagements.status` transitions raise a CHECK violation marked `INVALID_TRANSITION:engagements.status`, which maps to `conflict`; plain CHECK violations stay `validation` (extends the IMP-020 closure (C) `07` API-ERR-01 convention); (D) `responsible_partner_membership_id` is validated as an ACTIVE same-firm membership with no role predicate (mirrors the IMP-020 DM-04 precedent); (E) senior/article engagement access deferred to IMP-030/040 (nothing in R0, same deferral as IMP-020).
 
 ## Purpose
 
@@ -1315,26 +1315,191 @@ separate explicit implementation instruction.
   Centre sections and Morning Brief from live data, with tenant-scoped
   aggregation that never bypasses RLS.
 - **Requirement IDs:** API-SEC-01…04 (aggregate RPC security),
-  API-CONV-*, API-RT-01 (realtime rules context); API-OQ-03 (composite
-  RPC vs per-section views — decided by measurement here).
-- **TEST-* IDs:** TEST-API-04…08 (aggregate tenant isolation, no browser
-  service-role, SECURITY DEFINER authorization where used), TEST-E2E-10.
+  API-CONV-*, API-RT-01/02 (realtime rules context — Command Centre
+  itself is API-RT-02: refetch-on-mutate / refetch-on-focus, no
+  realtime); API-OQ-02 (RESOLVED for the IMP-060 surfaces 2026-09-19,
+  recorded below); API-OQ-03 (composite RPC vs per-section views —
+  RESOLVED 2026-09-19 = human-approved B-count, decided by measurement
+  here; recorded below and normatively in `07` API-R0-DASH).
+- **TEST-* IDs:** TEST-API-04 (aggregate/dashboard caller-scoped per
+  role — portfolio slices for manager, assigned slices for senior; the
+  revenue-aggregates clause binds only where applicable: R0 has no
+  billing data source for the deferred live tile, H5), TEST-API-05 (no
+  browser service-role), TEST-API-06 (SECURITY DEFINER/cross-tenant
+  security — if the implementation uses no definer function,
+  evidence-by-absence/invoker semantics may satisfy the relevant part),
+  TEST-API-07 (pagination/filter/sort for applicable list/read
+  contracts), TEST-API-08 (conflict/idempotency regression coverage —
+  IMP-060's new read-model work is read-only), TEST-E2E-10 (deadlines +
+  Command Centre render live data); the API-R0-DLN deadline surfaces
+  remain bound to TEST-API-20 (`11`, IMP-051).
 - **Dependencies:** IMP-051.
-- **Allowed scope:** read-model views/RPCs (RLS-respecting), page wiring.
+- **Allowed scope:** RLS-respecting read-model reads composed behind
+  `@/data` (per-section exact-count PostgREST reads per the B-count
+  ruling; a view enters only if an API-A-01 read gap escalates), page
+  wiring.
 - **Non-goals:** new metrics beyond approved contracts; cross-tenant
-  aggregation of any kind.
+  aggregation of any kind; the deferred scope itemized in the
+  pre-implementation rulings block below (invented Morning Brief
+  attention-total formula, synthetic On-Track formula, Team Overload
+  live metric, billing/revenue live tile without an approved R0 source,
+  AI/composite Attention List, standalone `/dependency` page unless
+  separately approved, production/statutory-rule activation, IMP-061
+  work).
 - **Expected files/areas:** `supabase/` (views/RPC), `src/data/`,
   `src/pages/` (Command Centre, Morning Brief).
 - **Entry criteria:** R0-F green.
 - **Acceptance criteria:** aggregates match row-level truth under Firm A/B
   isolation tests; performance measured on representative volume
-  (API-OQ-03 decision recorded).
+  (API-OQ-03 measured 2026-09-18 on the local representative-volume
+  benchmark — decision recorded below; hosted-network behavior must
+  still be validated at hosted staging acceptance — local loopback
+  latency does not guarantee hosted latency).
 - **Verification:** CI-equivalent + TEST-API-* + TEST-E2E-10.
 - **Exit criteria:** both surfaces live with correct isolation.
-- **Human approval:** no (aggregate security pattern reviewed via tests).
+- **Human approval:** no plan-level security re-approval (aggregate
+  security pattern reviewed via tests) — but per the 2026-09-19
+  pre-implementation recording below, implementation begins only after
+  fresh independent review of this package contract plus explicit human
+  package-contract approval and an explicit implementation instruction.
 - **Git checkpoint:** `feat: command centre and morning brief live`.
 - **Rollback concern:** read-only; safe.
-- **Open/provisional dependency:** API-OQ-03 (resolved here, recorded).
+- **Open/provisional dependency:** ~~API-OQ-03~~ (RESOLVED 2026-09-19 —
+  human-approved B-count; recorded below and normatively in `07`
+  API-R0-DASH / the API-OQ matrix).
+
+**IMP-060 pre-implementation package contract — human-approved rulings
+RECORDED (rulings H1…H8 already human-approved; API-OQ-02 surface ruling
+and API-OQ-03 = B-count decision human-approved; recording 2026-09-19 —
+documentation-only, no implementation authorized).** Dependency:
+IMP-051 = COMPLETE/CLOSED (live deadline read-model foundation).
+
+- **Canonical boundary (unchanged, no redesign):** React → `@/data` →
+  Supabase/PostgREST (or a narrowly justified server/RPC path). No
+  direct Supabase calls from React components (API-ARCH-01/02); fixture
+  and Supabase adapters expose the same interface; no browser
+  service-role key (API-SEC-02); ordinary RLS-respecting PostgREST is
+  used where sufficient (API-ARCH-03); SECURITY DEFINER remains
+  exceptional and may never widen tenant visibility (API-SEC-03);
+  Command Centre itself is API-RT-02 — NO realtime — with freshness
+  through the approved refetch-on-mutate / refetch-on-focus behavior;
+  no cross-tenant aggregation; no new metrics beyond the approved
+  contracts.
+- **API-R0-DASH approved live set:** task counts by state; deadline
+  risk; review pending; active alerts — replacing the relevant
+  fixture/`useLiveAggregates` usage. No additional aggregate metrics
+  are introduced.
+- **H1 — Compliance Health:** live Compliance Health uses
+  `compliance_instances` state truth. The fixture task-category
+  semantics are NOT preserved as the live compliance-health definition;
+  task-state counts remain separately permitted as part of API-R0-DASH.
+- **H2 — Morning Brief "items needing attention today":** no composite
+  definition is invented; the hard-coded fixture value (e.g. 17) is
+  deferred/removed in live mode until a separate approved definition
+  exists.
+- **H3 — Critical / At-Risk / On-Track fixture semantics:** fabricated
+  fixture semantics are NOT preserved and no new On-Track formula is
+  invented; live mode exposes only directly named approved counters —
+  at-risk deadlines, pending reviews, active alerts. NO synthetic
+  "On Track" metric.
+- **H4 — Team Overload:** DEFERRED for live mode; no new
+  workload-analytics contract is introduced in IMP-060.
+- **H5 — Billing / Revenue tile:** DEFERRED for live mode; no R0
+  billing data source exists; no fabricated currency, invoice, billing,
+  or revenue values. (The `07`/TEST-API-04 "revenue aggregates
+  partner/admin only" clause binds only where applicable — if an
+  approved billing source ever exists; IMP-060 ships no live
+  billing/revenue tile.)
+- **H6 — AI/composite Attention List:** DEFERRED; no hidden
+  prioritization, ranking, weighting, or composition algorithm is
+  introduced.
+- **H7 — Deadline/dependency scope:** IMP-060 includes the live
+  Deadline Board, deadline group drill-down, client drill-down, the
+  Command Centre deadline card, and the Command Centre dependency card,
+  built on the IMP-051 live deadline/read-model foundation
+  (API-R0-DLN). A dedicated standalone `/dependency` page remains
+  DEFERRED unless a later authoritative scope decision explicitly adds
+  it.
+- **H8 — API-OQ-03 measurement basis:** API-OQ-03 was resolved only
+  after a local representative-volume benchmark (evidence under
+  `scripts/spikes/api-oq-03/` — decision evidence only, NOT a normative
+  production harness): 2 firms; per firm approximately 200 clients,
+  5,000 compliance instances, 10,000 tasks, 1,000 review items, 500
+  alerts; roles partner, manager, senior, billing. Candidates compared:
+  (A) composite SECURITY INVOKER RPC; (B-fetch) per-section row-fetch
+  approach; (B-count) per-section exact-count approach with limited row
+  fetches where a derivation requires rows.
+- **API-OQ-02 ruling (recorded):** scalar aggregate counts do NOT
+  require special pagination; existing list contracts retain their
+  already-approved pagination behavior; any genuinely new paginated
+  list introduced later uses the API-CONV-02 default 50 / maximum 200
+  unless superseded by a later explicit ruling.
+- **API-OQ-03 RESOLVED = B-COUNT (human-approved):** the normative
+  aggregate architecture is RLS-respecting per-section exact-count
+  reads for the scalar aggregates, with limited row fetches only where
+  required by an approved derivation. B-fetch is NOT the aggregate
+  implementation; the composite-RPC candidate was NOT selected.
+  **B-count production contract:** every count executes under the
+  signed-in caller's RLS context (API-SEC-01); the `x-active-firm` /
+  existing active-firm selector contract applies unchanged (context
+  selection, never authorization, RLS-CTX-01/02); no service-role
+  credentials in the browser (API-SEC-02); tenant visibility is never
+  widened; scalar counts are obtained without fetching entire source
+  datasets; limited row fetches occur only where the approved
+  derivation genuinely requires row-level fields. The exact request
+  count observed in the benchmark (22 per composition) is composition
+  evidence, NOT a normative constant — it may change if approved
+  read-model contracts evolve while preserving semantics.
+  **Active-alert derivation:** unchanged from the approved IMP-042 /
+  IMP-051 semantics and tests — an exact count of directly active
+  persisted alerts, combined where required with a limited fetch of
+  snoozed rows whose row data determines whether they are effectively
+  active (the TEST-API-18 read derivation); no new alert lifecycle
+  formula is invented.
+- **Benchmark evidence (factual decision rationale; LOCAL loopback
+  Supabase):** all three candidates passed the three-way
+  semantic/security validation; 60 recorded runs per candidate per
+  role; 10 warmups; 0 measurement failures/timeouts. Measured p50 ms —
+  Candidate A: partner 194.62, manager 602.30, senior 652.15, billing
+  397.56; Candidate B-fetch: partner 534.87, manager 772.20, senior
+  685.65, billing 209.28; Candidate B-count: partner 104.54, manager
+  195.26, senior 216.71, billing 133.73. Round trips per composition —
+  A: 1; B-fetch: role-dependent, 5–21 in the benchmark; B-count: 22 in
+  the benchmark composition. Representative payload bytes — A: ≈487–542;
+  B-fetch: 10–461,635 depending on role; B-count: 44–9,391 depending on
+  role. **Limitation:** these measurements were taken against local
+  loopback Supabase; hosted-network behavior must still be validated
+  during hosted staging acceptance — local latency does not guarantee
+  hosted latency.
+- **Security evidence (all three candidate shapes):** role-scoped
+  correctness; Firm A → Firm B isolation; Firm B → Firm A isolation;
+  valid Firm B own-context access; suspended-membership denial;
+  removed-membership denial. Candidate A was explicitly SECURITY
+  INVOKER; no service-role path was used for any measured candidate
+  call; the chosen B-count architecture remains ordinary caller-RLS
+  scoped.
+- **Test mapping:** TEST-API-04…08, TEST-E2E-10 as itemized in the
+  TEST-* IDs bullet above; API-SEC-*/API-CONV-*/API-RT requirements
+  remain binding; Command Centre itself is API-RT-02 (no realtime).
+- **Harness non-promotion:** the benchmark harness is temporary
+  decision evidence only — its synthetic UUIDs, local setup/teardown,
+  exact dataset sizes, the benchmark-only Candidate A function name,
+  spike result JSON paths, temporary LOW findings, and local-only
+  cleanup mechanics are NOT normative production requirements.
+- **Expected implementation areas (identified only — NOT created or
+  edited by this recording):** `src/data/**` (read-model data
+  adapters), `src/pages/**` (Command Centre, Morning Brief), and
+  read-model/data-adapter integration; a `supabase/` view enters only
+  if an implementation-discovered read gap escalates per API-A-01.
+- **ALL pre-implementation human decisions for IMP-060 are now
+  RESOLVED and recorded; the IMP-060 package contract records the
+  human-approved H1–H8 rulings and the API-OQ-02 / API-OQ-03
+  resolutions. IMP-060 MAIN IMPLEMENTATION remains NOT AUTHORIZED — it
+  begins only after fresh independent review of this package contract
+  plus explicit human package-contract approval, followed by an
+  explicit implementation instruction; this recording edits contract
+  text only and does NOT authorize implementation, Git checkpoint, or
+  push.**
 
 ---
 
@@ -1571,8 +1736,8 @@ Every TEST-* family defined in `11` is owned by at least one work package:
 | AUD-OQ-02 | `08` | **Resolved 2026-09-01 — layered A+B+C audit-context propagation (IMP-005 spike + human review)** | No (resolved) | — (IMP-013 proceeds on the resolved mechanism) | Resolved at IMP-005 (Harness Gate) |
 | RLS-OQ-04 | `05` | Open — deferred | No | Release 1 client-visible document flagging only | Release 1 specs |
 | API-OQ-01 (= SCH-OQ-02) | `07` | **Resolved 2026-09-05 — R0 vocabulary frozen (`gst_reconciliation`, `tds_return`, `itr_computation`, `financial_statements`, `audit_workpaper`; SCH-17 CHECK)** | No (resolved) | — (IMP-041 proceeds on the frozen vocabulary) | Resolved at IMP-041 contract closure (requester input) |
-| API-OQ-02 | `07` | Open — convention fixed | No | Per-surface pagination values only | During each surface's package |
-| API-OQ-03 | `07` | Open | No | Composite RPC vs per-section views shape | IMP-060 (measured) |
+| API-OQ-02 | `07` | Open — convention fixed; **resolved for the IMP-060 read-model surfaces 2026-09-19 (scalar aggregate counts need no pagination; existing list contracts keep approved pagination; new paginated lists default 50 / max 200 per API-CONV-02)** | No | Per-surface pagination values only | During each surface's package |
+| API-OQ-03 | `07` | **Resolved 2026-09-19 — human-approved B-count: RLS-respecting per-section exact-count reads for scalar aggregates, limited row fetches only where an approved derivation requires rows; measured on local representative volume (all three candidates passed semantic/security validation; B-fetch and the composite-RPC candidate NOT selected); hosted-network behavior validated at hosted staging acceptance** | No (resolved) | — (IMP-060 proceeds on B-count) | Resolved at IMP-060 pre-implementation package contract (human ruling + measurement evidence) |
 | API-OQ-04 (= SCH-OQ-03) | `07` | Open | No | Re-invite persistence semantics (API separates the three operations already) | IMP-010/011 membership implementation |
 | AUTO-OQ-01 (= DEC-OQ-02) | `09` | **Resolved 2026-09-11 — human ruling: pg_cron + hardened in-database scheduler/job functions final for R0; pg_net not required for R0; HTTP/Edge deferred to R1+ (AUTO-SCH-01; AUTO-SCH-02 PASS)** | No (resolved) | — (IMP-050 proceeds on the resolved mechanism) | Resolved at IMP-050 architecture gate (human ruling + validation evidence) |
 | AUTO-OQ-02 | `09` | **Resolved 2026-09-11 — human ruling: transactional outbox final; direct invocation rejected for R0 (AUTO-FLOW-03; SCH-33/34/35 contracts in `06`)** | No (resolved) | — (IMP-050 proceeds on the resolved mechanism) | Resolved at IMP-050 architecture gate (human ruling) |

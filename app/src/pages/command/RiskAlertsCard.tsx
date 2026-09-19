@@ -6,8 +6,9 @@ import { ArrowRight, BadgeCheck, TriangleAlert } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import Badge from '@/components/Badge';
 import Drawer from '@/components/Drawer';
-import { DEMO_TODAY, getClient, getCompliance, ownerOf, useDemoStore } from '@/data';
+import { DEMO_TODAY, getClient, getCompliance, getDataSource, ownerOf, useDemoStore } from '@/data';
 import type { AlertSeverity, FirmAlert } from '@/data';
+import type { DashboardAggregatesState } from '@/hooks/useDashboardAggregates';
 import { cn } from '@/lib/utils';
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
@@ -38,8 +39,26 @@ function timeAgo(iso: string): string {
 /**
  * Section E — Firm Risk Alerts. Severity-triaged rows; clicking opens the
  * detail Drawer (affected entities, recommended action, resolve CTA).
+ *
+ * IMP-060 (H3): in live (Supabase) mode the card renders ONLY the approved
+ * active-alerts counter (dashboardService.activeAlerts, TEST-API-18
+ * effective-active derivation) — no fixture alert list, no drawer, no
+ * resolve action; the /alerts page stays gated so there is NO link to it.
  */
-export default function RiskAlertsCard({ delay = 0 }: { delay?: number }) {
+export default function RiskAlertsCard({
+  delay = 0,
+  dashboard,
+}: {
+  delay?: number;
+  /** IMP-060: the page-composed aggregate state (ONE composition per page). */
+  dashboard: DashboardAggregatesState;
+}) {
+  if (getDataSource() !== 'supabase') return <FixtureRiskAlertsCard delay={delay} />;
+  return <LiveRiskAlertsCard delay={delay} dashboard={dashboard} />;
+}
+
+/** Fixture/demo track — unchanged. */
+function FixtureRiskAlertsCard({ delay }: { delay: number }) {
   const { alerts, activeAlertCount, resolveAlert } = useDemoStore();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<FirmAlert | null>(null);
@@ -205,6 +224,54 @@ export default function RiskAlertsCard({ delay = 0 }: { delay?: number }) {
           </div>
         )}
       </Drawer>
+    </motion.section>
+  );
+}
+
+/** Live (Supabase) track — the approved activeAlerts counter only; the
+ *  aggregate state is composed ONCE by the page and received as a prop. */
+function LiveRiskAlertsCard({
+  delay,
+  dashboard,
+}: {
+  delay: number;
+  dashboard: DashboardAggregatesState;
+}) {
+  const { aggregates, loading, error, refetch } = dashboard;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease: EASE }}
+      aria-label="Firm Risk Alerts"
+      className="rounded-xl border border-line bg-card p-5 shadow-card"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-[17px] leading-6 font-semibold text-ink">Firm Risk Alerts</h2>
+          {!loading && !error && aggregates && <Badge tone="critical">{aggregates.activeAlerts} active</Badge>}
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="mt-4 text-[13px] text-ink-3">Loading…</p>
+      ) : error ? (
+        <div className="mt-4">
+          <p className="text-[13px] text-ink-3">{error.message}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-3 rounded-lg border border-line bg-card px-3 py-1.5 text-[12px] font-medium text-ink-2 transition-colors hover:border-brand/40 hover:text-brand"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <p className="mt-4 text-[12.5px] leading-5 text-ink-3">
+          Detailed alert triage arrives with the Risk Alerts module in a later release.
+        </p>
+      )}
     </motion.section>
   );
 }
