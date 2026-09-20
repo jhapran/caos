@@ -20,6 +20,8 @@ import { defineConfig } from '@playwright/test';
  *                  TEST-E2E-09 (My Work buckets render)
  *   deadlines-command — IMP-060, TEST-E2E-10 (deadlines board + Command
  *                  Centre + Morning Brief render live data)
+ *   search       — IMP-061, TEST-E2E-13 (live Command Palette structured
+ *                  search; R11-A navigable/non-navigable behavior)
  *
  * Browser binaries are intentionally NOT installed by IMP-001 — run
  * `npx playwright install chromium` before first use (Harness Gate / CI).
@@ -101,6 +103,17 @@ export default defineConfig({
             // suites' fixtures.
             name: 'deadlines-command',
             testMatch: 'deadlines-command.spec.ts',
+            expect: { timeout: 30_000 },
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
+          {
+            // IMP-061: TEST-E2E-13 (live Command Palette structured search;
+            // R11-A navigable/non-navigable behavior). Same 3100
+            // supabase-mode server; the spec owns a private firm
+            // (a4400000-…) so project-parallel runs never race the other
+            // suites' fixtures.
+            name: 'search',
+            testMatch: 'search.spec.ts',
             expect: { timeout: 30_000 },
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },

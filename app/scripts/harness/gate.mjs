@@ -10,6 +10,7 @@
  *   → engagement adapter contract → Client 360 composite contract
  *   → review/alerts/My Work integration → automation (IMP-050) integration
  *   → deadlines (IMP-051) integration → dashboard (IMP-060) integration
+ *   → search (IMP-061) integration
  *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
@@ -207,6 +208,14 @@ async function main() {
   // underlying table schema/RLS/audit coverage runs in the phases above).
   currentPhase = 'dashboard-integration';
   run('dashboard-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/dashboard');
+
+  // IMP-061: structured global search contract (TEST-API-21…24 against the
+  // real stack — the SECURITY INVOKER structured_search function's catalog
+  // posture, six-domain projection, caps/ordering, masking, tenant
+  // isolation, input security, and the role/M1-A visibility matrix;
+  // underlying table schema/RLS/audit coverage runs in the phases above).
+  currentPhase = 'search-integration';
+  run('search-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/search');
 
   currentPhase = 'build';
   run('build', 'npm run build');

@@ -66,6 +66,7 @@ const FIXTURE_BRIDGES = new Set([
   join(SRC, 'data', 'alerts', 'fixture.ts'),
   join(SRC, 'data', 'mywork', 'fixture.ts'),
   join(SRC, 'data', 'dashboard', 'fixture.ts'),
+  join(SRC, 'data', 'search', 'fixture.ts'),
 ]);
 
 describe('import boundary — UI layer (API-ARCH-01/02)', () => {
@@ -122,6 +123,7 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'alerts')),
     ...tsFiles(join(SRC, 'data', 'mywork')),
     ...tsFiles(join(SRC, 'data', 'dashboard')),
+    ...tsFiles(join(SRC, 'data', 'search')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
     join(SRC, 'data', 'context.ts'),
@@ -173,6 +175,12 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     // Guards against the scan passing vacuously if the folder moves.
     expect(productionFiles).toContain(join(SRC, 'data', 'dashboard', 'supabase.ts'));
     expect(productionFiles).toContain(join(SRC, 'data', 'dashboard', 'fixture.ts'));
+  });
+
+  it('scans the structured-search adapter modules (IMP-061)', () => {
+    // Guards against the scan passing vacuously if the folder moves.
+    expect(productionFiles).toContain(join(SRC, 'data', 'search', 'supabase.ts'));
+    expect(productionFiles).toContain(join(SRC, 'data', 'search', 'fixture.ts'));
   });
 
   it('scans the engagement adapter modules (IMP-021)', () => {

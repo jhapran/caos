@@ -207,6 +207,16 @@ export {
   OPEN_INSTANCE_STATES,
 } from './dashboard';
 export type { DashboardAggregates, DashboardService } from './dashboard';
+// --- IMP-061: structured global search (API-R0-SRC; IMP061-R1…R11, M1-A) ----
+// No naming hazard (no legacy flat search module) — plain folder specifier.
+export { searchService } from './search';
+export { STRUCTURED_SEARCH_MIN_QUERY_LENGTH } from './search';
+export type {
+  SearchMatchClass,
+  SearchService,
+  StructuredSearchHit,
+  StructuredSearchKind,
+} from './search';
 // --- IMP-042: My Work (API-R0-MWK, DEC-L) --------------------------------------
 // No naming hazard (no legacy flat mywork module) — plain folder specifier,
 // the client360 convention.
