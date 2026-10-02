@@ -511,11 +511,16 @@ IMP-061 (structured global search) is COMPLETE and CLOSED (human
 closure-documentation authorization 2026-10-01; implementation
 checkpoint `213b5b1` `IMP-061: implement structured global search`
 2026-09-20; contract checkpoint `3f03edb`; R11 contract-amendment
-checkpoint `a6f1c29`; the final closure Git checkpoint is b01d644e117ff220f1d804940a8dfd9311676eed — the
-closure documentation candidate is prepared but NOT yet committed or
-pushed, awaiting the Runtime Test gate and explicit human Git
-authorization, following the IMP-050/IMP-051/IMP-060 `docs: close …` +
-closure-pointer-reconcile precedent). The final contract — human rulings
+checkpoint `a6f1c29`; the final closure Git checkpoint is
+b01d644e117ff220f1d804940a8dfd9311676eed (`docs: close IMP-061
+structured global search`), committed and pushed to origin/staging
+after the Runtime Test gate and explicit human Git authorization
+passed, followed by the closure-pointer-reconcile checkpoint
+01595be9f9c767af151fd0e41f187585866d7c9f (`docs: reconcile IMP-061
+closure pointer`), also committed and pushed, becoming
+origin/staging HEAD upon the IMP-061 closure push, following the
+IMP-050/IMP-051/IMP-060
+`docs: close …` + closure-pointer-reconcile precedent). The final contract — human rulings
 IMP061-R1…R11 + IMP061-M1 (= M1-A) recorded normatively in
 `docs/spec/07-api-contract.md` (API-R0-SRC),
 `docs/spec/11-testing-harness.md` (TEST-API-21…24, TEST-E2E-13), and

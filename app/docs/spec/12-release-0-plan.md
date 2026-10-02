@@ -1506,10 +1506,14 @@ IMP-051 = COMPLETE/CLOSED (live deadline read-model foundation).
 **IMP-061 — Structured global search**
 
 - **Status (2026-10-01):** COMPLETE/CLOSED — human closure-documentation
-  authorization 2026-10-01; the final closure Git checkpoint is b01d644e117ff220f1d804940a8dfd9311676eed
-  (the closure documentation candidate is prepared but NOT yet committed
-  or pushed — it awaits the Runtime Test gate and explicit human Git
-  authorization). Historical contract record (facts retained): CONTRACT
+  authorization 2026-10-01; the final closure Git checkpoint is
+  b01d644e117ff220f1d804940a8dfd9311676eed (committed and pushed to
+  origin/staging after the Runtime Test gate and explicit human Git
+  authorization passed, followed by closure-pointer-reconcile checkpoint
+  01595be9f9c767af151fd0e41f187585866d7c9f, also committed and pushed,
+  becoming origin/staging HEAD upon the IMP-061 closure push).
+  Historical contract record (facts
+  retained): CONTRACT
   PHASE 2026-09-19 — contract
   discovery PASS; preliminary rulings finalized; local spike PASS; fresh
   independent spike review PASS (CRITICAL=0, HIGH=0, MEDIUM=2 — both
@@ -1721,9 +1725,14 @@ IMP-051 = COMPLETE/CLOSED (live deadline read-model foundation).
   implementation).
 - **Git checkpoint:** implementation checkpoint `213b5b1` `IMP-061:
   implement structured global search` (2026-09-20); the final closure
-  Git checkpoint (`docs: close IMP-061 …`) is b01d644e117ff220f1d804940a8dfd9311676eed — the closure
-  documentation candidate is prepared but not yet committed or pushed
-  (no commit/push authorized at closure-documentation time).
+  Git checkpoint (`docs: close IMP-061 …`) is
+  b01d644e117ff220f1d804940a8dfd9311676eed, committed and pushed to
+  origin/staging after the Runtime Test gate and explicit human Git
+  authorization passed (no commit/push had been authorized at
+  closure-documentation time; commit/push was subsequently authorized
+  and completed), followed by closure-pointer-reconcile checkpoint
+  01595be9f9c767af151fd0e41f187585866d7c9f, also committed and pushed,
+  becoming origin/staging HEAD upon the IMP-061 closure push.
 - **Rollback concern:** read-only; the function is additive.
 - **Open/provisional dependency:** none — R3/R8/M1 are RESOLVED by the
   final human rulings recorded above.
