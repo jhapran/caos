@@ -280,7 +280,8 @@ TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
 Release-0 state through IMP-062 (CLOSED 2026-10-03 — human
 closure-documentation authorization; the final closure Git checkpoint is
-pending — see the IMP-062 closure record below): 24 / 27 formal R0
+05d037ba6f5889aca11f1ef285310b40fde1ebc7 — see the IMP-062 closure
+record below): 24 / 27 formal R0
 packages
 complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030, IMP-031,
 IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061, IMP-062;
@@ -596,11 +597,13 @@ closure-documentation authorization 2026-10-03; implementation
 checkpoint b6d70477acf8233eb9b9d6ef2a5058f4995c7462 `feat: limited
 realtime` 2026-10-02 — exactly one commit, 25 files; the Git checkpoint
 was independently verified and pushed to origin/staging under explicit
-human authorization; the final closure Git checkpoint is PENDING — the
-closure documentation candidate is prepared but NOT yet committed or
-pushed, awaiting independent verification and explicit human Git
-authorization, following the IMP-050/IMP-051/IMP-060/IMP-061
-`docs: close …` + closure-pointer-reconcile precedent). The durable
+human authorization; the final closure Git checkpoint is
+05d037ba6f5889aca11f1ef285310b40fde1ebc7 (`docs: close IMP-062 limited
+realtime`), committed and pushed to origin/staging under explicit human
+Git authorization after independent closure-checkpoint verification
+passed, becoming origin/staging HEAD upon the IMP-062 closure push,
+following the IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
+closure-pointer-reconcile precedent). The durable
 human rulings are carried by this closure record: IMP062-R1 = R1-B
 (true push transport = database-trigger realtime.send / broadcast to
 private firm-scoped topics `firm:<uuid>:review_queue` /

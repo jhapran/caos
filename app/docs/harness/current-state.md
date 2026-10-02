@@ -12,11 +12,11 @@
 - IMP-062 implementation checkpoint:
   b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`,
   2026-10-02)
-- IMP-062 closure checkpoint: PENDING — the closure documentation
-  candidate is prepared (unstaged working-tree changes, 2026-10-03) but
-  the closure Git checkpoint (`docs: close IMP-062 …`) is NOT yet
-  committed or pushed; it awaits independent verification and explicit
-  human Git authorization, following the
+- IMP-062 closure checkpoint: 05d037ba6f5889aca11f1ef285310b40fde1ebc7
+  (`docs: close IMP-062 limited realtime`), committed and pushed to
+  origin/staging under explicit human Git authorization after
+  independent closure-checkpoint verification passed, becoming
+  origin/staging HEAD upon the IMP-062 closure push, following the
   IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
   closure-pointer-reconcile precedent
 - IMP-062 hosted staging acceptance: PASS (see §4/§6/§6h)
@@ -91,8 +91,8 @@ Remaining formal R0 packages (3 / 27, 11.11%):
   realtime`, 2026-10-02; authoritative Harness Gate PASS 27/27;
   TEST-API-09/10 PASS; hosted staging acceptance PASS; hosted migration
   ledger 14/14 through `20261002000000_limited_realtime.sql`; acceptance
-  cleanup verified; final closure Git checkpoint PENDING — see §1 and
-  §6h). IMP-061 — Structured
+  cleanup verified; final closure Git checkpoint
+  05d037ba6f5889aca11f1ef285310b40fde1ebc7 — see §1 and §6h). IMP-061 — Structured
   global search is COMPLETE/CLOSED (human closure-documentation
   authorization 2026-10-01; implementation checkpoint `213b5b1`
   `IMP-061: implement structured global search`, 2026-09-20; contract
@@ -337,11 +337,18 @@ Remaining formal R0 packages (3 / 27, 11.11%):
   b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`) —
   hosted staging acceptance PASS at the platform/integration level
   (migration applied; the real committed application modules ran
-  unmodified against hosted staging). The deployed Netlify staging
-  frontend REMAINS at the pre-IMP-062 revision `213b5b1` (accepted LOW
-  residual — deployed-frontend UI acceptance was not a normative IMP-062
-  closure requirement; any staging frontend deployment is a separate
-  explicitly authorized action)
+  unmodified against hosted staging). During hosted acceptance the
+  deployed Netlify staging frontend was still at the pre-IMP-062
+  revision `213b5b1` (accepted LOW residual — deployed-frontend UI
+  acceptance was not performed and was not a normative IMP-062 closure
+  requirement; any staging frontend deployment is a separate explicitly
+  authorized action). A later Netlify Production publish showing
+  `staging@b6d7047` (`feat: limited realtime`) was subsequently
+  human-observed in Netlify; that publish was NOT caused by the IMP-062
+  closure HUMAN-GATE or by any CAOS gate — no CAOS gate performed,
+  triggered, or retried any deployment, and no deployed-frontend UI
+  acceptance is claimed. Whether `b6d7047` is currently the live
+  deployed revision is NOT independently verified by this record
 - Accepted implementation checkpoint: `213b5b1`
   (`IMP-061: implement structured global search` —
   deployed on Netlify staging; hosted staging revision verified == this
@@ -352,8 +359,15 @@ Remaining formal R0 packages (3 / 27, 11.11%):
   `1f3db3e` (deployed bundle proven byte-identical to a clean local
   build of that Git HEAD with the staging environment) was the accepted
   checkpoint through IMP-051.
-- Deployment: Published / IMP-061 hosted staging acceptance PASS at
-  revision `213b5b1` (see §6g). Historical: IMP-060 hosted staging
+- Deployment: Published. During IMP-061 hosted staging acceptance the
+  deployed revision was `213b5b1` (see §6g); during IMP-062 hosted
+  acceptance the deployed frontend was still at `213b5b1`, and a later
+  Netlify Production publish showing `staging@b6d7047` (`feat: limited
+  realtime`) was subsequently human-observed — that publish was not
+  caused by any CAOS gate, no deployed-frontend UI acceptance is
+  claimed, and the current live revision is not independently
+  re-verified here (see §6h).
+  Historical: IMP-060 hosted staging
   acceptance PASS 2026-09-19 at revision `d78cfe7` (see §6f); human browser
   acceptance PASS 2026-09-07
   (44/44 browser-gate checks: role-scoped My Work per persona, TEST-E2E-07
@@ -1003,11 +1017,12 @@ Remaining formal R0 packages (3 / 27, 11.11%):
   b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`,
   2026-10-02 — exactly one commit, 25 files; independent checkpoint
   verification PASS; pushed to origin/staging under explicit human
-  authorization, server ref verified). Closure Git checkpoint: PENDING —
-  the closure documentation candidate was human-authorized 2026-10-03
-  and prepared as unstaged working-tree changes; it awaits independent
-  verification and explicit human Git authorization (the
-  IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
+  authorization, server ref verified). Closure Git checkpoint:
+  05d037ba6f5889aca11f1ef285310b40fde1ebc7 (`docs: close IMP-062
+  limited realtime`), committed and pushed to origin/staging under
+  explicit human Git authorization after independent closure-checkpoint
+  verification passed, becoming origin/staging HEAD upon the IMP-062
+  closure push (the IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
   closure-pointer-reconcile precedent applies).
 - Database: migration `20261002000000_limited_realtime.sql` applied to
   hosted staging (project ref `pyrniumcjcvagjygheyu`); hosted migration
