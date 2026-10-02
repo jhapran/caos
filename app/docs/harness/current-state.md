@@ -7,9 +7,21 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human package-closure approval date: 2026-09-19
-- Last CLOSED package: IMP-060 — Command Centre & Morning Brief live
-  data
+- Human closure-documentation authorization date: 2026-10-01 (IMP-061)
+- Last CLOSED package: IMP-061 — Structured global search
+- IMP-061 implementation checkpoint: `213b5b1`
+  (`IMP-061: implement structured global search`, 2026-09-20)
+- IMP-061 contract checkpoint: `3f03edb` (2026-09-19); IMP-061 R11
+  contract-amendment checkpoint: `a6f1c29` (2026-09-20)
+- IMP-061 closure checkpoint: PENDING — the closure documentation
+  candidate is prepared (unstaged working-tree changes, 2026-10-01) but
+  the closure Git checkpoint (`docs: close IMP-061 …`) is NOT yet
+  committed or pushed; it awaits the Runtime Test gate and explicit
+  human Git authorization, following the IMP-050/IMP-051/IMP-060
+  `docs: close …` + closure-pointer-reconcile precedent
+- IMP-061 hosted staging acceptance: PASS (see §4/§6/§6g)
+- Previous CLOSED package: IMP-060 — Command Centre & Morning Brief live
+  data (human package-closure approval 2026-09-19)
 - IMP-060 implementation checkpoint: `d78cfe7`
   (`IMP-060: live Command Centre and Morning Brief read models`)
 - IMP-060 closure checkpoint: `f51ff717b28f093fb94b95dc6e58f829742aea66`
@@ -27,7 +39,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (22 / 27, 81.48%):
+Completed (23 / 27, 85.19%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -42,16 +54,28 @@ Completed (22 / 27, 81.48%):
   evaluation; human package-closure approval 2026-09-18)
 - IMP-060 (Application Read Models — Command Centre & Morning Brief
   live data; human package-closure approval 2026-09-19)
+- IMP-061 (Application Read Models — structured global search; human
+  closure-documentation authorization 2026-10-01)
 
 Remaining formal R0 packages:
 
-- IMP-061, IMP-062 (Application Read Models)
+- IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-061 — Structured global search — IMPLEMENTATION
-  AUTHORIZED / PAUSED FOR R11 CONTRACT AMENDMENT (2026-09-20): contract
+- Current: IMP-062 — Limited Realtime — NOT STARTED and NOT AUTHORIZED
+  (begins only after the IMP-061 final closure Git checkpoint and an
+  explicit human implementation instruction). IMP-061 — Structured
+  global search is COMPLETE/CLOSED (human closure-documentation
+  authorization 2026-10-01; implementation checkpoint `213b5b1`
+  `IMP-061: implement structured global search`, 2026-09-20; contract
+  checkpoint `3f03edb`; R11 contract-amendment checkpoint `a6f1c29`;
+  hosted staging acceptance PASS — API checks 67/67, UI checks 52/52,
+  combined 119/119, combined failures 0; hosted migration ledger 13/13
+  through `20260920000000_structured_search.sql`; acceptance cleanup
+  verified; final closure Git checkpoint PENDING — see §1 and §6g).
+- Historical contract record for IMP-061 (kept for rationale): contract
   discovery PASS; preliminary rulings finalized; local spike PASS; fresh
   independent spike review PASS (CRITICAL=0, HIGH=0, MEDIUM=2 — MEDIUM-1
   resolved as IMP061-M1 = M1-A; MEDIUM-2 resolved by not citing the
@@ -72,14 +96,11 @@ Remaining formal R0 packages:
   `task` / `compliance_instance` / `staff` are searchable but
   non-navigable in R0; no new route or page is introduced — recorded
   normatively in `07` API-R0-SRC, `11` (TEST-API-21, TEST-E2E-13), and
-  `12`. Implementation execution is PAUSED pending (1) the R11 contract
-  reconciliation, (2) a fresh independent R11 contract-amendment review,
-  and (3) an amendment Git checkpoint. No implementation source,
-  migration, or test/harness implementation exists; no hosted/production
-  change has been made; the production SECURITY INVOKER
-  structured-search function lands only through a version-controlled
-  migration during execution.
-- Last CLOSED package: IMP-060 — Command Centre & Morning Brief
+  `12`. The earlier "Implementation execution is PAUSED pending the R11
+  contract reconciliation" status is SUPERSEDED — the R11 amendment
+  checkpoint `a6f1c29` reconciled the contract and implementation then
+  landed (checkpoint `213b5b1`) and closed as recorded above.
+- Previous CLOSED package: IMP-060 — Command Centre & Morning Brief
   live data — CLOSED (human package-closure approval 2026-09-19).
   Acceptance record: primary implementation PASS; focused
   runtime/harness PASS; fresh independent implementation/security
@@ -93,9 +114,6 @@ Remaining formal R0 packages:
   dashboard integration 25/25; Playwright smoke 16/16; all
   security/cleanliness phases PASS); hosted staging acceptance PASS at
   hosted revision `d78cfe7` (see §4/§6/§6f); production untouched.
-- Next after IMP-061: IMP-062 — Limited Realtime — NOT STARTED and NOT
-  AUTHORIZED (begins only after IMP-061 closure and an explicit
-  implementation instruction).
 - Historical pre-implementation record for IMP-060 (kept for
   rationale): all pre-implementation human decisions were RESOLVED and
   recorded before implementation — the H1–H8 human-approved rulings,
@@ -177,9 +195,16 @@ Remaining formal R0 packages:
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260916000000_alert_evaluation.sql` (IMP-051)
-- Hosted staging migration ledger: 12 migrations, local == remote
-  through `20260916000000` (12 / 12)
+- Latest migration: `20260920000000_structured_search.sql` (IMP-061)
+- Hosted staging migration ledger: 13 migrations, local == remote
+  through `20260920000000` (13 / 13)
+- IMP-061 adds ONE version-controlled migration —
+  `20260920000000_structured_search.sql` — installing the production
+  SECURITY INVOKER `structured_search` function (`search_path=''`;
+  EXECUTE to `authenticated` only — PUBLIC denied, `anon` denied, NO
+  explicit `service_role` grant introduced); hosted migration gate PASS
+  and fresh independent hosted DB verification PASS; NO new base table,
+  view, or policy — the catalog posture below is unchanged by IMP-061
 - IMP-060 adds NO migration, NO base table, NO view, NO policy — the
   schema/RLS posture below is unchanged by IMP-060 (its read model is
   application-side B-count composition over existing RLS-protected
@@ -189,7 +214,9 @@ Remaining formal R0 packages:
   deadline read model is two security_invoker views,
   `public.deadline_board` and `public.client_dependency_board`, SELECT
   to authenticated only — anon and service_role denied, no public grant;
-  views are not relkind='r' and carry no policies, so the Ruling
+  views are not relkind='r' and carry no policies; unchanged by IMP-061 —
+  the structured search read path is ONE SECURITY INVOKER function, no
+  table or view — so the Ruling
   2026-09-12 R8 posture — RLS 24/24, FORCE 20, policies 51 — is
   unchanged)
 - IMP-051 structural acceptance (hosted + local): the corrected
@@ -265,15 +292,19 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
-- Accepted implementation checkpoint: `d78cfe7`
-  (`IMP-060: live Command Centre and Morning Brief read models` —
+- Accepted implementation checkpoint: `213b5b1`
+  (`IMP-061: implement structured global search` —
   deployed on Netlify staging; hosted staging revision verified == this
-  SHA at IMP-060 acceptance, revision match YES). Historical: IMP-042's
+  SHA at IMP-061 acceptance, revision match YES; no additional deploy
+  required). Historical: IMP-060's `d78cfe7` (hosted staging revision
+  verified == that SHA at IMP-060 acceptance) was the accepted
+  checkpoint through IMP-060; IMP-042's
   `1f3db3e` (deployed bundle proven byte-identical to a clean local
   build of that Git HEAD with the staging environment) was the accepted
   checkpoint through IMP-051.
-- Deployment: Published / IMP-060 hosted staging acceptance PASS
-  2026-09-19 at revision `d78cfe7` (see §6f). Historical: human browser
+- Deployment: Published / IMP-061 hosted staging acceptance PASS at
+  revision `213b5b1` (see §6g). Historical: IMP-060 hosted staging
+  acceptance PASS 2026-09-19 at revision `d78cfe7` (see §6f); human browser
   acceptance PASS 2026-09-07
   (44/44 browser-gate checks: role-scoped My Work per persona, TEST-E2E-07
   task transition + authorized manager reassignment, TEST-E2E-09
@@ -780,10 +811,101 @@ Remaining formal R0 packages:
 - Production untouched — NOT promoted, NOT authorized; no production
   verification claimed. Statutory default activation NOT performed.
   IMP-061 implementation NOT STARTED at the time of this record (final
-  human rulings recorded 2026-09-19) — see §3 for the live IMP-061
-  state (implementation authorization since GRANTED; execution PAUSED
-  for the IMP061-R11 = R11-A contract amendment; no code, migration, or
-  hosted change).
+  human rulings recorded 2026-09-19) — SUPERSEDED: IMP-061 has since
+  been implemented and CLOSED (implementation checkpoint `213b5b1`;
+  hosted staging acceptance PASS) — see §3 and §6g for the live/closure
+  IMP-061 state.
+
+## 6g. Structured Global Search Facts (IMP-061 — durable; CLOSED 2026-10-01)
+
+- Contract (final human rulings IMP061-R1…R11 + IMP061-M1, recorded
+  normatively in `07` API-R0-SRC, `11` TEST-API-21…24/TEST-E2E-13, and
+  the `12` IMP-061 package contract — implemented exactly): exactly six
+  searchable domains (client, legal_entity, registration, task,
+  compliance_instance, staff); React → `@/data` search service → ONE
+  SECURITY INVOKER `structured_search` database function under ordinary
+  caller RLS (R8-B); server-revalidated active firm — no
+  caller-authoritative firm_id; R3-B hybrid matching (identifiers
+  exact/prefix only; textual names/labels case-insensitive substring
+  with prefix ranked first; literal-input escaping; server-side
+  2-character minimum); caps 5 per kind / 20 global, no pagination,
+  deterministic ordering; masked identifiers (display type + last four
+  only); truthful Offboarded labeling; M1-A RLS-safe composition (no
+  INNER JOIN removal of otherwise-visible compliance instances; no
+  compliance-type-name leakage); R11-A optional truthful navigation —
+  `client` / `legal_entity` / `registration` → `/clients/:clientId`;
+  `task` / `compliance_instance` / `staff` searchable but non-navigable
+  in R0; no new route or page.
+- Git checkpoints: contract `3f03edb` (2026-09-19); R11
+  contract-amendment `a6f1c29` (2026-09-20); implementation `213b5b1`
+  `IMP-061: implement structured global search` (2026-09-20) — the exact
+  implementation patch passed independent review and Runtime Test before
+  commit/push, and the remote implementation checkpoint was
+  independently verified. Closure Git checkpoint: PENDING — the closure
+  documentation candidate was human-authorized 2026-10-01 and prepared
+  as unstaged working-tree changes; it awaits the Runtime Test gate and
+  explicit human Git authorization (the IMP-050/IMP-051/IMP-060
+  `docs: close …` + closure-pointer-reconcile precedent applies).
+- Database: migration `20260920000000_structured_search.sql` applied to
+  hosted staging (migration gate PASS; fresh independent hosted DB
+  verification PASS); hosted migration ledger 13/13 through
+  `20260920000000`; `structured_search` hosted as SECURITY INVOKER with
+  `search_path=''`, EXECUTE to `authenticated` only — PUBLIC denied,
+  `anon` denied, NO explicit `service_role` grant introduced; catalog
+  invariants unchanged — tables 24, RLS 24/24, FORCE RLS 20, policies
+  51; no pg_trgm and no new index (R3 — search indexing is re-evaluated
+  only at materially larger per-firm data volumes using fresh
+  measurement; no numerical threshold).
+- Harness: the dedicated search-integration phase
+  (`tests/integration/search/` via `npm run test:search`, executing
+  TEST-API-21…24) is wired into the standing Harness Gate in
+  `scripts/harness/gate.mjs` — the `11` IMP-061 harness future
+  obligation is discharged — plus Playwright TEST-E2E-13. This is
+  implementation validation; hosted acceptance is recorded separately
+  below.
+- Hosted app: Netlify staging `https://staging.caos.datafabric.in`
+  (the Netlify production branch for that staging site is `staging`)
+  published revision == `213b5b1`; no additional deploy required.
+- Hosted functional acceptance: PASS — API checks 67/67, UI checks
+  52/52, combined 119/119, combined failures 0. Accepted coverage:
+  client search; legal_entity search; registration search; task search;
+  compliance_instance search; staff search; six-domain search; tenant
+  isolation; identifier masking; R11 navigable; R11 non-navigable;
+  Offboarded behavior; M1-A senior; M1-A article; partner, manager,
+  senior, article, and billing role coverage; zero-result state; no
+  fixture fallback; existing staging regression.
+- ERROR_STATE_TRUTHFULNESS: NOT_EXERCISED on hosted staging — accepted
+  non-blocking limitation; no safe non-mutating hosted fault-injection
+  mechanism exists; local component/test coverage remains authoritative
+  for the error states (same class as the IMP-060 hosted rendered-error
+  limitation). This is NOT a hosted PASS and is not recorded as one.
+- Acceptance cleanup (bounded; completed and passed fresh independent
+  verification): deterministic IMP-061 fixture residue ZERO — fixture
+  firms 0, fixture memberships 0, fixture clients 0, fixture legal
+  entities 0, fixture registrations 0, fixture tasks 0, fixture
+  compliance instances 0, fixture event_outbox 0. Retained: six
+  synthetic acceptance profiles, six synthetic auth users, three
+  unrelated synthetic TOTP factors, and append-only audit_log evidence
+  (current verified audit_log count 1103; historical fixture-lifecycle
+  audit evidence retained; NO audit cleanup/deletion performed).
+  Removed: the six imp061-accept TOTP factors and
+  `/tmp/imp061-accept/sessions.json`. The six synthetic acceptance
+  passwords were rotated to fresh random values whose replacements were
+  intentionally not retained. Baseline staging state independently
+  preserved. **The six acceptance identities are intentionally unusable
+  until a future explicitly authorized credential/MFA provisioning
+  gate.** No passwords, TOTP secrets, or tokens are recorded in the
+  repository or this file.
+- LOW-finding accounting: the historical IMP-061 implementation review
+  carried seven LOW findings (HISTORICAL_LOW_COUNT=7). LOW-3 — stale
+  pre-implementation repository status wording describing IMP-061 as
+  implementation-paused / no-implementation — is RESOLVED by the IMP-061
+  closure documentation (all active stale wording removed from the
+  tracked closure record; the historical finding itself is preserved
+  here). LOW-1, LOW-2, LOW-4, LOW-5, LOW-6, LOW-7 remain OPEN;
+  EFFECTIVE_OPEN_LOW_COUNT=6.
+- Production untouched — NOT promoted, NOT authorized; no production
+  verification claimed.
 
 ## 7. Permanent Architecture Boundaries
 
@@ -869,7 +991,8 @@ Remaining formal R0 packages:
   outside the IMP-060 read-model surfaces (resolved for those surfaces
   only, 2026-09-19).
 - IMP-061 deferred search domains (final human ruling IMP061-R2,
-  2026-09-19 — deferrals, not open blockers): contacts, phone search,
+  2026-09-19 — deferrals, not open blockers; IMP-061 CLOSED 2026-10-01 —
+  see §6g): contacts, phone search,
   email search, document search, invoice search, client-portal search,
   semantic search, embeddings, RAG, and pgvector are OUT of IMP-061 and
   are not pulled forward; search indexing / pg_trgm is to be

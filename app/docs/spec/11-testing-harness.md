@@ -668,17 +668,20 @@ instance, one event). Extensions:
   `compliance_types` visibility and no loss of otherwise-visible
   instances from the composition structure (no INNER JOIN removal).
 
-**IMP-061 harness wiring (future obligation — recorded at contract
-reconciliation 2026-09-19; NO harness code is edited at contract time):**
-per the standing repository convention — each live data-backed domain
-surface carries its own integration suite wired into the standing Harness
-Gate (e.g. IMP-051 `tests/integration/deadlines/` →
+**IMP-061 harness wiring (DISCHARGED at implementation — the future
+obligation recorded at the contract reconciliation 2026-09-19 is now
+implemented):** per the standing repository convention — each live
+data-backed domain surface carries its own integration suite wired into
+the standing Harness Gate (e.g. IMP-051 `tests/integration/deadlines/` →
 `deadlines-integration`; IMP-060 `tests/integration/dashboard/` →
-`dashboard-integration`) — IMP-061 introduces a dedicated search
+`dashboard-integration`) — IMP-061 introduced a dedicated search
 integration phase (`tests/integration/search/`, executing
 TEST-API-21…24) wired into `scripts/harness/gate.mjs` during
 implementation. Extending an existing domain phase was rejected: no
-existing phase owns a cross-domain search surface.
+existing phase owns a cross-domain search surface. This records
+implementation validation only — hosted staging acceptance is separately
+recorded (IMP-061 hosted functional acceptance PASS: API checks 67/67,
+UI checks 52/52, combined 119/119, combined failures 0).
 
 ## Security family (TEST-SEC-*)
 
