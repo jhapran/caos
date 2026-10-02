@@ -23,10 +23,13 @@
  *   - NO direct alerts/alert_rules INSERT/UPDATE/DELETE is ever issued
  *     (SELECT-only browser grants; the five Layer-B commands are the only
  *     write paths, API-ARCH-04);
- *   - subscribeAlerts is the API-RT-07 polling fallback: a bare
- *     invalidation tick every ALERTS_POLL_INTERVAL_MS, NO realtime channel
- *     opened, unsubscribe clears the timer; without an active firm it is a
- *     no-op.
+ *   - subscribeAlerts is IMP-062 R1-B: exactly ONE private channel on the
+ *     firm:<uuid>:alerts topic delivering bare invalidations, with the
+ *     API-RT-07 polling backstop always-on (a bare tick every
+ *     ALERTS_POLL_INTERVAL_MS); unsubscribe clears the timer and removes
+ *     the channel; without an active firm it is a no-op; a malformed firm
+ *     id fails closed to polling-only; subscriptions-disabled
+ *     (TEST-API-09) runs polling alone.
  *
  * The supabase adapter is imported DIRECTLY here (not via the
  * DATA_SOURCE-pinned selector) — a test-only reach into the implementation
@@ -83,9 +86,18 @@ interface CapturedRpc {
   name: string;
   params: Record<string, unknown>;
 }
+interface CapturedChannel {
+  name: string;
+  on: { event: string; config: Record<string, unknown> }[];
+  subscribed: boolean;
+  removed: boolean;
+  emit: () => void;
+}
 
 const tableCalls: CapturedTable[] = [];
 const rpcCalls: CapturedRpc[] = [];
+const channels: CapturedChannel[] = [];
+const channelEntries = new Map<object, CapturedChannel>();
 let rpcResults: Record<string, unknown> = {};
 let listRows: Record<string, unknown[]> = {};
 
@@ -122,13 +134,44 @@ vi.mock('@/lib/supabaseClient', () => ({
       rpcCalls.push({ name, params });
       return { data: rpcResults[name] ?? null, error: null };
     },
-    // Any realtime channel usage must show up in tests as a failure signal.
-    channel: () => {
-      throw new Error('no realtime channel may be opened (API-RT-07 polling fallback)');
+    // IMP-062 R1-B: the firm-topic invalidation channel is captured (not
+    // forbidden) — exactly one per topic, removed on last release.
+    channel: (name: string) => {
+      let invalidate: (() => void) | null = null;
+      const entry: CapturedChannel = {
+        name,
+        on: [],
+        subscribed: false,
+        removed: false,
+        emit: () => invalidate?.(),
+      };
+      const channel = {
+        on: (event: string, config: Record<string, unknown>, cb: () => void) => {
+          entry.on.push({ event, config });
+          invalidate = cb;
+          return channel;
+        },
+        subscribe: () => {
+          entry.subscribed = true;
+          return channel;
+        },
+      };
+      channels.push(entry);
+      channelEntries.set(channel, entry);
+      return channel;
+    },
+    removeChannel: (channel: unknown) => {
+      const entry = channelEntries.get(channel as object);
+      if (entry) entry.removed = true;
+      return Promise.resolve('ok');
+    },
+    auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
     },
   }),
 }));
 
+import { resetRealtimeHubForTests, setRealtimeChannelsEnabled } from '@/data/realtime/hub';
 import { ALERTS_POLL_INTERVAL_MS, supabaseAlerts } from '@/data/alerts/supabase';
 
 describe('supabase alerts adapter — reads', () => {
@@ -466,33 +509,50 @@ describe('supabase alerts adapter — rule administration (RLS-ARL-01 + RLS-AAL-
   });
 });
 
-describe('supabase alerts adapter — freshness (API-RT-01 via the API-RT-07 polling fallback)', () => {
+const RT_FIRM = 'a4200000-0000-4000-8000-0000000000a2';
+const RT_TOPIC = `firm:${RT_FIRM}:alerts`;
+
+describe('supabase alerts adapter — freshness (API-RT-01: IMP-062 R1-B channel + API-RT-07 polling backstop)', () => {
   beforeEach(() => {
+    channels.length = 0;
     vi.useFakeTimers();
-    setActiveFirm('firm-1');
+    setActiveFirm(RT_FIRM);
+    resetRealtimeHubForTests();
   });
 
   afterEach(() => {
+    resetRealtimeHubForTests();
     vi.useRealTimers();
     clearActiveFirm();
   });
 
-  it('ticks invalidation on the polling interval and opens NO realtime channel', () => {
+  it('opens exactly ONE private channel on the firm alerts topic and ticks polling invalidations', () => {
     let invalidated = 0;
     const unsubscribe = supabaseAlerts.subscribeAlerts(() => {
       invalidated += 1;
     });
-    // No immediate fire, and no postgres_changes channel at all (the mock
-    // throws if one is opened) — the approved API-RT-07 fallback is polling.
+
+    // ONE private channel on the firm alerts topic (IMP-062 R1-B).
+    expect(channels).toHaveLength(1);
+    expect(channels[0].name).toBe(RT_TOPIC);
+    expect(channels[0].on[0]).toMatchObject({
+      event: 'broadcast',
+      config: { event: 'invalidate' },
+    });
+
+    // No immediate fire from either mechanism; the always-on polling
+    // backstop ticks; a broadcast is the SAME bare invalidation.
     expect(invalidated).toBe(0);
     vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS);
     expect(invalidated).toBe(1);
-    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS * 2);
+    channels[0].emit();
+    expect(invalidated).toBe(2);
+    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS);
     expect(invalidated).toBe(3);
     unsubscribe();
   });
 
-  it('unsubscribe clears the timer — no further invalidations, no leak', () => {
+  it('unsubscribe clears the timer and removes the channel — no leak', () => {
     let invalidated = 0;
     const unsubscribe = supabaseAlerts.subscribeAlerts(() => {
       invalidated += 1;
@@ -503,6 +563,7 @@ describe('supabase alerts adapter — freshness (API-RT-01 via the API-RT-07 pol
     vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS * 5);
     expect(invalidated).toBe(1);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels[0].removed).toBe(true);
   });
 
   it('without an active firm the subscription is a no-op', () => {
@@ -510,10 +571,36 @@ describe('supabase alerts adapter — freshness (API-RT-01 via the API-RT-07 pol
     const unsubscribe = supabaseAlerts.subscribeAlerts(() => {});
     vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS * 2);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels).toHaveLength(0);
     expect(() => unsubscribe()).not.toThrow();
   });
 
-  it('simultaneous consumers poll on independent timers and unsubscribe independently', () => {
+  it('a malformed firm id fails closed to polling-only — no channel, ticks continue', () => {
+    setActiveFirm('firm-1'); // not a canonical UUID → no topic, no channel
+    let invalidated = 0;
+    const unsubscribe = supabaseAlerts.subscribeAlerts(() => {
+      invalidated += 1;
+    });
+    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS);
+    expect(invalidated).toBe(1);
+    unsubscribe();
+  });
+
+  it('subscriptions disabled (TEST-API-09) — polling only, no channel, same invalidation contract', () => {
+    setRealtimeChannelsEnabled(false);
+    let invalidated = 0;
+    const unsubscribe = supabaseAlerts.subscribeAlerts(() => {
+      invalidated += 1;
+    });
+    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS * 2);
+    expect(invalidated).toBe(2);
+    unsubscribe();
+    setRealtimeChannelsEnabled(true);
+  });
+
+  it('simultaneous consumers share the one channel, poll on independent timers and unsubscribe independently', () => {
     let first = 0;
     let second = 0;
     const unsubFirst = supabaseAlerts.subscribeAlerts(() => {
@@ -522,14 +609,22 @@ describe('supabase alerts adapter — freshness (API-RT-01 via the API-RT-07 pol
     const unsubSecond = supabaseAlerts.subscribeAlerts(() => {
       second += 1;
     });
+    expect(channels).toHaveLength(1);
+
     vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS);
     expect(first).toBe(1);
     expect(second).toBe(1);
+
+    // A broadcast reaches every remaining consumer.
     unsubFirst();
-    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS);
+    channels[0].emit();
     expect(first).toBe(1);
     expect(second).toBe(2);
+    expect(channels[0].removed).toBe(false);
+
     unsubSecond();
+    vi.advanceTimersByTime(ALERTS_POLL_INTERVAL_MS * 3);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels[0].removed).toBe(true);
   });
 });

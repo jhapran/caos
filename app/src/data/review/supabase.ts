@@ -21,22 +21,27 @@
  * arrives as { status: 'already_applied', … } and is returned as a DTO,
  * never an error.
  *
- * Freshness (API-RT-01/03/05, API-RT-07): subscribeReviewQueue is a
- * provider-neutral invalidation subscription. The Supabase implementation
- * uses the APPROVED API-RT-07 POLLING FALLBACK: authenticated
- * postgres_changes cannot satisfy the R0 active-firm RLS context
- * (realtime's per-row RLS evaluation provides role + request.jwt.claims
- * only — never request.headers — so req_active_firm() is NULL there and
- * every tenant row is filtered out; proven by the 2026-09-06 executable
- * differential harness run). Every poll tick is treated purely as an
- * invalidation signal — the consumer re-reads through the normal
- * RLS-controlled list, so polling never widens authorization.
+ * Freshness (API-RT-01…07): subscribeReviewQueue is a provider-neutral
+ * invalidation subscription. The Supabase implementation is IMP-062 R1-B
+ * (delegated to src/data/realtime): a database-trigger broadcast on the
+ * private firm:<firm_id>:review_queue topic (authorized by
+ * membership-scoped realtime.messages RLS) delivers a bare invalidation —
+ * NEVER payload data — and the consumer re-reads through the normal
+ * RLS-controlled list. The approved API-RT-07 POLLING FALLBACK stays
+ * always-on underneath as the resilience backstop (missed/duplicate/
+ * reordered events and write-free read-derivations are healed within one
+ * interval), and it remains the whole mechanism when channels are disabled
+ * or a channel failure goes terminal (API-RT-05/07). Authenticated
+ * postgres_changes remains unused: it cannot satisfy the R0 active-firm
+ * RLS context (realtime's per-row RLS evaluation provides role +
+ * request.jwt.claims only — never request.headers — proven by the
+ * 2026-09-06 executable differential harness run).
  *
  * Errors are translated once through toApiError() — no Supabase SDK or
  * PostgREST types cross this boundary (API-ARCH-01/02, API-ERR-01).
  */
-import { getActiveFirm } from '@/data/context';
 import { ApiError, toApiError, type ApiErrorKind } from '@/data/errors';
+import { subscribeFirmInvalidation } from '@/data/realtime';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 
 import type { TaskCommentRecord, TaskRecord, TaskStatus } from '../tasks/types';
@@ -187,10 +192,9 @@ function denialError(result: { kind?: ApiErrorKind; message?: string }): ApiErro
   return new ApiError(result.kind ?? 'internal', result.message ?? 'command denied');
 }
 
-// API-RT-07 fallback interval. Authenticated postgres_changes cannot
-// satisfy the R0 active-firm RLS context (see the header above), so the
-// review queue count/list freshness uses the approved polling fallback.
-// Implementation parameter — tuneable later, NOT a product/SLA guarantee.
+// API-RT-07 fallback interval — the always-on resilience backstop beneath
+// the IMP-062 R1-B channel (see the header above). Implementation
+// parameter — tuneable later, NOT a product/SLA guarantee.
 export const REVIEW_QUEUE_POLL_INTERVAL_MS = 15_000;
 
 export const supabaseReview: ReviewService = {
@@ -262,16 +266,12 @@ export const supabaseReview: ReviewService = {
   },
 
   subscribeReviewQueue(onInvalidate) {
-    // API-RT-07 polling fallback: each tick is a bare invalidation signal —
-    // no payload, no channel, no client-side authorization; the consumer
-    // re-reads through the RLS-controlled list (API-RT-03/05). Every
-    // consumer owns an independent timer (Navbar badge + queue page may be
-    // mounted simultaneously); unsubscribe always clears it.
-    const firmId = getActiveFirm();
-    if (!firmId) return () => {}; // no selector context → no subscription
-    const timer = setInterval(onInvalidate, REVIEW_QUEUE_POLL_INTERVAL_MS);
-    return () => {
-      clearInterval(timer);
-    };
+    // IMP-062 R1-B: private firm-topic channel (prompt bare invalidation)
+    // + the always-on API-RT-07 polling backstop, behind the unchanged
+    // provider-neutral contract. Every signal is a bare invalidation — the
+    // consumer re-reads through the RLS-controlled list (API-RT-03/05).
+    // Consumers share ONE channel per topic (hub); polling timers stay
+    // per-consumer; unsubscribe always tears down both.
+    return subscribeFirmInvalidation('review_queue', onInvalidate, REVIEW_QUEUE_POLL_INTERVAL_MS);
   },
 };

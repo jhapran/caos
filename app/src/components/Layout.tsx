@@ -63,9 +63,10 @@ export default function Layout() {
   // the demo-store overlay count EXACTLY as before (API-RT-04). In Supabase
   // mode the badge reads the RLS-filtered active count through
   // alertsService.listAlerts and stays fresh via the subscribeAlerts
-  // invalidation subscription (the approved API-RT-07 polling fallback —
-  // bare invalidation → authoritative re-read, never payload data). A failed
-  // read renders no badge (truthful unknown), never a fabricated zero.
+  // invalidation subscription (IMP-062 R1-B: private firm-topic channel +
+  // always-on API-RT-07 polling backstop — bare invalidation →
+  // authoritative re-read, never payload data). A failed read renders no
+  // badge (truthful unknown), never a fabricated zero.
   const [liveAlertCount, setLiveAlertCount] = useState<number | null>(null);
   useEffect(() => {
     if (fixture) return;

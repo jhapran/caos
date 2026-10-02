@@ -5,9 +5,12 @@
  * One place that owns: the initial RLS-filtered queue read, the loading /
  * error states, manual refetch, and the API-RT-01 invalidation
  * subscription (freshness signal → refetch through reviewService; the
- * signal never carries data — the Supabase implementation is the approved
- * API-RT-07 polling fallback). The subscription is established once per
- * mounted consumer and always unsubscribed on cleanup.
+ * signal never carries data — the Supabase implementation is IMP-062 R1-B:
+ * a private firm-topic channel with the approved API-RT-07 polling
+ * fallback always-on underneath). The subscription is established once per
+ * mounted consumer and always unsubscribed on cleanup. Route re-entry
+ * re-mounts this hook, so the initial read IS the API-RT-06 re-entry
+ * authoritative refresh.
  */
 import { useCallback, useEffect, useState } from 'react';
 

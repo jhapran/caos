@@ -159,6 +159,9 @@ const A = {
 // The accepted IMP-≤051 public-schema SECURITY DEFINER inventory (pinned
 // against the live catalog at suite authoring; identical to the
 // rls-catalog.test.ts baseline). IMP-060 adds NO database objects.
+// IMP-062 adds exactly TWO definer objects: the R1-B broadcast trigger
+// functions (trigger-invoked only, EXECUTE revoked from every role,
+// broadcast failure contained — reviewed contract).
 const EXPECTED_DEFINER_FUNCTIONS = [
   'accept_invitation',
   'acknowledge_alert',
@@ -187,6 +190,8 @@ const EXPECTED_DEFINER_FUNCTIONS = [
   'event_publish_trg',
   'generate_profile_instances',
   'generate_successor_instance',
+  'imp062_rt_broadcast_alerts',
+  'imp062_rt_broadcast_review_queue',
   'invite_member',
   'list_client_identities',
   'list_engagement_letter_statuses',

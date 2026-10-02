@@ -18,10 +18,14 @@
  *     is a DTO, never an error; embedded task/comment rows map onto the
  *     camelCase DTOs;
  *   - NO direct review_items INSERT/UPDATE/DELETE is ever issued;
- *   - subscribeReviewQueue is the API-RT-07 polling fallback: a bare
- *     invalidation tick every REVIEW_QUEUE_POLL_INTERVAL_MS, NO realtime
- *     channel opened, unsubscribe clears the timer; without an active
- *     firm it is a no-op.
+ *   - subscribeReviewQueue is IMP-062 R1-B: exactly ONE private channel on
+ *     the firm:<uuid>:review_queue topic (shared by simultaneous consumers)
+ *     delivering bare invalidations, with the API-RT-07 polling backstop
+ *     always-on (a bare tick every REVIEW_QUEUE_POLL_INTERVAL_MS);
+ *     unsubscribe clears the timer and the last release removes the
+ *     channel; without an active firm it is a no-op; a malformed firm id
+ *     fails closed to polling-only; subscriptions-disabled (TEST-API-09)
+ *     runs polling alone.
  *
  * The supabase adapter is imported DIRECTLY here (not via the
  * DATA_SOURCE-pinned selector) — a test-only reach into the implementation
@@ -173,9 +177,13 @@ vi.mock('@/lib/supabaseClient', () => ({
       if (entry) entry.removed = true;
       return Promise.resolve('ok');
     },
+    auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    },
   }),
 }));
 
+import { resetRealtimeHubForTests, setRealtimeChannelsEnabled } from '@/data/realtime/hub';
 import { REVIEW_QUEUE_POLL_INTERVAL_MS, supabaseReview } from '@/data/review/supabase';
 
 /** Keys no browser caller may ever send on submission (server-controlled). */
@@ -423,38 +431,62 @@ describe('supabase review adapter — decide_review_item', () => {
   });
 });
 
-describe('supabase review adapter — queue freshness (API-RT-01 via the API-RT-07 polling fallback)', () => {
+const RT_FIRM = 'a4100000-0000-4000-8000-0000000000a1';
+const RT_TOPIC = `firm:${RT_FIRM}:review_queue`;
+
+describe('supabase review adapter — queue freshness (API-RT-01: IMP-062 R1-B channel + API-RT-07 polling backstop)', () => {
   beforeEach(() => {
     channels.length = 0;
     vi.useFakeTimers();
-    setActiveFirm('firm-1');
+    setActiveFirm(RT_FIRM);
+    resetRealtimeHubForTests();
   });
 
   afterEach(() => {
+    resetRealtimeHubForTests();
     vi.useRealTimers();
     clearActiveFirm();
   });
 
-  it('ticks invalidation on the polling interval and opens NO realtime channel', () => {
-    let invalidated = 0;
-    const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
-      invalidated += 1;
+  it('opens exactly ONE private channel on the firm topic, shared by simultaneous consumers, plus per-consumer polling ticks', () => {
+    let pageInvalidated = 0;
+    let badgeInvalidated = 0;
+    const unsubPage = supabaseReview.subscribeReviewQueue(() => {
+      pageInvalidated += 1;
     });
-    // No immediate fire, and no postgres_changes channel at all — the
-    // 2026-09-06 differential harness run proved authenticated realtime
-    // cannot satisfy the R0 active-firm RLS context (request.headers is
-    // unavailable in realtime's RLS evaluation), so the approved API-RT-07
-    // fallback is polling.
-    expect(invalidated).toBe(0);
-    expect(channels).toHaveLength(0);
+    const unsubBadge = supabaseReview.subscribeReviewQueue(() => {
+      badgeInvalidated += 1;
+    });
+
+    // ONE channel per topic per client (reviewed contract) — the queue
+    // page and the Navbar badge share it through the hub.
+    expect(channels).toHaveLength(1);
+    expect(channels[0].name).toBe(RT_TOPIC);
+    expect(channels[0].on[0]).toMatchObject({
+      event: 'broadcast',
+      config: { event: 'invalidate' },
+    });
+
+    // No immediate fire from either mechanism.
+    expect(pageInvalidated).toBe(0);
+    expect(badgeInvalidated).toBe(0);
+
+    // The always-on polling backstop ticks for every consumer.
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
-    expect(invalidated).toBe(1);
-    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 2);
-    expect(invalidated).toBe(3);
-    unsubscribe();
+    expect(pageInvalidated).toBe(1);
+    expect(badgeInvalidated).toBe(1);
+
+    // A broadcast invalidation reaches every consumer as the SAME bare
+    // signal (payload never surfaced).
+    channels[0].emit();
+    expect(pageInvalidated).toBe(2);
+    expect(badgeInvalidated).toBe(2);
+
+    unsubPage();
+    unsubBadge();
   });
 
-  it('unsubscribe clears the timer — no further invalidations, no leak', () => {
+  it('unsubscribe clears the timer and the last release removes the channel — no leak', () => {
     let invalidated = 0;
     const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
       invalidated += 1;
@@ -465,6 +497,7 @@ describe('supabase review adapter — queue freshness (API-RT-01 via the API-RT-
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 5);
     expect(invalidated).toBe(1);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels[0].removed).toBe(true);
   });
 
   it('without an active firm the subscription is a no-op', () => {
@@ -472,10 +505,36 @@ describe('supabase review adapter — queue freshness (API-RT-01 via the API-RT-
     const unsubscribe = supabaseReview.subscribeReviewQueue(() => {});
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 2);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels).toHaveLength(0);
     expect(() => unsubscribe()).not.toThrow();
   });
 
-  it('simultaneous consumers (Navbar badge + queue page) poll on independent timers and unsubscribe independently', () => {
+  it('a malformed firm id fails closed to polling-only — no channel, ticks continue', () => {
+    setActiveFirm('firm-1'); // not a canonical UUID → no topic, no channel
+    let invalidated = 0;
+    const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
+      invalidated += 1;
+    });
+    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
+    expect(invalidated).toBe(1);
+    unsubscribe();
+  });
+
+  it('subscriptions disabled (TEST-API-09) — polling only, no channel, same invalidation contract', () => {
+    setRealtimeChannelsEnabled(false);
+    let invalidated = 0;
+    const unsubscribe = supabaseReview.subscribeReviewQueue(() => {
+      invalidated += 1;
+    });
+    expect(channels).toHaveLength(0);
+    vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 2);
+    expect(invalidated).toBe(2);
+    unsubscribe();
+    setRealtimeChannelsEnabled(true);
+  });
+
+  it('simultaneous consumers poll on independent timers and unsubscribe independently; the shared channel outlives the first unsubscribe', () => {
     let first = 0;
     let second = 0;
     const unsubFirst = supabaseReview.subscribeReviewQueue(() => {
@@ -484,20 +543,24 @@ describe('supabase review adapter — queue freshness (API-RT-01 via the API-RT-
     const unsubSecond = supabaseReview.subscribeReviewQueue(() => {
       second += 1;
     });
+    expect(channels).toHaveLength(1);
 
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
     expect(first).toBe(1);
     expect(second).toBe(1);
 
-    // Unsubscribing one stops only its own timer.
+    // Unsubscribing one stops only its own timer; the shared channel stays
+    // for the remaining consumer.
     unsubFirst();
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS);
     expect(first).toBe(1);
     expect(second).toBe(2);
+    expect(channels[0].removed).toBe(false);
 
     unsubSecond();
     vi.advanceTimersByTime(REVIEW_QUEUE_POLL_INTERVAL_MS * 3);
     expect(second).toBe(2);
     expect(vi.getTimerCount()).toBe(0);
+    expect(channels[0].removed).toBe(true);
   });
 });

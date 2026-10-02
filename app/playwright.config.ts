@@ -117,6 +117,18 @@ export default defineConfig({
             expect: { timeout: 30_000 },
             use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
           },
+          {
+            // IMP-062: API-RT-01(b) alert bell badge freshness without
+            // reload (R1-B private topic + API-RT-07 polling backstop).
+            // Same 3100 supabase-mode server; the spec owns a private firm
+            // (a4500000-…) and signs in with USER_MULTI_FIRM (unused by any
+            // other project) so project-parallel runs never race the other
+            // suites' fixtures or MFA factors.
+            name: 'alert-badge',
+            testMatch: 'alert-badge.spec.ts',
+            expect: { timeout: 30_000 },
+            use: { browserName: 'chromium' as const, baseURL: 'http://127.0.0.1:3100' },
+          },
         ]
       : []),
   ],

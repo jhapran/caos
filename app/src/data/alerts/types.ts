@@ -253,10 +253,11 @@ export interface AlertsService {
    * callback means "re-read through the normal RLS-controlled list" —
    * freshness signals never carry business data (API-RT-03/05). Returns the
    * unsubscribe function; subscriptions require an active-firm context and
-   * are cleaned up by the caller. The Supabase implementation uses the
-   * approved API-RT-07 polling fallback (see alerts/supabase.ts); fixture
-   * mode simulates this locally (API-RT-04) — no Supabase channel is ever
-   * opened in demo mode.
+   * are cleaned up by the caller. The Supabase implementation is IMP-062
+   * R1-B: a private firm-topic invalidation channel with the approved
+   * API-RT-07 polling fallback always-on underneath (see
+   * alerts/supabase.ts); fixture mode simulates this locally (API-RT-04) —
+   * no Supabase channel is ever opened in demo mode.
    */
   subscribeAlerts(onInvalidate: () => void): () => void;
 }

@@ -182,9 +182,9 @@ export interface ReviewService {
    * The callback means "re-read through the normal RLS-controlled list" —
    * freshness signals never carry business data (API-RT-03/05). Returns
    * the unsubscribe function; subscriptions require an active-firm context
-   * and are cleaned up by the caller. The Supabase implementation uses the
-   * approved API-RT-07 polling fallback (authenticated postgres_changes
-   * cannot satisfy the R0 active-firm RLS context — see
+   * and are cleaned up by the caller. The Supabase implementation is
+   * IMP-062 R1-B: a private firm-topic invalidation channel with the
+   * approved API-RT-07 polling fallback always-on underneath (see
    * review/supabase.ts); fixture mode simulates this locally (API-RT-04) —
    * no Supabase channel is ever opened in demo mode.
    */

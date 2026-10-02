@@ -10,7 +10,7 @@
  *   → engagement adapter contract → Client 360 composite contract
  *   → review/alerts/My Work integration → automation (IMP-050) integration
  *   → deadlines (IMP-051) integration → dashboard (IMP-060) integration
- *   → search (IMP-061) integration
+ *   → search (IMP-061) integration → realtime (IMP-062) integration
  *   → production build → Playwright smoke → network-binding security gate
  *   → MCP regression → database cleanliness + harness verification
  *   → secret scan (TEST-SEC-01 harness level) → summary
@@ -216,6 +216,15 @@ async function main() {
   // underlying table schema/RLS/audit coverage runs in the phases above).
   currentPhase = 'search-integration';
   run('search-integration', 'npx vitest run -c vitest.integration.config.ts tests/integration/search');
+
+  // IMP-062: limited realtime contract (TEST-API-10 + the R1-B security
+  // posture against the real stack — same-firm trigger-broadcast delivery,
+  // invalidation-only payloads, uniform cross-firm/forged-topic/anonymous
+  // denial, client-publish denial, revocation-at-refresh, reconnect
+  // reauthorization, pinned DML coverage; app-table schema/RLS/audit
+  // coverage runs in the phases above).
+  currentPhase = 'realtime-integration';
+  run('realtime-integration', 'npm run test:realtime');
 
   currentPhase = 'build';
   run('build', 'npm run build');
@@ -424,6 +433,18 @@ async function main() {
     ).trim();
     if (policies !== expectedPolicies.join(',')) {
       throw new Error(`public policies are [${policies}], expected [${expectedPolicies.join(',')}] (IMP-012/013/020/021/030/031/040/041/042; IMP-050 SCH-33/34/35 are zero-policy zero-browser-grant postures — Ruling R8 keeps the count at 51)`);
+    }
+    // IMP-062: the realtime.messages authorization posture is exactly the
+    // two pinned policies — ONE permissive membership-scoped SELECT and the
+    // deny-all INSERT. Any additional permissive realtime.messages policy
+    // widens the realtime surface and fails the gate (reviewed contract:
+    // no further permissive policy without review).
+    const realtimePolicies = psql(
+      `select coalesce(string_agg(policyname || ':' || cmd, ',' order by policyname), '')
+       from pg_policies where schemaname = 'realtime' and tablename = 'messages'`,
+    ).trim();
+    if (realtimePolicies !== 'imp062_rt_messages_insert_deny:INSERT,imp062_rt_messages_select:SELECT') {
+      throw new Error(`realtime.messages policies are [${realtimePolicies}], expected exactly [imp062_rt_messages_insert_deny:INSERT,imp062_rt_messages_select:SELECT] (IMP-062)`);
     }
     execSync('npm run db:verify:harness', { stdio: 'pipe' });
     return 'no hgate_/decj_/audctx_ objects; public tables = exactly tenant core + audit_log + client hierarchy + engagements + compliance rules + compliance profiles/instances + task family + review_items + alerts/alert_rules + event_outbox/scheduler_job_runs/scheduler_dead_letters (committed IMP-010/013/020/021/030/031/040/041/042/050 migrations); RLS posture verified (RLS on all 24, FORCE on 20 — SCH-33/SCH-35 forced, SCH-34 enabled-not-forced per Ruling R8 — 51 expected policies, zero browser grants on the automation records); 16 deterministic identities verified';

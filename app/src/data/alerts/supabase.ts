@@ -29,21 +29,27 @@
  * effectiveStatus, and the status list-filter matches the DERIVED status.
  * IMP-042 performs NO expiry writes.
  *
- * Freshness (API-RT-01/03/05, API-RT-07): subscribeAlerts is a
- * provider-neutral invalidation subscription. The Supabase implementation
- * uses the APPROVED API-RT-07 POLLING FALLBACK (human-ruled at IMP-042
- * contract reconciliation 2026-09-06; the IMP-041 differential harness
- * proved authenticated postgres_changes cannot satisfy the R0 active-firm
- * RLS context): every poll tick is a bare invalidation signal — the
- * consumer re-reads through the normal RLS-controlled list, so polling
- * never widens authorization. No postgres_changes dependency, no realtime
- * publication.
+ * Freshness (API-RT-01…07): subscribeAlerts is a provider-neutral
+ * invalidation subscription. The Supabase implementation is IMP-062 R1-B
+ * (delegated to src/data/realtime): a database-trigger broadcast on the
+ * private firm:<firm_id>:alerts topic (authorized by membership-scoped
+ * realtime.messages RLS) delivers a bare invalidation — NEVER payload
+ * data — and the consumer re-reads through the normal RLS-controlled
+ * list. The approved API-RT-07 POLLING FALLBACK (human-ruled at IMP-042
+ * contract reconciliation 2026-09-06) stays always-on underneath as the
+ * resilience backstop — it is also what heals the write-free snooze-expiry
+ * read derivation (TEST-API-18), which produces no broadcast — and it
+ * remains the whole mechanism when channels are disabled or a channel
+ * failure goes terminal (API-RT-05/07). No postgres_changes dependency,
+ * no realtime publication (the IMP-041 differential harness proved
+ * authenticated postgres_changes cannot satisfy the R0 active-firm RLS
+ * context).
  *
  * Errors are translated once through toApiError() — no Supabase SDK or
  * PostgREST types cross this boundary (API-ARCH-01/02, API-ERR-01).
  */
-import { getActiveFirm } from '@/data/context';
 import { ApiError, toApiError, type ApiErrorKind } from '@/data/errors';
+import { subscribeFirmInvalidation } from '@/data/realtime';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 
 import {
@@ -193,11 +199,10 @@ function mapCommandResult(result: AlertCommandRpcResult): AlertTransitionResult 
   };
 }
 
-// API-RT-07 fallback interval. Authenticated postgres_changes cannot
-// satisfy the R0 active-firm RLS context (see the header above), so alert
-// list/count freshness uses the approved polling fallback — the same
-// sanctioned pattern as subscribeReviewQueue (IMP-041). Implementation
-// parameter — tuneable later, NOT a product/SLA guarantee.
+// API-RT-07 fallback interval — the always-on resilience backstop beneath
+// the IMP-062 R1-B channel (see the header above; same sanctioned pattern
+// as subscribeReviewQueue). Implementation parameter — tuneable later, NOT
+// a product/SLA guarantee.
 export const ALERTS_POLL_INTERVAL_MS = 15_000;
 
 export const supabaseAlerts: AlertsService = {
@@ -301,15 +306,11 @@ export const supabaseAlerts: AlertsService = {
   },
 
   subscribeAlerts(onInvalidate) {
-    // API-RT-07 polling fallback: each tick is a bare invalidation signal —
-    // no payload, no channel, no client-side authorization; the consumer
-    // re-reads through the RLS-controlled list (API-RT-03/05). Every
-    // consumer owns an independent timer; unsubscribe always clears it.
-    const firmId = getActiveFirm();
-    if (!firmId) return () => {}; // no selector context → no subscription
-    const timer = setInterval(onInvalidate, ALERTS_POLL_INTERVAL_MS);
-    return () => {
-      clearInterval(timer);
-    };
+    // IMP-062 R1-B: private firm-topic channel (prompt bare invalidation)
+    // + the always-on API-RT-07 polling backstop, behind the unchanged
+    // provider-neutral contract. Every signal is a bare invalidation — the
+    // consumer re-reads through the RLS-controlled list (API-RT-03/05).
+    // Unsubscribe always tears down both.
+    return subscribeFirmInvalidation('alerts', onInvalidate, ALERTS_POLL_INTERVAL_MS);
   },
 };

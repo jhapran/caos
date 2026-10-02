@@ -124,6 +124,7 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'mywork')),
     ...tsFiles(join(SRC, 'data', 'dashboard')),
     ...tsFiles(join(SRC, 'data', 'search')),
+    ...tsFiles(join(SRC, 'data', 'realtime')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
     join(SRC, 'data', 'context.ts'),
@@ -181,6 +182,12 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     // Guards against the scan passing vacuously if the folder moves.
     expect(productionFiles).toContain(join(SRC, 'data', 'search', 'supabase.ts'));
     expect(productionFiles).toContain(join(SRC, 'data', 'search', 'fixture.ts'));
+  });
+
+  it('scans the realtime channel module (IMP-062)', () => {
+    // Guards against the scan passing vacuously if the folder moves.
+    expect(productionFiles).toContain(join(SRC, 'data', 'realtime', 'hub.ts'));
+    expect(productionFiles).toContain(join(SRC, 'data', 'realtime', 'subscribe.ts'));
   });
 
   it('scans the engagement adapter modules (IMP-021)', () => {
