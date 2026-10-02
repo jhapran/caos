@@ -280,7 +280,7 @@ TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
 Release-0 state through IMP-061 (CLOSED 2026-10-01 — human
 closure-documentation authorization; the final closure Git checkpoint is
-pending — see the IMP-061 closure record below): 23 / 27 formal R0
+b01d644e117ff220f1d804940a8dfd9311676eed — see the IMP-061 closure record below): 23 / 27 formal R0
 packages
 complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030, IMP-031,
 IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061; 85.19%).
@@ -511,7 +511,7 @@ IMP-061 (structured global search) is COMPLETE and CLOSED (human
 closure-documentation authorization 2026-10-01; implementation
 checkpoint `213b5b1` `IMP-061: implement structured global search`
 2026-09-20; contract checkpoint `3f03edb`; R11 contract-amendment
-checkpoint `a6f1c29`; the final closure Git checkpoint is PENDING — the
+checkpoint `a6f1c29`; the final closure Git checkpoint is b01d644e117ff220f1d804940a8dfd9311676eed — the
 closure documentation candidate is prepared but NOT yet committed or
 pushed, awaiting the Runtime Test gate and explicit human Git
 authorization, following the IMP-050/IMP-051/IMP-060 `docs: close …` +

@@ -13,7 +13,7 @@
   (`IMP-061: implement structured global search`, 2026-09-20)
 - IMP-061 contract checkpoint: `3f03edb` (2026-09-19); IMP-061 R11
   contract-amendment checkpoint: `a6f1c29` (2026-09-20)
-- IMP-061 closure checkpoint: PENDING — the closure documentation
+- IMP-061 closure checkpoint: b01d644e117ff220f1d804940a8dfd9311676eed — the closure documentation
   candidate is prepared (unstaged working-tree changes, 2026-10-01) but
   the closure Git checkpoint (`docs: close IMP-061 …`) is NOT yet
   committed or pushed; it awaits the Runtime Test gate and explicit
@@ -74,7 +74,7 @@ Remaining formal R0 packages:
   hosted staging acceptance PASS — API checks 67/67, UI checks 52/52,
   combined 119/119, combined failures 0; hosted migration ledger 13/13
   through `20260920000000_structured_search.sql`; acceptance cleanup
-  verified; final closure Git checkpoint PENDING — see §1 and §6g).
+  verified; final closure Git checkpoint b01d644e117ff220f1d804940a8dfd9311676eed — see §1 and §6g).
 - Historical contract record for IMP-061 (kept for rationale): contract
   discovery PASS; preliminary rulings finalized; local spike PASS; fresh
   independent spike review PASS (CRITICAL=0, HIGH=0, MEDIUM=2 — MEDIUM-1
@@ -841,7 +841,7 @@ Remaining formal R0 packages:
   `IMP-061: implement structured global search` (2026-09-20) — the exact
   implementation patch passed independent review and Runtime Test before
   commit/push, and the remote implementation checkpoint was
-  independently verified. Closure Git checkpoint: PENDING — the closure
+  independently verified. Closure Git checkpoint: b01d644e117ff220f1d804940a8dfd9311676eed — the closure
   documentation candidate was human-authorized 2026-10-01 and prepared
   as unstaged working-tree changes; it awaits the Runtime Test gate and
   explicit human Git authorization (the IMP-050/IMP-051/IMP-060
