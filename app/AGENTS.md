@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-061 (CLOSED 2026-10-01; see the status block
+hosted staging through IMP-062 (CLOSED 2026-10-03; see the status block
 below and `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,8 +25,8 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-061 (CLOSED
-2026-10-01); the Supabase track
+Implementation packages have landed through IMP-062 (CLOSED
+2026-10-03); the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
 document future behavior as if it exists. When a section below describes
@@ -278,21 +278,25 @@ event publication (`alert.created`/`alert.resolved`) to IMP-050
 (AUTO-OQ-02). Coverage: TEST-SCH-26…29, TEST-RLS-ALR-*/ARL-*,
 TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
-Release-0 state through IMP-061 (CLOSED 2026-10-01 — human
+Release-0 state through IMP-062 (CLOSED 2026-10-03 — human
 closure-documentation authorization; the final closure Git checkpoint is
-b01d644e117ff220f1d804940a8dfd9311676eed — see the IMP-061 closure record below): 23 / 27 formal R0
+pending — see the IMP-062 closure record below): 24 / 27 formal R0
 packages
 complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030, IMP-031,
-IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061; 85.19%).
-Migrations run through `20260920000000_structured_search.sql`
-(hosted staging ledger 13/13, local == remote through `20260920000000`).
+IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061, IMP-062;
+88.89%).
+Migrations run through `20261002000000_limited_realtime.sql`
+(hosted staging ledger 14/14, local == remote through `20261002000000`).
 Application public tables: 24 — CURRENT on local and hosted staging
 (RLS enabled 24/24, FORCE RLS 20 — SCH-33/SCH-35 forced, SCH-34 enabled
 not forced — policies 51; IMP-051 adds NO base table — the deadline read
-model is two security_invoker views — IMP-060 adds NO table or view, and
+model is two security_invoker views — IMP-060 adds NO table or view,
 IMP-061 adds NO table or view — the structured search read path is ONE
-SECURITY INVOKER function — so the Ruling 2026-09-12 R8 posture is
-unchanged).
+SECURITY INVOKER function — and IMP-062 adds NO base table, view, or
+public-schema policy — the realtime transport is two SECURITY DEFINER
+broadcast trigger functions plus exactly two `realtime.messages`
+policies with zero `supabase_realtime` publication tables — so the
+Ruling 2026-09-12 R8 posture is unchanged).
 
 IMP-050 (recurrence generation & scheduler signals) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-13; implementation
@@ -587,6 +591,72 @@ LOW-1, LOW-2, LOW-4, LOW-5, LOW-6, LOW-7 remain OPEN
 (EFFECTIVE_OPEN_LOW_COUNT=6). Production untouched; no production
 verification claimed.
 
+IMP-062 (limited realtime) is COMPLETE and CLOSED (human
+closure-documentation authorization 2026-10-03; implementation
+checkpoint b6d70477acf8233eb9b9d6ef2a5058f4995c7462 `feat: limited
+realtime` 2026-10-02 — exactly one commit, 25 files; the Git checkpoint
+was independently verified and pushed to origin/staging under explicit
+human authorization; the final closure Git checkpoint is PENDING — the
+closure documentation candidate is prepared but NOT yet committed or
+pushed, awaiting independent verification and explicit human Git
+authorization, following the IMP-050/IMP-051/IMP-060/IMP-061
+`docs: close …` + closure-pointer-reconcile precedent). The durable
+human rulings are carried by this closure record: IMP062-R1 = R1-B
+(true push transport = database-trigger realtime.send / broadcast to
+private firm-scoped topics `firm:<uuid>:review_queue` /
+`firm:<uuid>:alerts`, with membership-scoped `realtime.messages`
+authorization, minimal invalidation-only payloads `{firm_id,id,kind}`,
+authoritative refetch under RLS, and the polling fallback); IMP062-R2
+(the bounded platform verification spike was authorized and completed —
+local PASS, hosted staging PASS, read-only probes, zero residue);
+IMP062-R3 (active-firm subscription rebuild is deferred to the later
+firm-switcher package — no switcher machinery in IMP-062); H2 (realtime
+authorization is membership-scoped, not active-firm-scoped — the active
+firm remains application context); H3 (the join-time realtime
+authorization staleness model is accepted with safeguards — fresh
+join/reconnect reauthorizes; explicit teardown on
+logout/identity/session change is load-bearing; invalidation-only
+payloads and authoritative refetch bound consequences). Exactly two
+realtime surfaces (Review Queue freshness; alert badge/count freshness)
+behind the provider-neutral `@/data` boundary (`src/data/realtime/`,
+reachable only from the review/alerts Supabase adapters); correctness is
+independent of realtime (API-RT-05) via the always-on 15-second polling
+fallback and reconnect/re-entry refetch; NO `supabase_realtime`
+publication and NO realtime anywhere else (API-RT-02). The migration
+`20261002000000_limited_realtime.sql` is APPLIED on hosted staging
+(project ref `pyrniumcjcvagjygheyu`; ledger 14/14 through
+`20261002000000`): two SECURITY DEFINER broadcast trigger functions
+(`search_path=''`) on `review_items` and `alerts` plus exactly two
+`realtime.messages` policies (membership-scoped SELECT; client-publish
+INSERT denied `with check (false)`); application catalog invariants
+unchanged (tables 24, RLS 24/24, FORCE RLS 20, public policies 51).
+Verification chain: implementation review PASS; dedicated runtime
+verification PASS; TEST-API-09 PASS; TEST-API-10 PASS; authoritative
+Harness Gate PASS 27/27 (realtime-integration 9/9); independent
+implementation security review PASS (zero findings); hosted staging
+acceptance PASS (realtime.messages RLS, trigger broadcast, same-firm
+delivery, cross-firm denial, forged-topic denial, anonymous/private
+denial, client publish denial, invalidation-only payload, the accepted
+revocation model, explicit teardown, reconnect
+reauthorization/refetch, polling fallback, Review Queue freshness,
+alert badge/count freshness, test-data cleanup, no unexpected hosted
+residue); independent closure-readiness review PASS. Accepted LOW
+residuals (do not erase): LOW-1 — hosted broadcast delivery was
+observed lossy/variable during acceptance (3/6 within 25 s; triggers
+persisted 6/6) — accepted because correctness is independent of
+realtime (invalidation-only messaging + authoritative refetch +
+always-on polling + reconnect/re-entry refetch); delivery is NOT
+guaranteed and is not claimed to be. LOW-2 — the deployed staging
+frontend remained at the pre-IMP-062 revision `213b5b1` during hosted
+acceptance; full deployed-frontend UI acceptance was not performed and
+is not a normative IMP-062 closure requirement (the strongest
+authorized hosted integration verification ran the real committed
+application modules unmodified against hosted staging); any later
+staging frontend deployment remains a separate explicitly authorized
+action. LOW-3 — the IMP062-R1/R2/R3 + H2/H3 rulings were previously
+carried only in the evidence chain — RESOLVED by this durable closure
+record. Production untouched; no production verification claimed.
+
 Historical pre-implementation context for IMP-061 (kept for rationale):
 contract discovery PASS; preliminary rulings finalized; local spike
 PASS; fresh independent spike review PASS (CRITICAL=0/HIGH=0; MEDIUM=2 —
@@ -605,9 +675,9 @@ IS PAUSED pending the R11 contract reconciliation" status is SUPERSEDED
 — the R11 amendment (checkpoint `a6f1c29`) reconciled the contract, and
 implementation then landed and closed as recorded above.
 
-Next package: IMP-062 — Limited Realtime — NOT STARTED and NOT
-AUTHORIZED. It begins only after the IMP-061 final closure Git
-checkpoint and an explicit human implementation instruction.
+Next package: IMP-070 — Fixture demo preservation & adapter completion —
+NOT STARTED and NOT AUTHORIZED. It begins only after the IMP-062 final
+closure Git checkpoint and an explicit human implementation instruction.
 
 Authoritative sources:
 

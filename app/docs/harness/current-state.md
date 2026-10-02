@@ -7,8 +7,22 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human closure-documentation authorization date: 2026-10-01 (IMP-061)
-- Last CLOSED package: IMP-061 — Structured global search
+- Human closure-documentation authorization date: 2026-10-03 (IMP-062)
+- Last CLOSED package: IMP-062 — Limited Realtime
+- IMP-062 implementation checkpoint:
+  b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`,
+  2026-10-02)
+- IMP-062 closure checkpoint: PENDING — the closure documentation
+  candidate is prepared (unstaged working-tree changes, 2026-10-03) but
+  the closure Git checkpoint (`docs: close IMP-062 …`) is NOT yet
+  committed or pushed; it awaits independent verification and explicit
+  human Git authorization, following the
+  IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
+  closure-pointer-reconcile precedent
+- IMP-062 hosted staging acceptance: PASS (see §4/§6/§6h)
+- Previous closure-documentation authorization date: 2026-10-01
+  (IMP-061)
+- Previous CLOSED package: IMP-061 — Structured global search
 - IMP-061 implementation checkpoint: `213b5b1`
   (`IMP-061: implement structured global search`, 2026-09-20)
 - IMP-061 contract checkpoint: `3f03edb` (2026-09-19); IMP-061 R11
@@ -42,7 +56,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (23 / 27, 85.19%):
+Completed (24 / 27, 88.89%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -59,17 +73,26 @@ Completed (23 / 27, 85.19%):
   live data; human package-closure approval 2026-09-19)
 - IMP-061 (Application Read Models — structured global search; human
   closure-documentation authorization 2026-10-01)
+- IMP-062 (Application Read Models — limited realtime; human
+  closure-documentation authorization 2026-10-03)
 
-Remaining formal R0 packages:
+Remaining formal R0 packages (3 / 27, 11.11%):
 
-- IMP-062 (Application Read Models)
 - IMP-070, IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-062 — Limited Realtime — NOT STARTED and NOT AUTHORIZED
-  (begins only after the IMP-061 final closure Git checkpoint and an
-  explicit human implementation instruction). IMP-061 — Structured
+- Current: IMP-070 — Fixture demo preservation & adapter completion —
+  NOT STARTED and NOT AUTHORIZED (begins only after the IMP-062 final
+  closure Git checkpoint and an explicit human implementation
+  instruction). IMP-062 — Limited Realtime is COMPLETE/CLOSED (human
+  closure-documentation authorization 2026-10-03; implementation
+  checkpoint b6d70477acf8233eb9b9d6ef2a5058f4995c7462 `feat: limited
+  realtime`, 2026-10-02; authoritative Harness Gate PASS 27/27;
+  TEST-API-09/10 PASS; hosted staging acceptance PASS; hosted migration
+  ledger 14/14 through `20261002000000_limited_realtime.sql`; acceptance
+  cleanup verified; final closure Git checkpoint PENDING — see §1 and
+  §6h). IMP-061 — Structured
   global search is COMPLETE/CLOSED (human closure-documentation
   authorization 2026-10-01; implementation checkpoint `213b5b1`
   `IMP-061: implement structured global search`, 2026-09-20; contract
@@ -198,9 +221,21 @@ Remaining formal R0 packages:
 
 ## 4. Database / Migration State (accepted staging)
 
-- Latest migration: `20260920000000_structured_search.sql` (IMP-061)
-- Hosted staging migration ledger: 13 migrations, local == remote
-  through `20260920000000` (13 / 13)
+- Latest migration: `20261002000000_limited_realtime.sql` (IMP-062)
+- Hosted staging migration ledger: 14 migrations, local == remote
+  through `20261002000000` (14 / 14)
+- IMP-062 adds ONE version-controlled migration —
+  `20261002000000_limited_realtime.sql` — installing the two SECURITY
+  DEFINER broadcast trigger functions
+  (`imp062_rt_broadcast_review_queue` / `imp062_rt_broadcast_alerts`,
+  `search_path=''`) and their triggers on `review_items` and `alerts`,
+  plus exactly two `realtime.messages` policies
+  (`imp062_rt_messages_select` — membership-scoped SELECT for
+  `authenticated`; `imp062_rt_messages_insert_deny` — client-publish
+  INSERT denied `with check (false)`); hosted migration applied and
+  hosted staging acceptance PASS; NO new base table, view, or
+  public-schema policy — the application catalog posture below is
+  unchanged by IMP-062
 - IMP-061 adds ONE version-controlled migration —
   `20260920000000_structured_search.sql` — installing the production
   SECURITY INVOKER `structured_search` function (`search_path=''`;
@@ -266,7 +301,10 @@ Remaining formal R0 packages:
   SELECT policies; every write goes through the Layer-B definer commands
 - No realtime-publication migration exists; `supabase_realtime` publishes
   zero public tables (the IMP-042 alert bell uses the approved API-RT-07
-  polling fallback — D2 ruling; see §6b/§6c)
+  polling fallback — D2 ruling; see §6b/§6c) — UNCHANGED by IMP-062: the
+  limited realtime transport is database-trigger broadcast to private
+  firm-scoped topics, not postgres_changes publication, and the polling
+  fallback remains the always-on backstop (see §6h)
 - Post-promotion staging row counts after hosted/browser fixture
   teardown: `alerts`, `alert_rules`, and all IMP-042 probe/browser
   fixture rows = 0 — no probe, fixture, or migration-created rows remain;
@@ -295,6 +333,15 @@ Remaining formal R0 packages:
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
+- IMP-062 accepted implementation checkpoint:
+  b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`) —
+  hosted staging acceptance PASS at the platform/integration level
+  (migration applied; the real committed application modules ran
+  unmodified against hosted staging). The deployed Netlify staging
+  frontend REMAINS at the pre-IMP-062 revision `213b5b1` (accepted LOW
+  residual — deployed-frontend UI acceptance was not a normative IMP-062
+  closure requirement; any staging frontend deployment is a separate
+  explicitly authorized action)
 - Accepted implementation checkpoint: `213b5b1`
   (`IMP-061: implement structured global search` —
   deployed on Netlify staging; hosted staging revision verified == this
@@ -915,6 +962,103 @@ Remaining formal R0 packages:
 - Production untouched — NOT promoted, NOT authorized; no production
   verification claimed.
 
+## 6h. Limited Realtime Facts (IMP-062 — durable; CLOSED 2026-10-03)
+
+- Durable human rulings (carried by this closure record — this resolves
+  the independent closure-readiness review's LOW-3 ruling-durability
+  finding, under which these rulings were previously carried only in the
+  evidence chain):
+  - IMP062-R1 = R1-B ACCEPTED: the true push transport is
+    database-trigger realtime.send / broadcast to private firm-scoped
+    topics (`firm:<uuid>:review_queue`, `firm:<uuid>:alerts`), with
+    membership-scoped `realtime.messages` authorization, minimal
+    invalidation-only payloads (`{firm_id,id,kind}`), authoritative
+    refetch under RLS, and the polling fallback.
+  - IMP062-R2: the bounded platform verification spike was authorized
+    and completed (local PASS; hosted staging PASS; read-only hosted
+    probes, zero residue).
+  - IMP062-R3: active-firm subscription rebuild is DEFERRED to the later
+    firm-switcher package — no switcher machinery belongs in IMP-062.
+  - H2: realtime authorization is MEMBERSHIP-scoped, not
+    active-firm-scoped; the active firm remains application context.
+  - H3: the join-time realtime authorization staleness model is ACCEPTED
+    with safeguards — fresh join/reconnect reauthorizes; explicit
+    teardown on logout/identity/session change is load-bearing;
+    invalidation-only payloads and authoritative refetch bound the
+    consequences.
+- Architecture: exactly two realtime surfaces (Review Queue freshness;
+  alert badge/count freshness — API-RT-01); React → `@/data` realtime
+  module (`src/data/realtime/`, reachable only from the review/alerts
+  Supabase adapters) → private firm-scoped broadcast topics; the server
+  side is database-trigger broadcast (two SECURITY DEFINER functions
+  with `search_path=''` on `review_items` and `alerts`); authorization
+  is exactly two `realtime.messages` policies (membership-scoped SELECT;
+  client-publish INSERT denied `with check (false)`); payloads are bare
+  invalidations and every consumer re-reads authoritative state under
+  RLS; correctness is independent of realtime (API-RT-05) with the
+  always-on 15-second polling fallback preserved and reconnect/re-entry
+  refetch; NO `supabase_realtime` publication, NO postgres_changes
+  dependency, NO realtime anywhere else (API-RT-02).
+- Git checkpoints: implementation checkpoint
+  b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`,
+  2026-10-02 — exactly one commit, 25 files; independent checkpoint
+  verification PASS; pushed to origin/staging under explicit human
+  authorization, server ref verified). Closure Git checkpoint: PENDING —
+  the closure documentation candidate was human-authorized 2026-10-03
+  and prepared as unstaged working-tree changes; it awaits independent
+  verification and explicit human Git authorization (the
+  IMP-050/IMP-051/IMP-060/IMP-061 `docs: close …` +
+  closure-pointer-reconcile precedent applies).
+- Database: migration `20261002000000_limited_realtime.sql` applied to
+  hosted staging (project ref `pyrniumcjcvagjygheyu`); hosted migration
+  ledger 14/14 through `20261002000000`; application catalog invariants
+  unchanged — tables 24, RLS 24/24, FORCE RLS 20, public policies 51;
+  `supabase_realtime` publication tables 0.
+- Verification chain: implementation review PASS; dedicated RUNTIME
+  verification PASS; TEST-API-09 PASS; TEST-API-10 PASS; authoritative
+  Harness Gate PASS 27/27 phases (realtime-integration 9/9; committed
+  artifact `docs/harness/harness-gate-result.json` at the implementation
+  checkpoint); independent implementation security review PASS
+  (CRITICAL/HIGH/MEDIUM/LOW = 0); Git checkpoint independently verified;
+  hosted staging acceptance PASS; independent closure-readiness review
+  PASS (CRITICAL=0, HIGH=0, MEDIUM=0; LOW-1/LOW-2 accepted residuals;
+  LOW-3 ruling durability — resolved by this record).
+- Hosted staging acceptance: PASS (project `pyrniumcjcvagjygheyu`) —
+  `realtime.messages` RLS; trigger broadcast; same-firm delivery;
+  cross-firm denial; forged-topic denial; anonymous/private denial;
+  client publish denial; invalidation-only payload; the accepted
+  revocation model; explicit teardown; reconnect
+  reauthorization/refetch; polling fallback; Review Queue freshness;
+  alert badge/count freshness; test-data cleanup; no unexpected hosted
+  residue. The strongest authorized hosted integration verification ran
+  the real committed application modules unmodified against hosted
+  staging. Closure-stage evidence (external evidence store, per
+  convention — filenames, not repository paths):
+  `imp062-hosted-staging-acceptance-20261002T1806Z.md` (SHA256
+  a748a6be57b866c76845618180dc081706666791acb5bb9ff9cfc82b43ff3653);
+  `imp062-independent-closure-readiness-review-20261002T1825Z.md`
+  (SHA256 7e3127aeffc06bfd7aa9786fbd016104bd18060bd07b99faa1392a5516984adc).
+- Accepted residuals (LOW; do not silently erase):
+  - RESIDUAL 1 — hosted broadcast delivery: hosted realtime broadcast
+    delivery was observed to be lossy/variable during acceptance (3/6
+    within 25 s in the delivery characterization; triggers persisted
+    6/6). ACCEPTED because correctness is independent of realtime and is
+    preserved by invalidation-only messaging, authoritative refetch, the
+    always-on 15-second polling fallback, and reconnect/re-entry
+    refetch. Delivery is NOT guaranteed and is not claimed to be.
+  - RESIDUAL 2 — deployed staging frontend: the deployed staging
+    frontend remained on the pre-IMP-062 revision (`213b5b1`) during
+    hosted acceptance, so full deployed-frontend UI acceptance was not
+    performed. The independent closure-readiness review determined this
+    is NOT a normative IMP-062 closure requirement; any later staging
+    frontend deployment remains a separate explicitly authorized action.
+  - RESIDUAL 3 — ruling durability: RESOLVED by this closure record (the
+    IMP062-R1/R2/R3 + H2/H3 rulings are now carried durably here, in
+    `AGENTS.md`, in `docs/spec/00-index.md`, and in the `12` IMP-062
+    package card).
+- Production untouched — NOT promoted, NOT authorized; no production
+  verification claimed. PRODUCTION_TOUCHED=NO.
+
 ## 7. Permanent Architecture Boundaries
 
 - Data flow: React → `@/data` → fixture OR Supabase adapter. No direct
@@ -1006,6 +1150,10 @@ Remaining formal R0 packages:
   are not pulled forward; search indexing / pg_trgm is to be
   re-evaluated at materially larger per-firm data volumes using fresh
   measurement (no numerical threshold is established).
+- IMP-062 deferred scope (CLOSED 2026-10-03 — see §6h; deferral, not an
+  open blocker): active-firm subscription rebuild is deferred to the
+  later firm-switcher package (IMP062-R3) — IMP-062 carries no switcher
+  machinery.
 - Advisor follow-ups (non-IMP-040/IMP-041, pre-existing; do not treat as
   blockers): Supabase `auth_leaked_password_protection` WARN (platform
   Auth config — ops decision); performance advisors
