@@ -5,7 +5,9 @@
  * loopback-only Supabase stack and the repository's own tooling:
  *
  *   preflight → stack lifecycle → deterministic reset+seed → decision-evidence
- *   → lint → unit/component tests → Auth integration → RLS integration
+ *   → lint → unit/component tests → migration validation (IMP-070:
+ *   mapping tooling + TEST-MIG-02/04/09/12/15) → Auth integration
+ *   → RLS integration
  *   → schema integration → audit integration → client-hierarchy adapter contract
  *   → engagement adapter contract → Client 360 composite contract
  *   → review/alerts/My Work integration → automation (IMP-050) integration
@@ -140,6 +142,15 @@ async function main() {
 
   currentPhase = 'unit-tests';
   run('unit-tests', 'npm run test:unit');
+
+  // IMP-070: migration validation — fixture→production mapping tooling
+  // (API-INV-01 / spec-10, drift-checked committed report) plus the locally
+  // owned TEST-MIG suites: 02 adapter parity (MIG-VAL-03), 04 read-model
+  // consistency, 09 seed-labelling negative, 12 MIG-VAL-01 invariants,
+  // 15 statutory-pending. Runs right after unit tests so the invariant
+  // suite sees the pristine post-reset database (seed + harness users).
+  currentPhase = 'migration-validation';
+  run('migration-validation', 'npm run test:migration');
 
   currentPhase = 'auth-integration';
   run('auth-integration', 'npm run test:auth');

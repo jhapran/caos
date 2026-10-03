@@ -67,7 +67,39 @@ const FIXTURE_BRIDGES = new Set([
   join(SRC, 'data', 'mywork', 'fixture.ts'),
   join(SRC, 'data', 'dashboard', 'fixture.ts'),
   join(SRC, 'data', 'search', 'fixture.ts'),
+  join(SRC, 'data', 'deadlines', 'fixture.ts'),
 ]);
+
+// All 12 dual-mode domain service folders (IMP-070 — the parity/boundary
+// suites must enumerate every one explicitly so they cannot pass vacuously
+// if a folder is dropped from the scan list; discovery LOW-3).
+const DOMAIN_FOLDERS = [
+  'clientHierarchy',
+  'engagements',
+  'client360',
+  'complianceRules',
+  'complianceInstances',
+  'tasks',
+  'review',
+  'alerts',
+  'mywork',
+  'dashboard',
+  'search',
+  'deadlines',
+];
+
+// True when a specifier references a legacy flat fixture module
+// (src/data/<mod>) as opposed to a same-name production module inside a
+// domain subfolder.
+function isFixtureRef(spec: string, file: string): boolean {
+  const leaf = spec.split('/').pop() ?? spec;
+  if (!FIXTURE_MODULES.has(leaf)) return false;
+  return (
+    spec === `@/data/${leaf}` ||
+    ((spec === `./${leaf}` || spec === `../${leaf}`) &&
+      (dirname(file) === join(SRC, 'data') || dirname(file) === SRC))
+  );
+}
 
 describe('import boundary — UI layer (API-ARCH-01/02)', () => {
   const uiFiles = [
@@ -124,6 +156,7 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
     ...tsFiles(join(SRC, 'data', 'mywork')),
     ...tsFiles(join(SRC, 'data', 'dashboard')),
     ...tsFiles(join(SRC, 'data', 'search')),
+    ...tsFiles(join(SRC, 'data', 'deadlines')),
     ...tsFiles(join(SRC, 'data', 'realtime')),
     join(SRC, 'data', 'source.ts'),
     join(SRC, 'data', 'errors.ts'),
@@ -223,17 +256,65 @@ describe('import boundary — production adapter path (TEST-MIG-07)', () => {
         // A fixture reference is one that resolves to src/data/<mod> itself
         // — not a same-name module inside a production subfolder (e.g.
         // tenancy/types.ts is a production module).
-        const leaf = spec.split('/').pop() ?? spec;
-        if (!FIXTURE_MODULES.has(leaf)) continue;
-        const isFixtureRef =
-          spec === `@/data/${leaf}` ||
-          ((spec === `./${leaf}` || spec === `../${leaf}`) &&
-            (dirname(file) === join(SRC, 'data') || dirname(file) === SRC));
-        if (isFixtureRef) {
+        if (isFixtureRef(spec, file)) {
           violations.push(`${relative(SRC, file)} -> ${spec}`);
         }
       }
     }
     expect(violations).toEqual([]);
+  });
+});
+
+describe('import boundary — non-vacuity guards (IMP-070, discovery LOW-3)', () => {
+  const productionFiles = [
+    ...tsFiles(join(SRC, 'data', 'auth')),
+    ...tsFiles(join(SRC, 'data', 'tenancy')),
+    ...DOMAIN_FOLDERS.flatMap((folder) => tsFiles(join(SRC, 'data', folder))),
+    ...tsFiles(join(SRC, 'data', 'realtime')),
+    join(SRC, 'data', 'source.ts'),
+    join(SRC, 'data', 'errors.ts'),
+    join(SRC, 'data', 'context.ts'),
+    ...tsFiles(join(SRC, 'lib')),
+  ];
+
+  it('enumerates exactly the 12 dual-mode domain service folders', () => {
+    // The scan must cover every domain folder; a folder silently dropped
+    // from the scan list (the LOW-3 defect for deadlines/) must fail here.
+    expect(DOMAIN_FOLDERS).toHaveLength(12);
+    for (const folder of DOMAIN_FOLDERS) {
+      expect(productionFiles).toContain(join(SRC, 'data', folder, 'fixture.ts'));
+      expect(productionFiles).toContain(join(SRC, 'data', folder, 'supabase.ts'));
+    }
+  });
+
+  it('FIXTURE_BRIDGES is exactly the set of fixture adapters importing legacy fixture modules', () => {
+    // Non-vacuity: the bridge exemption list can be neither under-listed
+    // (a bridge importing fixtures unlisted would violate the boundary) nor
+    // over-listed (an entry for an adapter importing nothing would hide a
+    // folder silently dropped from the scan).
+    const importers = DOMAIN_FOLDERS
+      .map((folder) => join(SRC, 'data', folder, 'fixture.ts'))
+      .filter((file) => specifiersOf(file).some((spec) => isFixtureRef(spec, file)));
+    expect([...FIXTURE_BRIDGES].sort()).toEqual(importers.sort());
+  });
+
+  it('complianceRules/fixture.ts is covered and imports zero legacy fixture modules', () => {
+    // LOW-3: this adapter is self-contained, so it never appears in a
+    // legacy-import-derived list — pin its coverage explicitly.
+    const file = join(SRC, 'data', 'complianceRules', 'fixture.ts');
+    expect(productionFiles).toContain(file);
+    expect(FIXTURE_BRIDGES.has(file)).toBe(false);
+    expect(specifiersOf(file).filter((spec) => isFixtureRef(spec, file))).toEqual([]);
+  });
+
+  it('deadlines/fixture.ts is covered as a declared bridge importing legacy fixture modules', () => {
+    // LOW-3: the deadlines folder was absent from the scan list; it is a
+    // legitimate bridge (derives demo rows from the legacy deadline and
+    // dependency fixture modules) and must be pinned as covered.
+    const file = join(SRC, 'data', 'deadlines', 'fixture.ts');
+    expect(productionFiles).toContain(file);
+    expect(FIXTURE_BRIDGES.has(file)).toBe(true);
+    const legacyRefs = specifiersOf(file).filter((spec) => isFixtureRef(spec, file));
+    expect(legacyRefs.length).toBeGreaterThan(0);
   });
 });
