@@ -7,8 +7,20 @@
 
 ## 1. Last Accepted Checkpoint
 
-- Human closure-documentation authorization date: 2026-10-03 (IMP-062)
-- Last CLOSED package: IMP-062 — Limited Realtime
+- Human closure-documentation authorization date: 2026-10-03 (IMP-070)
+- Last CLOSED package: IMP-070 — Fixture demo preservation & adapter
+  completion
+- IMP-070 implementation checkpoint:
+  1eb3559722fd60f912760a3fbebb61468eee049e (`feat: complete dual-mode data
+  layer validation`, 2026-10-03 — exactly one commit, 12 files), pushed to
+  origin/staging under explicit human authorization (server ref verified)
+- IMP-070 closure durability checkpoint: NONE YET — the closure gate
+  updated closure documentation in the working tree only; commit/push were
+  NOT authorized and NOT performed; durability is pending a separate
+  explicit human authorization
+- IMP-070 hosted staging acceptance: PASS_WITH_LIMITATION (see §6/§6i)
+- Previous closure-documentation authorization date: 2026-10-03 (IMP-062)
+- Previous CLOSED package: IMP-062 — Limited Realtime
 - IMP-062 implementation checkpoint:
   b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`,
   2026-10-02)
@@ -56,7 +68,7 @@
 
 Formal R0 package count: 27 (per `docs/spec/12-release-0-plan.md`).
 
-Completed (24 / 27, 88.89%):
+Completed (25 / 27, 92.59%):
 
 - IMP-000…IMP-005 (Harness Engineering phase — Harness Gate PASS)
 - IMP-010…IMP-014 (Identity & Tenant Foundation)
@@ -75,17 +87,38 @@ Completed (24 / 27, 88.89%):
   closure-documentation authorization 2026-10-01)
 - IMP-062 (Application Read Models — limited realtime; human
   closure-documentation authorization 2026-10-03)
+- IMP-070 (Migration & Cutover — fixture demo preservation & adapter
+  completion; human closure-documentation authorization 2026-10-03;
+  closure durability commit/push pending explicit human authorization)
 
-Remaining formal R0 packages (3 / 27, 11.11%):
+Remaining formal R0 packages (2 / 27, 7.41%):
 
-- IMP-070, IMP-071, IMP-072 (Migration & Cutover)
+- IMP-071, IMP-072 (Migration & Cutover)
 
 ## 3. Current / Next Package
 
-- Current: IMP-070 — Fixture demo preservation & adapter completion —
-  NOT STARTED and NOT AUTHORIZED (begins only after the IMP-062 final
-  closure Git checkpoint and an explicit human implementation
-  instruction). IMP-062 — Limited Realtime is COMPLETE/CLOSED (human
+- Current: IMP-071 — Staging deployment & verification — NOT STARTED and
+  NOT AUTHORIZED (begins only after the IMP-070 closure documentation is
+  durably committed/pushed under explicit human authorization and an
+  explicit human implementation instruction). IMP-070 — Fixture demo
+  preservation & adapter completion is COMPLETE/CLOSED (human
+  closure-documentation authorization 2026-10-03; implementation
+  checkpoint 1eb3559722fd60f912760a3fbebb61468eee049e `feat: complete
+  dual-mode data layer validation`, 2026-10-03 — exactly one commit, 12
+  files; pushed to origin/staging under explicit human authorization,
+  server ref verified; formal Harness Gate PASS after the RESOLVED HIGH-1
+  test-isolation correction — 29 artifact records incl. the conditional
+  stack-stop record, migration-validation 61/61; independent security
+  review PASS — CRITICAL/HIGH/MEDIUM = 0, LOW=4, INFO=4 accepted; Human
+  Acceptance ACCEPTED_WITH_EXPLICIT_RESIDUALS; hosted staging acceptance
+  PASS_WITH_LIMITATION — read-only HTTP shell/asset/SPA checks PASS on
+  `staging.caos.datafabric.in`, authoritative fixture-demo URL absent from
+  trusted sources, deployed commit not independently verifiable read-only
+  (revision UNKNOWN/LIMITED); NO migration/schema/RLS/RPC/realtime/fixture
+  content/spec change; hosted migration ledger unchanged at 14/14 through
+  `20261002000000_limited_realtime.sql`; closure durability Git
+  commit/push NOT yet performed — pending explicit human authorization —
+  see §1 and §6i). IMP-062 — Limited Realtime is COMPLETE/CLOSED (human
   closure-documentation authorization 2026-10-03; implementation
   checkpoint b6d70477acf8233eb9b9d6ef2a5058f4995c7462 `feat: limited
   realtime`, 2026-10-02; authoritative Harness Gate PASS 27/27;
@@ -333,6 +366,17 @@ Remaining formal R0 packages (3 / 27, 11.11%):
 - Supabase staging project ref (not a secret): `pyrniumcjcvagjygheyu`
 - Netlify staging: `staging.caos.datafabric.in` (tracks Git branch
   `staging`; `VITE_DATA_SOURCE=supabase` set in site environment)
+- IMP-070 accepted implementation checkpoint:
+  1eb3559722fd60f912760a3fbebb61468eee049e (`feat: complete dual-mode data
+  layer validation`) — pushed to origin/staging under explicit human
+  authorization (server ref verified). Hosted staging acceptance
+  PASS_WITH_LIMITATION (see §6i): read-only HTTP shell/asset/SPA checks
+  PASS on `staging.caos.datafabric.in`; the authoritative fixture-demo URL
+  is absent from trusted sources; the deployed commit is NOT independently
+  verifiable through safe read-only deployment metadata (revision
+  UNKNOWN/LIMITED). IMP-070 carries DATA_MIGRATION_SCOPE=NONE — no hosted
+  Supabase mutation was required or performed; no deployment was caused or
+  claimed by any IMP-070 gate.
 - IMP-062 accepted implementation checkpoint:
   b6d70477acf8233eb9b9d6ef2a5058f4995c7462 (`feat: limited realtime`) —
   hosted staging acceptance PASS at the platform/integration level
@@ -1071,6 +1115,83 @@ Remaining formal R0 packages (3 / 27, 11.11%):
     IMP062-R1/R2/R3 + H2/H3 rulings are now carried durably here, in
     `AGENTS.md`, in `docs/spec/00-index.md`, and in the `12` IMP-062
     package card).
+- Production untouched — NOT promoted, NOT authorized; no production
+  verification claimed. PRODUCTION_TOUCHED=NO.
+
+## 6i. Fixture Demo Preservation & Adapter Completion Facts (IMP-070 — durable; CLOSED 2026-10-03)
+
+- Git checkpoints: implementation checkpoint
+  1eb3559722fd60f912760a3fbebb61468eee049e (`feat: complete dual-mode data
+  layer validation`, 2026-10-03 — exactly one commit, 12 files, 3185
+  insertions / 55 deletions), explicitly human-authorized and pushed to
+  origin/staging under explicit human authorization (server ref verified;
+  non-force fast-forward `cbd6544..1eb3559 staging -> staging`).
+  Checkpoint provenance (process history, NOT a product defect): the
+  checkpoint was executed under PRIMARY instead of HUMAN-GATE because of a
+  role-assignment/process mistake; Git history was intentionally NOT
+  rewritten to disguise this; the push was subsequently performed under
+  HUMAN-GATE after explicit human authorization; checkpoint contents and
+  scope were verified before push. Closure durability Git commit/push: NOT
+  performed at the closure gate (not authorized) — pending a separate
+  explicit human authorization.
+- Scope/deliverables: dual-mode data layer validation; fixture demo
+  preservation proof (fixture content unchanged; no production fixture
+  fallback; fail-closed DATA_SOURCE unchanged); Supabase/fixture adapter
+  parity validation
+  (`tests/integration/migration/adapter-parity.test.ts`); the executable
+  fixture→production mapping validator
+  (`scripts/validation/mapping-validation.mjs`) plus the committed mapping
+  validation report (`docs/mapping-validation-report.md`); the TEST-MIG
+  disposition matrix; local TEST-MIG verification owned by IMP-070; the
+  bounded Harness migration-validation phase
+  (`tests/integration/migration/` via `npm run test:migration`, wired into
+  `scripts/harness/gate.mjs`); import-boundary non-vacuity hardening
+  (`tests/unit/import-boundary.test.ts`). NO migration, NO
+  schema/RLS/RPC/realtime change, NO fixture content change, NO spec
+  change — application catalog invariants unchanged (tables 24, RLS 24/24,
+  FORCE RLS 20, policies 51); hosted migration ledger unchanged (14/14
+  through `20261002000000_limited_realtime.sql`).
+- TEST-MIG disposition (approved; preserved truthfully — deferred and
+  conditional work is NOT recorded as executed PASS): EXECUTED LOCALLY —
+  TEST-MIG-02/04/09/12/15; REUSED/REVERIFIED — 01/03/06/07/08/10;
+  CONDITIONAL — 13; DEFERRED TO IMP-071 — 11/14 plus the staging legs of
+  12 and 15; PHASE-E/LATER — 05 plus the bundle-level leg of 07.
+- HIGH-1 correction history (RESOLVED — not an active residual): the first
+  formal Harness run found HIGH-1, a test-isolation defect in which the
+  statutory-pending suite's cleanup deleted seeded SYS_ITR_VERSION audit
+  evidence; the authorized correction narrowed the cleanup to test-owned
+  rows with seeded-baseline capture/restore assertions; the formal Harness
+  rerun PASSED (29 artifact records incl. the conditional stack-stop
+  record; migration-validation 61/61; audit-integration 114/114
+  unweakened); HIGH-1 is RESOLVED.
+- Verification chain: runtime verification PASS; formal Harness Gate PASS
+  (rerun after the HIGH-1 correction); independent security review PASS
+  (CRITICAL/HIGH/MEDIUM = 0; LOW=4, INFO=4); Human Acceptance
+  ACCEPTED_WITH_EXPLICIT_RESIDUALS; Git checkpoint + push under explicit
+  human authorization; hosted staging acceptance PASS_WITH_LIMITATION.
+- Hosted staging acceptance: PASS_WITH_LIMITATION — Netlify is the
+  authoritative provider; `staging.caos.datafabric.in` read-only HTTP
+  acceptance succeeded (root/application shell/assets/SPA routing healthy;
+  anonymous GET/HEAD only; no hosted mutation; no manual deployment; no
+  Supabase mutation; no Netlify config mutation; production untouched).
+  Limitations (preserved, not strengthened): the authoritative
+  fixture-demo URL was NOT found in trusted sources; the deployed commit
+  could NOT be independently verified through safe read-only deployment
+  metadata — deployment revision UNKNOWN/LIMITED; no pixel-perfect hosted
+  fixture-demo verification is claimed.
+- Accepted residuals (carried forward, NOT resolved): LOW-1 —
+  mapping-validator barrel-regex parser hardening opportunity; LOW-2 —
+  FIXTURE_MODULE_PATHS completeness hardening opportunity; LOW-3 —
+  embedded-spec-copy drift hardening opportunity; LOW-4 — statutory-pending
+  cleanup ownership could be further constrained; INFO-1 —
+  `--check-report` is a drift guard, not authenticity proof; INFO-2 —
+  adapter parity has documented null/empty tolerance and does not exercise
+  subscribe methods; INFO-3 — TEST-MIG-03 substance is discharged by
+  TEST-MIG-12 per contract; INFO-4 — MIG-OQ-02 wording inconsistency
+  remains deferred documentation cleanup.
+- The expected pre-existing untracked `.kimi-code/skills/caos-fast-track/`
+  directory is NOT part of IMP-070 and was never staged, committed,
+  pushed, modified, or deleted.
 - Production untouched — NOT promoted, NOT authorized; no production
   verification claimed. PRODUCTION_TOUCHED=NO.
 

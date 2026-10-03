@@ -13,7 +13,7 @@ Vite, fixture-backed via `@/data`, deployed as the dedicated demo site.
 (2) The Supabase-backed Release-0 implementation — PostgreSQL schema via
 Git-tracked migrations, Supabase Auth, Row Level Security, audit, and
 provider-neutral data adapters behind `@/data` — landed and accepted on
-hosted staging through IMP-062 (CLOSED 2026-10-03; see the status block
+hosted staging through IMP-070 (CLOSED 2026-10-03; see the status block
 below and `docs/harness/current-state.md`). The test/harness stack (Vitest unit,
 auth/RLS/schema/audit integration suites, Playwright, Harness Gate) is
 installed and operational.
@@ -25,7 +25,7 @@ schema-change source of truth, private/server boundaries where required —
 with isolated local / staging / production environments. The polished
 fixture demo is retained as a separate, dedicated deployment.
 
-Implementation packages have landed through IMP-062 (CLOSED
+Implementation packages have landed through IMP-070 (CLOSED
 2026-10-03); the Supabase track
 is real and accepted on staging. Do not conflate the two tracks: fixture
 mode is demo-only; production behavior is the Supabase track. Do not
@@ -278,16 +278,17 @@ event publication (`alert.created`/`alert.resolved`) to IMP-050
 (AUTO-OQ-02). Coverage: TEST-SCH-26…29, TEST-RLS-ALR-*/ARL-*,
 TEST-API-16…19, TEST-AUD-02/03 (IMP-042 portions), TEST-E2E-07/09.
 
-Release-0 state through IMP-062 (CLOSED 2026-10-03 — human
-closure-documentation authorization; the final closure Git checkpoint is
-05d037ba6f5889aca11f1ef285310b40fde1ebc7 — see the IMP-062 closure
-record below): 24 / 27 formal R0
+Release-0 state through IMP-070 (CLOSED 2026-10-03 — human
+closure-documentation authorization; the closure durability Git
+commit/push is pending explicit human authorization — see the IMP-070
+closure record below): 25 / 27 formal R0
 packages
 complete (IMP-000…005, IMP-010…014, IMP-020…022, IMP-030, IMP-031,
-IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061, IMP-062;
-88.89%).
+IMP-040, IMP-041, IMP-042, IMP-050, IMP-051, IMP-060, IMP-061, IMP-062,
+IMP-070; 92.59%).
 Migrations run through `20261002000000_limited_realtime.sql`
-(hosted staging ledger 14/14, local == remote through `20261002000000`).
+(hosted staging ledger 14/14, local == remote through `20261002000000`;
+unchanged by IMP-070 — no migration).
 Application public tables: 24 — CURRENT on local and hosted staging
 (RLS enabled 24/24, FORCE RLS 20 — SCH-33/SCH-35 forced, SCH-34 enabled
 not forced — policies 51; IMP-051 adds NO base table — the deadline read
@@ -297,7 +298,8 @@ SECURITY INVOKER function — and IMP-062 adds NO base table, view, or
 public-schema policy — the realtime transport is two SECURITY DEFINER
 broadcast trigger functions plus exactly two `realtime.messages`
 policies with zero `supabase_realtime` publication tables — so the
-Ruling 2026-09-12 R8 posture is unchanged).
+Ruling 2026-09-12 R8 posture is unchanged; IMP-070 likewise adds NO
+migration, base table, view, or public-schema policy).
 
 IMP-050 (recurrence generation & scheduler signals) is COMPLETE and
 CLOSED (human package-closure approval 2026-09-13; implementation
@@ -660,6 +662,65 @@ action. LOW-3 — the IMP062-R1/R2/R3 + H2/H3 rulings were previously
 carried only in the evidence chain — RESOLVED by this durable closure
 record. Production untouched; no production verification claimed.
 
+IMP-070 (fixture demo preservation & adapter completion) is COMPLETE and
+CLOSED (human closure-documentation authorization 2026-10-03;
+implementation checkpoint 1eb3559722fd60f912760a3fbebb61468eee049e
+`feat: complete dual-mode data layer validation` — exactly one commit, 12
+files; pushed to origin/staging under explicit human authorization, server
+ref verified; closure durability Git commit/push NOT yet performed — this
+closure gate updated documentation in the working tree only, pending a
+separate explicit human authorization). IMP-070 finalized the dual-mode
+data layer: fixture demo preservation proven (fixture content unchanged;
+fail-closed DATA_SOURCE and no-fixture-fallback invariants re-verified);
+Supabase/fixture adapter parity validated; the executable
+fixture→production mapping validator
+(`scripts/validation/mapping-validation.mjs`) and its committed mapping
+validation report (`docs/mapping-validation-report.md`) landed; the
+TEST-MIG disposition matrix was recorded — EXECUTED LOCALLY:
+TEST-MIG-02/04/09/12/15; REUSED/REVERIFIED: 01/03/06/07/08/10;
+CONDITIONAL: 13; DEFERRED TO IMP-071: 11/14 plus the staging legs of
+12/15; PHASE-E/LATER: 05 plus the bundle-level leg of 07. The Harness Gate
+gained the bounded migration-validation phase
+(`tests/integration/migration/` via `npm run test:migration`). NO
+migration, NO schema/RLS/RPC/realtime change, NO fixture content change,
+NO spec change; application catalog invariants unchanged (tables 24, RLS
+24/24, FORCE RLS 20, policies 51). Correction history: the first formal
+Harness run found HIGH-1 — a test-isolation defect in which the
+statutory-pending suite cleanup deleted seeded SYS_ITR_VERSION audit
+evidence; the correction narrowed cleanup to test-owned rows with
+baseline capture/restore assertions; the formal Harness rerun PASSED (29
+artifact records incl. the conditional stack-stop record;
+migration-validation 61/61); HIGH-1 is RESOLVED — not an active residual.
+Verification chain: runtime verification PASS; formal Harness PASS after
+the HIGH-1 correction; independent security review PASS
+(CRITICAL/HIGH/MEDIUM = 0; LOW=4, INFO=4); Human Acceptance
+ACCEPTED_WITH_EXPLICIT_RESIDUALS; hosted staging acceptance
+PASS_WITH_LIMITATION — Netlify is the authoritative provider;
+`staging.caos.datafabric.in` read-only HTTP acceptance succeeded
+(root/application shell/assets/SPA routing healthy; anonymous GET/HEAD
+only; no hosted mutation, no manual deployment, no Supabase mutation, no
+Netlify config mutation; production untouched) — limitations: the
+authoritative fixture-demo URL was NOT found in trusted sources and the
+deployed commit could NOT be independently verified through safe read-only
+deployment metadata (deployment revision UNKNOWN/LIMITED); no
+pixel-perfect hosted fixture-demo verification is claimed. Checkpoint
+provenance (process history, not a product defect): the Git checkpoint
+was explicitly human-authorized but executed under PRIMARY instead of
+HUMAN-GATE because of a role-assignment/process mistake; Git history was
+intentionally NOT rewritten to disguise this; the push was subsequently
+performed under HUMAN-GATE after explicit human authorization; checkpoint
+contents and scope were verified before push. Accepted residuals (carried
+forward, NOT resolved): LOW-1 mapping-validator barrel-regex parser
+hardening opportunity; LOW-2 FIXTURE_MODULE_PATHS completeness hardening
+opportunity; LOW-3 embedded-spec-copy drift hardening opportunity; LOW-4
+statutory-pending cleanup ownership could be further constrained; INFO-1
+`--check-report` is a drift guard, not authenticity proof; INFO-2 adapter
+parity has documented null/empty tolerance and does not exercise subscribe
+methods; INFO-3 TEST-MIG-03 substance is discharged by TEST-MIG-12 per
+contract; INFO-4 MIG-OQ-02 wording inconsistency remains deferred
+documentation cleanup. Production untouched; no production verification
+claimed.
+
 Historical pre-implementation context for IMP-061 (kept for rationale):
 contract discovery PASS; preliminary rulings finalized; local spike
 PASS; fresh independent spike review PASS (CRITICAL=0/HIGH=0; MEDIUM=2 —
@@ -678,9 +739,10 @@ IS PAUSED pending the R11 contract reconciliation" status is SUPERSEDED
 — the R11 amendment (checkpoint `a6f1c29`) reconciled the contract, and
 implementation then landed and closed as recorded above.
 
-Next package: IMP-070 — Fixture demo preservation & adapter completion —
-NOT STARTED and NOT AUTHORIZED. It begins only after the IMP-062 final
-closure Git checkpoint and an explicit human implementation instruction.
+Next package: IMP-071 — Staging deployment & verification — NOT STARTED
+and NOT AUTHORIZED. It begins only after the IMP-070 closure documentation
+is durably committed/pushed under explicit human authorization and an
+explicit human implementation instruction.
 
 Authoritative sources:
 
